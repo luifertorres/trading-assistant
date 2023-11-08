@@ -176,6 +176,32 @@ namespace TradingAssistant
             BinanceRestClient client,
             CancellationToken stoppingToken)
         {
+            var position = await GetPositionDetailsAsync(orderUpdate, client, stoppingToken);
+            var trading = client.UsdFuturesApi.Trading;
+
+            if (position is null)
+            {
+                _stopLossCount = 0;
+
+                await trading.CancelAllOrdersAsync(orderUpdate.Symbol, ct: stoppingToken);
+
+                return;
+            }
+
+            var oldStopLossOrder = await GetStopLossOrderAsync(position.Symbol, client, stoppingToken);
+            var priceFilter = await GetSymbolPriceFilter(position.Symbol, client, stoppingToken);
+            var isNewStopLossOrder = await TryPlaceNewStopLossOrderAsync(client, position, priceFilter, stoppingToken);
+
+            if (isNewStopLossOrder && oldStopLossOrder is not null)
+            {
+                await trading.CancelOrderAsync(position.Symbol, origClientOrderId: oldStopLossOrder.ClientOrderId, ct: stoppingToken);
+            }
+        }
+
+        private async Task<BinancePositionDetailsUsdt?> GetPositionDetailsAsync(BinanceFuturesStreamOrderUpdateData orderUpdate,
+            BinanceRestClient client,
+            CancellationToken stoppingToken)
+        {
             var account = client.UsdFuturesApi.Account;
             var positionInformationResult = await account.GetPositionInformationAsync(orderUpdate.Symbol, ct: stoppingToken);
 
@@ -183,65 +209,83 @@ namespace TradingAssistant
             {
                 _logger.LogError("Get position information has failed. {Error}", positionInformationResult.Error);
 
-                return;
+                return null;
             }
 
             var position = positionInformationResult.Data.FirstOrDefault(p => p.Symbol == orderUpdate.Symbol);
 
             if (position is null)
             {
-                _stopLossCount = 0;
-
-                return;
+                return null;
             }
 
             if (position.Quantity == 0)
             {
-                _stopLossCount = 0;
-
-                return;
+                return null;
             }
 
+            return position;
+        }
+
+        private async Task<BinanceFuturesOrder?> GetStopLossOrderAsync(string symbol,
+            BinanceRestClient client,
+            CancellationToken stoppingToken)
+        {
             var trading = client.UsdFuturesApi.Trading;
-            var openOrdersResult = await trading.GetOpenOrdersAsync(position.Symbol, ct: stoppingToken);
+            var openOrdersResult = await trading.GetOpenOrdersAsync(symbol, ct: stoppingToken);
 
             if (!openOrdersResult.Success)
             {
                 _logger.LogError("Get open orders has failed. {Error}", openOrdersResult.Error);
 
-                return;
+                return null;
             }
 
-            var openOrders = openOrdersResult.Data.Where(o => o.Symbol == position.Symbol);
-            var stopLossOrder = openOrders.SingleOrDefault(o => o.Type == FuturesOrderType.StopMarket);
-            var positionSideAsOrderSide = position.Quantity.AsOrderSide();
-            var stopLossMoneyQuantity = 0.95m;
-            var sign = positionSideAsOrderSide == OrderSide.Buy ? 1 : -1;
-            var positionCost = position.EntryPrice * Math.Abs(position.Quantity);
+            return openOrdersResult.Data.Where(o => o.Symbol == symbol)
+                .FirstOrDefault(o => o.Type == FuturesOrderType.StopMarket);
+        }
+
+        private async Task<BinanceSymbolPriceFilter?> GetSymbolPriceFilter(string symbol,
+            BinanceRestClient client,
+            CancellationToken stoppingToken)
+        {
             var exchangeInfoResult = await client.UsdFuturesApi.ExchangeData.GetExchangeInfoAsync(stoppingToken);
 
             if (!exchangeInfoResult.Success)
             {
-                _logger.LogError("Get exchange info has failed. {Error}", openOrdersResult.Error);
+                _logger.LogError("Get exchange info has failed. {Error}", exchangeInfoResult.Error);
 
-                return;
+                return null;
             }
 
-            var symbol = exchangeInfoResult.Data.Symbols.SingleOrDefault(s => s.Name == position.Symbol);
+            var symbolInformation = exchangeInfoResult.Data.Symbols.FirstOrDefault(s => s.Name == symbol);
 
-            if (symbol is null)
+            if (symbolInformation is null)
             {
-                _logger.LogError("{Symbol} symbol doesn't have exchange info", position.Symbol);
+                _logger.LogError("{Symbol} symbol doesn't have exchange info", symbol);
 
-                return;
+                return null;
             }
 
+            return symbolInformation.PriceFilter;
+        }
+
+        private async Task<bool> TryPlaceNewStopLossOrderAsync(BinanceRestClient client,
+            BinancePositionDetailsUsdt position,
+            BinanceSymbolPriceFilter? priceFilter,
+            CancellationToken stoppingToken)
+        {
+            var trading = client.UsdFuturesApi.Trading;
+            var positionSideAsOrderSide = position.Quantity.AsOrderSide();
+            var stopLossMoneyQuantity = 0.95m;
+            var sign = positionSideAsOrderSide == OrderSide.Buy ? 1 : -1;
+            var positionCost = position.EntryPrice * Math.Abs(position.Quantity);
             var price = (positionCost - (sign * stopLossMoneyQuantity)) / Math.Abs(position.Quantity);
             var placeStopLossOrderResult = await trading.PlaceOrderAsync(position.Symbol,
                 positionSideAsOrderSide.Reverse(),
                 FuturesOrderType.StopMarket,
                 quantity: null,
-                stopPrice: ApplyPriceFilter(price, symbol.PriceFilter),
+                stopPrice: ApplyPriceFilter(price, priceFilter),
                 closePosition: true,
                 timeInForce: TimeInForce.GoodTillCanceled,
                 newClientOrderId: $"{position.Symbol.ToLower()}-stop-loss-{++_stopLossCount}",
@@ -252,13 +296,10 @@ namespace TradingAssistant
             {
                 _logger.LogError("Place stop loss has failed. {Error}", placeStopLossOrderResult.Error);
 
-                return;
+                return false;
             }
 
-            if (stopLossOrder is not null)
-            {
-                await trading.CancelOrderAsync(position.Symbol, origClientOrderId: stopLossOrder.ClientOrderId, ct: stoppingToken);
-            }
+            return true;
         }
 
         private static decimal ApplyPriceFilter(decimal price, BinanceSymbolPriceFilter? filter)
