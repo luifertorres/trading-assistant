@@ -10,31 +10,23 @@ using CryptoExchange.Net.Sockets;
 
 namespace TradingAssistant
 {
-    public class TakeProfitManager : BackgroundService
+    public class TakeProfitManager(ILogger<TakeProfitManager> logger) : BackgroundService
     {
+        private const string Key = "Lvf6bhdcC4xkdruLKv6VTyJ8ETJrNcnemmpCo7VpPwIQUu2WJolCHpiDdj9bYZ3B";
+        private const string Secret = "agiBFSg0TpCuGz17lcOLT4H4GOJ3k8cA3lW7Oi2LiRE7VGtFAuF9uFAHimqixFjt";
         private const string TakeProfitIdFormat = "{0}-take-profit";
-        private readonly ILogger<TakeProfitManager> _logger;
+        private readonly ILogger<TakeProfitManager> _logger = logger;
+        private readonly BinanceRestClient _rest = new(o => o.ApiCredentials = new ApiCredentials(Key, Secret));
+        private readonly BinanceSocketClient _socket = new(o => o.ApiCredentials = new ApiCredentials(Key, Secret));
         private readonly ConcurrentDictionary<string, UpdateSubscription> _markPriceSubscriptions = new();
+        private readonly object _synchronizer = new();
+        private Task _updateTakeProfitTask = Task.CompletedTask;
         private string? _listenKey;
-        private int _takeProfitCount;
-
-        public TakeProfitManager(ILogger<TakeProfitManager> logger)
-        {
-            _logger = logger;
-
-            const string Key = "Lvf6bhdcC4xkdruLKv6VTyJ8ETJrNcnemmpCo7VpPwIQUu2WJolCHpiDdj9bYZ3B";
-            const string Secret = "agiBFSg0TpCuGz17lcOLT4H4GOJ3k8cA3lW7Oi2LiRE7VGtFAuF9uFAHimqixFjt";
-
-            BinanceRestClient.SetDefaultOptions(o => o.ApiCredentials = new ApiCredentials(Key, Secret));
-            BinanceSocketClient.SetDefaultOptions(o => o.ApiCredentials = new ApiCredentials(Key, Secret));
-        }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            using var binanceRestClient = new BinanceRestClient();
-            using var binanceSocketClient = new BinanceSocketClient();
 
-            var account = binanceRestClient.UsdFuturesApi.Account;
+            var account = _rest.UsdFuturesApi.Account;
             var startUserStreamResult = await account.StartUserStreamAsync(stoppingToken);
 
             if (!startUserStreamResult.GetResultOrError(out _listenKey, out var startUserStreamError))
@@ -60,12 +52,12 @@ namespace TradingAssistant
                 }
             }, stoppingToken);
 
-            var usdFuturesApi = binanceSocketClient.UsdFuturesApi;
+            var usdFuturesApi = _socket.UsdFuturesApi;
             var updateSubscription = await usdFuturesApi.SubscribeToUserDataUpdatesAsync(_listenKey,
                 onLeverageUpdate: _ => { },
                 onMarginUpdate: _ => { },
-                onAccountUpdate: @event => HandleAccountUpdate(@event, binanceRestClient, binanceSocketClient, stoppingToken),
-                onOrderUpdate: @event => HandleOrderUpdate(@event, binanceRestClient, stoppingToken),
+                onAccountUpdate: @event => HandleAccountUpdate(@event, stoppingToken),
+                onOrderUpdate: _ => { },
                 onListenKeyExpired: _ => { },
                 onStrategyUpdate: _ => { },
                 onGridUpdate: _ => { },
@@ -82,29 +74,24 @@ namespace TradingAssistant
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
 
-        private async void HandleAccountUpdate(DataEvent<BinanceFuturesStreamAccountUpdate> accountUpdateEvent,
-            BinanceRestClient restClient,
-            BinanceSocketClient socketClient,
-            CancellationToken cancellationToken = default)
+        private async void HandleAccountUpdate(DataEvent<BinanceFuturesStreamAccountUpdate> accountUpdateEvent, CancellationToken cancellationToken = default)
         {
             foreach (var position in accountUpdateEvent.Data.UpdateData.Positions)
             {
                 if (position.EntryPrice != 0 && position.Quantity != 0)
                 {
-                    var account = restClient.UsdFuturesApi.Account;
-                    var getPositionInformationResult = await account.GetPositionInformationAsync(position.Symbol, ct: cancellationToken);
+                    var positionDetails = await GetPositionDetailsAsync(position.Symbol, cancellationToken);
 
-                    if (!getPositionInformationResult.GetResultOrError(out var positions, out var getPositionInformationError))
+                    if (positionDetails is null)
                     {
-                        _logger.LogError("Get position information has failed. {Error}", getPositionInformationError);
-
-                        continue;
+                        return;
                     }
 
-                    var leverage = positions.First(p => p.Symbol == position.Symbol).Leverage;
-                    var subscribeToMarkPriceResult = await socketClient.UsdFuturesApi.SubscribeToMarkPriceUpdatesAsync(position.Symbol,
-                        updateInterval: default,
-                        onMessage: markPriceEvent => UpdateTakeProfit(markPriceEvent, position, leverage, restClient, cancellationToken),
+                    var leverage = positionDetails.Leverage;
+                    var trailingStop = new TrailingStop(position.EntryPrice, position.Quantity, leverage);
+                    var subscribeToMarkPriceResult = await _socket.UsdFuturesApi.SubscribeToMarkPriceUpdatesAsync(position.Symbol,
+                        updateInterval: 1_000,
+                        onMessage: @event => UpdateTakeProfit(@event.Data.MarkPrice, position, trailingStop, cancellationToken),
                         cancellationToken);
 
                     if (!subscribeToMarkPriceResult.GetResultOrError(out var newMarkPriceSubscription, out var subscribeToMarkPriceError))
@@ -134,131 +121,38 @@ namespace TradingAssistant
             }
         }
 
-        private async void UpdateTakeProfit(DataEvent<BinanceFuturesUsdtStreamMarkPrice> markPriceEvent,
-            BinanceFuturesStreamPosition position,
-            int leverage,
-            BinanceRestClient restClient,
-            CancellationToken cancellationToken = default)
+        private void UpdateTakeProfit(decimal currentPrice, BinanceFuturesStreamPosition position, TrailingStop trailingStop, CancellationToken cancellationToken = default)
         {
-            var markPrice = markPriceEvent.Data.MarkPrice;
-            var sign = position.Quantity > 0 ? 1 : -1;
-            var pnlPercentage = sign * ((markPrice / position.EntryPrice) - 1) * 100;
-            var stepPercentage = 100m / leverage;
-
-            if (pnlPercentage < stepPercentage)
+            lock (_synchronizer)
             {
-                return;
-            }
-
-            var percentageRemainder = pnlPercentage % stepPercentage;
-            var multiplier = (pnlPercentage - percentageRemainder) / stepPercentage;
-            var targetPercentage = stepPercentage * (multiplier - 1);
-            var newTrailingStopPrice = position.EntryPrice * (1 + (sign * targetPercentage / 100));
-            var trading = restClient.UsdFuturesApi.Trading;
-            var getOpenOrderResult = await trading.GetOpenOrderAsync(position.Symbol,
-                origClientOrderId: string.Format(TakeProfitIdFormat, position.Symbol.ToLower()),
-                ct: cancellationToken);
-
-            if (getOpenOrderResult.GetResultOrError(out var oldTrailingStop, out var getOpenOrderError))
-            {
-                if (newTrailingStopPrice != oldTrailingStop.StopPrice)
+                if (!_updateTakeProfitTask.IsCompleted)
                 {
-                    var cancelOrderResult = await trading.CancelOrderAsync(position.Symbol,
-                        origClientOrderId: string.Format(oldTrailingStop.ClientOrderId, position.Symbol.ToLower()),
-                        ct: cancellationToken);
-
-                    if (!cancelOrderResult.Success)
-                    {
-                        _logger.LogDebug("Cancel old TP order has failed. {Error}", cancelOrderResult.Error);
-
-                        return;
-                    }
+                    return;
                 }
-            }
-            else
-            {
-                _logger.LogDebug("Get old TP order has failed. {Error}", getOpenOrderError);
-            }
 
-            var symbolInformation = await GetSymbolInformation(position.Symbol, restClient, cancellationToken);
-            var placeOrderResult = await trading.PlaceOrderAsync(position.Symbol,
-                position.Quantity.AsOrderSide().Reverse(),
-                FuturesOrderType.StopMarket,
-                quantity: null,
-                stopPrice: ApplyPriceFilter(newTrailingStopPrice, symbolInformation?.PriceFilter),
-                closePosition: true,
-                timeInForce: TimeInForce.GoodTillCanceled,
-                newClientOrderId: string.Format(TakeProfitIdFormat, position.Symbol.ToLower()),
-                priceProtect: true,
-                ct: cancellationToken);
-
-            if (!placeOrderResult.Success)
-            {
-                _logger.LogError("Place new TP order has failed. {Error}", placeOrderResult.Error);
+                _updateTakeProfitTask = Task.Run(() => UpdateTrailingStop(currentPrice, position, trailingStop, cancellationToken),
+                    cancellationToken);
             }
         }
 
-        private async void HandleOrderUpdate(DataEvent<BinanceFuturesStreamOrderUpdate> @event,
-            BinanceRestClient binanceRestClient,
-            CancellationToken stoppingToken)
+        private async Task UpdateTrailingStop(decimal currentPrice, BinanceFuturesStreamPosition position, TrailingStop trailingStop, CancellationToken cancellationToken)
         {
-            var orderUpdate = @event.Data.UpdateData;
-
-            switch (orderUpdate.ExecutionType)
+            if (!trailingStop.TryAdvance(currentPrice, out var stopPrice))
             {
-                case ExecutionType.New:
-                    break;
-                case ExecutionType.Canceled:
-                    break;
-                case ExecutionType.Replaced:
-                    break;
-                case ExecutionType.Rejected:
-                    break;
-                case ExecutionType.Trade:
-                    break;
-                case ExecutionType.Expired:
-                    break;
-                case ExecutionType.Amendment:
-                    break;
-                case ExecutionType.TradePrevention:
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        private async Task PlaceStopLossOrder(BinanceFuturesStreamOrderUpdateData orderUpdate,
-            BinanceRestClient client,
-            CancellationToken stoppingToken)
-        {
-            var position = await GetPositionDetailsAsync(orderUpdate, client, stoppingToken);
-            var trading = client.UsdFuturesApi.Trading;
-
-            if (position is null)
-            {
-                _takeProfitCount = 0;
-
-                await trading.CancelAllOrdersAsync(orderUpdate.Symbol, ct: stoppingToken);
-
                 return;
             }
 
-            var oldStopLossOrder = await GetStopLossOrderAsync(position.Symbol, client, stoppingToken);
-            var symbolInformation = await GetSymbolInformation(position.Symbol, client, stoppingToken);
-            var isNewStopLossOrder = await TryPlaceNewStopLossOrderAsync(client, position, symbolInformation?.PriceFilter, stoppingToken);
-
-            if (isNewStopLossOrder && oldStopLossOrder is not null)
-            {
-                await trading.CancelOrderAsync(position.Symbol, origClientOrderId: oldStopLossOrder.ClientOrderId, ct: stoppingToken);
-            }
+            await TryCancelTakeProfitAsync(position.Symbol, cancellationToken);
+            await TryPlaceTakeProfitAsync(position.Symbol,
+                stopPrice!.Value,
+                position.Quantity.AsOrderSide().Reverse(),
+                cancellationToken);
         }
 
-        private async Task<BinancePositionDetailsUsdt?> GetPositionDetailsAsync(BinanceFuturesStreamOrderUpdateData orderUpdate,
-            BinanceRestClient client,
-            CancellationToken stoppingToken)
+        private async Task<BinancePositionDetailsUsdt?> GetPositionDetailsAsync(string symbol, CancellationToken cancellationToken = default)
         {
-            var account = client.UsdFuturesApi.Account;
-            var positionInformationResult = await account.GetPositionInformationAsync(orderUpdate.Symbol, ct: stoppingToken);
+            var account = _rest.UsdFuturesApi.Account;
+            var positionInformationResult = await account.GetPositionInformationAsync(symbol, ct: cancellationToken);
 
             if (!positionInformationResult.Success)
             {
@@ -267,14 +161,9 @@ namespace TradingAssistant
                 return null;
             }
 
-            var position = positionInformationResult.Data.FirstOrDefault(p => p.Symbol == orderUpdate.Symbol);
+            var position = positionInformationResult.Data.FirstOrDefault(p => p.Symbol == symbol);
 
-            if (position is null)
-            {
-                return null;
-            }
-
-            if (position.Quantity == 0)
+            if (position?.Quantity == 0)
             {
                 return null;
             }
@@ -282,29 +171,9 @@ namespace TradingAssistant
             return position;
         }
 
-        private async Task<BinanceFuturesOrder?> GetStopLossOrderAsync(string symbol,
-            BinanceRestClient client,
-            CancellationToken stoppingToken)
+        private async Task<BinanceFuturesUsdtSymbol?> GetSymbolInformation(string symbol, CancellationToken cancellationToken = default)
         {
-            var trading = client.UsdFuturesApi.Trading;
-            var openOrdersResult = await trading.GetOpenOrdersAsync(symbol, ct: stoppingToken);
-
-            if (!openOrdersResult.Success)
-            {
-                _logger.LogError("Get open orders has failed. {Error}", openOrdersResult.Error);
-
-                return null;
-            }
-
-            return openOrdersResult.Data.Where(o => o.Symbol == symbol)
-                .FirstOrDefault(o => o.Type == FuturesOrderType.StopMarket);
-        }
-
-        private async Task<BinanceFuturesUsdtSymbol?> GetSymbolInformation(string symbol,
-            BinanceRestClient client,
-            CancellationToken stoppingToken)
-        {
-            var exchangeInfoResult = await client.UsdFuturesApi.ExchangeData.GetExchangeInfoAsync(stoppingToken);
+            var exchangeInfoResult = await _rest.UsdFuturesApi.ExchangeData.GetExchangeInfoAsync(cancellationToken);
 
             if (!exchangeInfoResult.Success)
             {
@@ -325,31 +194,42 @@ namespace TradingAssistant
             return symbolInformation;
         }
 
-        private async Task<bool> TryPlaceNewStopLossOrderAsync(BinanceRestClient client,
-            BinancePositionDetailsUsdt position,
-            BinanceSymbolPriceFilter? priceFilter,
-            CancellationToken stoppingToken)
+        private async Task<bool> TryCancelTakeProfitAsync(string symbol, CancellationToken cancellationToken = default)
         {
-            var trading = client.UsdFuturesApi.Trading;
-            var positionSideAsOrderSide = position.Quantity.AsOrderSide();
-            var stopLossMoneyQuantity = 0.95m;
-            var sign = positionSideAsOrderSide == OrderSide.Buy ? 1 : -1;
-            var positionCost = position.EntryPrice * Math.Abs(position.Quantity);
-            var price = (positionCost - (sign * stopLossMoneyQuantity)) / Math.Abs(position.Quantity);
-            var placeStopLossOrderResult = await trading.PlaceOrderAsync(position.Symbol,
-                positionSideAsOrderSide.Reverse(),
+            var cancelOrderResult = await _rest.UsdFuturesApi.Trading.CancelOrderAsync(symbol,
+                origClientOrderId: string.Format(TakeProfitIdFormat, symbol.ToLower()),
+                ct: cancellationToken);
+
+            if (!cancelOrderResult.Success)
+            {
+                _logger.LogDebug("Cancel old TP order has failed. {Error}", cancelOrderResult.Error);
+
+                return false;
+            }
+
+            return true;
+        }
+
+        private async Task<bool> TryPlaceTakeProfitAsync(string symbol,
+            decimal price,
+            OrderSide orderSide,
+            CancellationToken cancellationToken = default)
+        {
+            var symbolInformation = await GetSymbolInformation(symbol, cancellationToken);
+            var placeOrderResult = await _rest.UsdFuturesApi.Trading.PlaceOrderAsync(symbol,
+                orderSide,
                 FuturesOrderType.StopMarket,
                 quantity: null,
-                stopPrice: ApplyPriceFilter(price, priceFilter),
+                stopPrice: ApplyPriceFilter(price, symbolInformation?.PriceFilter),
                 closePosition: true,
                 timeInForce: TimeInForce.GoodTillCanceled,
-                newClientOrderId: $"{position.Symbol.ToLower()}-stop-loss-{++_takeProfitCount}",
+                newClientOrderId: string.Format(TakeProfitIdFormat, symbol.ToLower()),
                 priceProtect: true,
-                ct: stoppingToken);
+                ct: cancellationToken);
 
-            if (!placeStopLossOrderResult.Success)
+            if (!placeOrderResult.Success)
             {
-                _logger.LogError("Place stop loss has failed. {Error}", placeStopLossOrderResult.Error);
+                _logger.LogError("Place new TP order has failed. {Error}", placeOrderResult.Error);
 
                 return false;
             }
