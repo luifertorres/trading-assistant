@@ -7,7 +7,8 @@ namespace TradingAssistant
             IHost host = Host.CreateDefaultBuilder(args)
                 .ConfigureServices(services =>
                 {
-                    services.AddHostedService<Worker>();
+                    services.AddHostedService<StopLossManager>();
+                    services.AddHostedService<TakeProfitManager>();
                 })
                 .Build();
 
