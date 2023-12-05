@@ -10,6 +10,7 @@ namespace TradingAssistant
 {
     public class StopLossManager : BackgroundService
     {
+        private const string StopLossIdFormat = "{0}-stop-loss-{1}";
         private readonly ILogger<StopLossManager> _logger;
         private string? _listenKey;
         private int _stopLossCount;
@@ -230,17 +231,18 @@ namespace TradingAssistant
             CancellationToken stoppingToken)
         {
             var trading = client.UsdFuturesApi.Trading;
-            var openOrdersResult = await trading.GetOpenOrdersAsync(symbol, ct: stoppingToken);
+            var getOpenOrderResult = await trading.GetOpenOrderAsync(symbol,
+                origClientOrderId: string.Format(StopLossIdFormat, symbol.ToLower(), _stopLossCount),
+                ct: stoppingToken);
 
-            if (!openOrdersResult.Success)
+            if (!getOpenOrderResult.GetResultOrError(out var oldStopLoss, out var getOpenOrderError))
             {
-                _logger.LogError("Get open orders has failed. {Error}", openOrdersResult.Error);
+                _logger.LogError("Get old SL order has failed. {Error}", getOpenOrderError);
 
                 return null;
             }
 
-            return openOrdersResult.Data.Where(o => o.Symbol == symbol)
-                .FirstOrDefault(o => o.Type == FuturesOrderType.StopMarket);
+            return oldStopLoss;
         }
 
         private async Task<BinanceSymbolPriceFilter?> GetSymbolPriceFilter(string symbol,
@@ -275,7 +277,7 @@ namespace TradingAssistant
         {
             var trading = client.UsdFuturesApi.Trading;
             var positionSideAsOrderSide = position.Quantity.AsOrderSide();
-            var stopLossMoneyQuantity = 2m;
+            var stopLossMoneyQuantity = 0.1m;
             var sign = positionSideAsOrderSide == OrderSide.Buy ? 1 : -1;
             var positionCost = position.EntryPrice * Math.Abs(position.Quantity);
             var stopLossPrice = (positionCost - (sign * stopLossMoneyQuantity)) / Math.Abs(position.Quantity);
@@ -284,7 +286,6 @@ namespace TradingAssistant
             var stopLossPriceAfterEntryCommission = stopLossPrice + entryCommissionPriceDistance;
             var lossAfterFees = 1 - sign * 0.05m / 100;
             var stopLossPriceAfterTotalFees = stopLossPriceAfterEntryCommission / lossAfterFees;
-
             var placeStopLossOrderResult = await trading.PlaceOrderAsync(position.Symbol,
                 positionSideAsOrderSide.Reverse(),
                 FuturesOrderType.StopMarket,
@@ -292,7 +293,7 @@ namespace TradingAssistant
                 stopPrice: ApplyPriceFilter(stopLossPriceAfterTotalFees, priceFilter),
                 closePosition: true,
                 timeInForce: TimeInForce.GoodTillCanceled,
-                newClientOrderId: $"{position.Symbol.ToLower()}-stop-loss-{++_stopLossCount}",
+                newClientOrderId: string.Format(StopLossIdFormat, position.Symbol.ToLower(), ++_stopLossCount),
                 priceProtect: true,
                 ct: stoppingToken);
 
