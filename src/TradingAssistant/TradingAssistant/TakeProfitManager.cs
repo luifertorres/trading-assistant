@@ -18,15 +18,35 @@ namespace TradingAssistant
         private readonly ILogger<TakeProfitManager> _logger = logger;
         private readonly BinanceRestClient _rest = new(o => o.ApiCredentials = new ApiCredentials(Key, Secret));
         private readonly BinanceSocketClient _socket = new(o => o.ApiCredentials = new ApiCredentials(Key, Secret));
-        private readonly ConcurrentDictionary<string, UpdateSubscription> _markPriceSubscriptions = new();
+        private readonly ConcurrentDictionary<string, UpdateSubscription> _priceSubscriptions = new();
+        private readonly ConcurrentDictionary<string, int> _leverages = new();
         private readonly object _synchronizer = new();
         private Task _updateTakeProfitTask = Task.CompletedTask;
         private string? _listenKey;
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-
             var account = _rest.UsdFuturesApi.Account;
+            var getLeverageBracketsResult = await account.GetBracketsAsync(ct: stoppingToken);
+
+            if (!getLeverageBracketsResult.GetResultOrError(out var brackets, out var getLeverageBracketsError))
+            {
+                _logger.LogError("Get leverage brackets failed. {Error}", getLeverageBracketsError);
+
+                return;
+            }
+
+            brackets.ToList().ForEach(bracket =>
+            {
+                _leverages.TryAdd(bracket.Symbol, bracket.Brackets.Max(b => b.InitialLeverage));
+            });
+
+            _leverages.ToList().ForEach(async (leverage) =>
+            {
+                await account.ChangeMarginTypeAsync(symbol: leverage.Key, marginType: FuturesMarginType.Cross, ct: stoppingToken);
+                await account.ChangeInitialLeverageAsync(symbol: leverage.Key, leverage: leverage.Value, ct: stoppingToken);
+            });
+
             var startUserStreamResult = await account.StartUserStreamAsync(stoppingToken);
 
             if (!startUserStreamResult.GetResultOrError(out _listenKey, out var startUserStreamError))
@@ -54,7 +74,7 @@ namespace TradingAssistant
 
             var usdFuturesApi = _socket.UsdFuturesApi;
             var updateSubscription = await usdFuturesApi.SubscribeToUserDataUpdatesAsync(_listenKey,
-                onLeverageUpdate: _ => { },
+                onLeverageUpdate: HandleLeverageUpdate,
                 onMarginUpdate: _ => { },
                 onAccountUpdate: @event => HandleAccountUpdate(@event, stoppingToken),
                 onOrderUpdate: _ => { },
@@ -74,48 +94,55 @@ namespace TradingAssistant
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
 
+        private void HandleLeverageUpdate(DataEvent<BinanceFuturesStreamConfigUpdate> configUpdate)
+        {
+            var symbol = configUpdate.Data.LeverageUpdateData.Symbol;
+            var leverage = configUpdate.Data.LeverageUpdateData.Leverage;
+
+            _leverages.AddOrUpdate(symbol!, leverage, (_, _) => leverage);
+        }
+
         private async void HandleAccountUpdate(DataEvent<BinanceFuturesStreamAccountUpdate> accountUpdateEvent, CancellationToken cancellationToken = default)
         {
             foreach (var position in accountUpdateEvent.Data.UpdateData.Positions)
             {
                 if (position.EntryPrice != 0 && position.Quantity != 0)
                 {
-                    var positionDetails = await GetPositionDetailsAsync(position.Symbol, cancellationToken);
-
-                    if (positionDetails is null)
+                    if (!_leverages.TryGetValue(position.Symbol, out var leverage))
                     {
-                        return;
-                    }
-
-                    var leverage = positionDetails.Leverage;
-                    var trailingStop = new TrailingStop(position.EntryPrice, position.Quantity, leverage);
-                    var subscribeToMarkPriceResult = await _socket.UsdFuturesApi.SubscribeToMarkPriceUpdatesAsync(position.Symbol,
-                        updateInterval: 1_000,
-                        onMessage: @event => UpdateTakeProfit(@event.Data.MarkPrice, position, trailingStop, cancellationToken),
-                        cancellationToken);
-
-                    if (!subscribeToMarkPriceResult.GetResultOrError(out var newMarkPriceSubscription, out var subscribeToMarkPriceError))
-                    {
-                        _logger.LogError("Subscribe to Mark Price has failed. {Error}", subscribeToMarkPriceError);
+                        _logger.LogError("Get {Symbol} leverage failed", position.Symbol);
 
                         continue;
                     }
 
-                    if (_markPriceSubscriptions.TryRemove(position.Symbol, out var oldMarkPriceSubscription))
+                    var trailingStop = new TrailingStop(position.EntryPrice, position.Quantity, leverage);
+                    var subscribeToPriceResult = await _socket.UsdFuturesApi.SubscribeToKlineUpdatesAsync(position.Symbol,
+                        interval: KlineInterval.OneMinute,
+                        onMessage: @event => UpdateTakeProfit(@event.Data.Data.ClosePrice, position, trailingStop, cancellationToken),
+                        cancellationToken);
+
+                    if (!subscribeToPriceResult.GetResultOrError(out var newPriceSubscription, out var subscribeToPriceError))
                     {
-                        await oldMarkPriceSubscription.CloseAsync();
+                        _logger.LogError("Subscribe to {Symbol} price failed. {Error}", position.Symbol, subscribeToPriceError);
+
+                        continue;
                     }
 
-                    if (!_markPriceSubscriptions.TryAdd(position.Symbol, newMarkPriceSubscription))
+                    if (_priceSubscriptions.TryRemove(position.Symbol, out var oldPriceSubscription))
                     {
-                        _logger.LogError("Storing Mark Price subscription for {Symbol} has failed", position.Symbol);
+                        await oldPriceSubscription.CloseAsync();
+                    }
+
+                    if (!_priceSubscriptions.TryAdd(position.Symbol, newPriceSubscription))
+                    {
+                        _logger.LogError("Store {Symbol} price subscription failed", position.Symbol);
                     }
                 }
                 else
                 {
-                    if (_markPriceSubscriptions.TryRemove(position.Symbol, out var oldMarkPriceSubscription))
+                    if (_priceSubscriptions.TryRemove(position.Symbol, out var oldPriceSubscription))
                     {
-                        await oldMarkPriceSubscription.CloseAsync();
+                        await oldPriceSubscription.CloseAsync();
                     }
                 }
             }
