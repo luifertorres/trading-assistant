@@ -9,6 +9,8 @@ namespace TradingAssistant
                 {
                     services.AddHostedService<StopLossManager>();
                     services.AddHostedService<TakeProfitManager>();
+
+                    services.AddSingleton<BinanceService>();
                 })
                 .Build();
 
