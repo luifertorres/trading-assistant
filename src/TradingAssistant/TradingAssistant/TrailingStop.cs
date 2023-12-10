@@ -3,37 +3,43 @@
     public class TrailingStop(decimal entryPrice, decimal quantity, int leverage)
     {
         private const decimal Step = 100m;
+        private const decimal Offset = Step / 2;
         private readonly decimal _entryPrice = entryPrice;
         private readonly decimal _quantity = quantity;
         private readonly int _leverage = leverage;
-        private int _multiplier;
+        private decimal _stopPrice;
+        private decimal _highestRoi;
+        private decimal _stopRoiMultiplier;
 
-        public bool TryAdvance(decimal currentPrice, out decimal? stopPrice)
+        public bool TryAdvance(decimal currentPrice, out decimal stopPrice)
         {
-            stopPrice = default;
+            stopPrice = _stopPrice;
 
             var sign = decimal.Sign(_quantity);
             var pnlPercentage = sign * ((currentPrice / _entryPrice) - 1) * 100;
             var roi = pnlPercentage * _leverage;
 
-            if (roi < Step)
+            if (roi < Offset)
             {
                 return false;
             }
+
+            if (roi <= _highestRoi)
+            {
+                return false;
+            }
+
+            _highestRoi = roi;
 
             var remainder = roi % Step;
-            var multiplier = (int)((roi - remainder) / Step);
+            var multiplier = (roi - remainder) / Step;
 
-            if (multiplier <= _multiplier)
-            {
-                return false;
-            }
+            _stopRoiMultiplier = remainder < Offset ? multiplier - 1 : multiplier;
 
-            var target = Step * (multiplier - 1);
-            var newStopPrice = _entryPrice * (1 + (sign * target / _leverage / 100));
+            var target = Step * _stopRoiMultiplier;
 
-            stopPrice = newStopPrice;
-            _multiplier = multiplier;
+            stopPrice = _entryPrice * (1 + (sign * target / _leverage / 100));
+            _stopPrice = stopPrice;
 
             return true;
         }

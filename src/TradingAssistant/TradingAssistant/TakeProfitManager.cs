@@ -1,4 +1,4 @@
-using Binance.Net.Objects.Models.Futures.Socket;
+﻿using Binance.Net.Objects.Models.Futures.Socket;
 
 using CryptoExchange.Net.Sockets;
 
@@ -54,7 +54,7 @@ namespace TradingAssistant
                 {
                     await UpdateTrailingStop(currentPrice, position, trailingStop, cancellationToken);
                 },
-                    cancellationToken);
+                cancellationToken);
             }
         }
 
@@ -67,7 +67,7 @@ namespace TradingAssistant
 
             await _binanceService.TryCancelTakeProfitAsync(position.Symbol, cancellationToken);
             await _binanceService.TryPlaceTakeProfitAsync(position.Symbol,
-                stopPrice!.Value,
+                stopPrice,
                 position.Quantity.AsOrderSide().Reverse(),
                 cancellationToken);
         }
