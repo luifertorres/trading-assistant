@@ -47,10 +47,10 @@ namespace TradingAssistant
                 throw new Exception();
             }
 
-            //if (!await TryConfigureMarginTypeAsync())
-            //{
-            //    throw new Exception();
-            //}
+            if (!await TryConfigureMarginTypeAsync())
+            {
+                throw new Exception();
+            }
 
             if (!await TryConfigureLeverageAsync())
             {
@@ -61,6 +61,8 @@ namespace TradingAssistant
             {
                 throw new Exception();
             }
+
+            _logger.LogInformation("Binance Service configured");
         }
 
         private static decimal ApplyPriceFilter(decimal price, BinanceSymbolPriceFilter? filter)
@@ -183,6 +185,7 @@ namespace TradingAssistant
             foreach (var symbol in _symbols)
             {
                 await account.ChangeMarginTypeAsync(symbol.Key, FuturesMarginType.Cross, ct: cancellationToken);
+                await Task.Delay(100, cancellationToken);
             }
 
             return true;
@@ -207,10 +210,11 @@ namespace TradingAssistant
                 _leverages.TryAdd(bracket.Symbol, bracket.Brackets.Max(b => b.InitialLeverage));
             });
 
-            //foreach (var leverage in _leverages)
-            //{
-            //    await account.ChangeInitialLeverageAsync(leverage.Key, leverage.Value, ct: cancellationToken);
-            //}
+            foreach (var leverage in _leverages)
+            {
+                await account.ChangeInitialLeverageAsync(leverage.Key, leverage.Value, ct: cancellationToken);
+                await Task.Delay(100, cancellationToken);
+            }
 
             return true;
         }
