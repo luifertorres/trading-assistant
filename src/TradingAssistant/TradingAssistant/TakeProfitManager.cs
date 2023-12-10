@@ -50,7 +50,10 @@ namespace TradingAssistant
                     return;
                 }
 
-                _updateTakeProfitTask = Task.Run(() => UpdateTrailingStop(currentPrice, position, trailingStop, cancellationToken),
+                _updateTakeProfitTask = Task.Run(async () =>
+                {
+                    await UpdateTrailingStop(currentPrice, position, trailingStop, cancellationToken);
+                },
                     cancellationToken);
             }
         }
