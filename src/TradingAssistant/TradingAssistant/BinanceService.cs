@@ -159,6 +159,8 @@ namespace TradingAssistant
                 return false;
             }
 
+            _logger.LogInformation("Subscribe to user data updates succeeded");
+
             return true;
         }
 
@@ -174,6 +176,7 @@ namespace TradingAssistant
             }
 
             exchangeInfo.Symbols.ToList().ForEach(symbol => _symbols.TryAdd(symbol.Name, symbol));
+            _logger.LogInformation("Get exchange info symbols succeeded");
 
             return true;
         }
@@ -187,6 +190,8 @@ namespace TradingAssistant
                 await account.ChangeMarginTypeAsync(symbol.Key, FuturesMarginType.Cross, ct: cancellationToken);
                 await Task.Delay(100, cancellationToken);
             }
+
+            _logger.LogInformation("Margin type configuration finished");
 
             return true;
         }
@@ -215,6 +220,8 @@ namespace TradingAssistant
                 await account.ChangeInitialLeverageAsync(leverage.Key, leverage.Value, ct: cancellationToken);
                 await Task.Delay(100, cancellationToken);
             }
+
+            _logger.LogInformation("Leverage configuration finished");
 
             return true;
         }
