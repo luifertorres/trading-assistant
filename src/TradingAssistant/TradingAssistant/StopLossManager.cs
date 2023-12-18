@@ -1,4 +1,4 @@
-using Binance.Net.Objects.Models.Futures.Socket;
+﻿using Binance.Net.Objects.Models.Futures.Socket;
 
 using CryptoExchange.Net.Sockets;
 
@@ -32,12 +32,14 @@ namespace TradingAssistant
 
         private async Task UpdateStopLoss(BinanceFuturesStreamPosition position, CancellationToken cancellationToken = default)
         {
-            var roi = 100m;
-            var moneyToLose = 1m;
+            var nullDecimal = default(decimal?);
+            var roi = 200;
+            var moneyToLose = nullDecimal;
             var isStopLossPlaced = await _binanceService.TryPlaceStopLossAsync(position.Symbol,
                 position.EntryPrice,
                 position.Quantity,
                 moneyToLose,
+                roi,
                 cancellationToken: cancellationToken);
 
             if (!isStopLossPlaced)
@@ -47,6 +49,7 @@ namespace TradingAssistant
                     position.EntryPrice,
                     position.Quantity,
                     moneyToLose,
+                    roi,
                     cancellationToken: cancellationToken);
             }
         }
