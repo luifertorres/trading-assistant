@@ -218,7 +218,6 @@ namespace TradingAssistant
             foreach (var leverage in _leverages)
             {
                 await account.ChangeInitialLeverageAsync(leverage.Key, leverage.Value, ct: cancellationToken);
-                await Task.Delay(100, cancellationToken);
             }
 
             _logger.LogInformation("Leverage configuration finished");
@@ -457,6 +456,37 @@ namespace TradingAssistant
                 closePosition: true,
                 timeInForce: TimeInForce.GoodTillCanceled,
                 newClientOrderId: string.Format(TakeProfitIdFormat, symbol.ToLower()),
+                priceProtect: true,
+                ct: cancellationToken);
+
+            if (!placeOrderResult.Success)
+            {
+                _logger.LogError("Place TP order failed. {Error}", placeOrderResult.Error);
+
+                return false;
+            }
+
+            return true;
+        }
+
+        public async Task<bool> TryPlaceTrailingStopAsync(string symbol,
+            OrderSide orderSide,
+            decimal quantity,
+            decimal callbackRate,
+            decimal? price = null,
+            CancellationToken cancellationToken = default)
+        {
+            TryGetSymbolInformation(symbol, out var symbolInformation);
+
+            var placeOrderResult = await _rest.UsdFuturesApi.Trading.PlaceOrderAsync(symbol,
+                orderSide,
+                FuturesOrderType.TrailingStopMarket,
+                quantity: Math.Abs(quantity),
+                timeInForce: TimeInForce.GoodTillCanceled,
+                reduceOnly: true,
+                newClientOrderId: string.Format(TakeProfitIdFormat, symbol.ToLower()),
+                activationPrice: price.HasValue ? ApplyPriceFilter(price.Value, symbolInformation?.PriceFilter) : null,
+                callbackRate: Math.Round(callbackRate, decimals: 1),
                 priceProtect: true,
                 ct: cancellationToken);
 
