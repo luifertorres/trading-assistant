@@ -188,7 +188,6 @@ namespace TradingAssistant
             foreach (var symbol in _symbols)
             {
                 await account.ChangeMarginTypeAsync(symbol.Key, FuturesMarginType.Cross, ct: cancellationToken);
-                await Task.Delay(100, cancellationToken);
             }
 
             _logger.LogInformation("Margin type configuration finished");
