@@ -39,6 +39,12 @@
             var target = Step * _stopRoiMultiplier;
 
             stopPrice = _entryPrice * (1 + (sign * target / _leverage / 100));
+
+            if (stopPrice == _stopPrice)
+            {
+                return false;
+            }
+
             _stopPrice = stopPrice;
 
             return true;
