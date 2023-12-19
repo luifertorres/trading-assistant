@@ -5,11 +5,11 @@ using CryptoExchange.Net.Sockets;
 
 namespace TradingAssistant
 {
-    public class TakeProfitManager(ILogger<TakeProfitManager> logger, BinanceService binanceService) : BackgroundService
+    public class SteppedTrailingStopManager(ILogger<SteppedTrailingStopManager> logger, BinanceService binanceService) : BackgroundService
     {
-        private readonly ILogger<TakeProfitManager> _logger = logger;
+        private readonly ILogger<SteppedTrailingStopManager> _logger = logger;
         private readonly BinanceService _binanceService = binanceService;
-        private readonly ConcurrentDictionary<string, UpdateTakeProfitTask> _updateTakeProfitTasks = [];
+        private readonly ConcurrentDictionary<string, UpdatePriceTask> _updateTakeProfitTasks = [];
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -34,9 +34,9 @@ namespace TradingAssistant
                         updateTakeProfitTask.Stop();
                     }
 
-                    var trailingStop = new TrailingStop(position.EntryPrice, position.Quantity, leverage);
+                    var trailingStop = new SteppedTrailingStop(position.EntryPrice, position.Quantity, leverage);
 
-                    updateTakeProfitTask = new UpdateTakeProfitTask(position.EntryPrice, (price, token) =>
+                    updateTakeProfitTask = new UpdatePriceTask(position.EntryPrice, (price, token) =>
                     {
                         return UpdateSteppedTrailingStopAsync(price, position, trailingStop, token);
                     });
@@ -66,7 +66,7 @@ namespace TradingAssistant
 
         private async Task UpdateSteppedTrailingStopAsync(decimal currentPrice,
             BinanceFuturesStreamPosition position,
-            TrailingStop trailingStop,
+            SteppedTrailingStop trailingStop,
             CancellationToken cancellationToken = default)
         {
             if (!trailingStop.TryAdvance(currentPrice, out var stopPrice))
@@ -77,7 +77,7 @@ namespace TradingAssistant
             _logger.LogDebug("{Symbol} Trailing Stop advanced due to current price: {Price}", position.Symbol, currentPrice);
 
             await _binanceService.TryCancelTakeProfitAsync(position.Symbol, cancellationToken);
-            await _binanceService.TryPlaceTakeProfitAsync(position.Symbol,
+            await _binanceService.TryPlaceTakeProfitBehindAsync(position.Symbol,
                 stopPrice,
                 position.Quantity.AsOrderSide().Reverse(),
                 cancellationToken);

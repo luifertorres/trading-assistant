@@ -1,13 +1,13 @@
 ﻿namespace TradingAssistant
 {
-    public class UpdateTakeProfitTask
+    public class UpdatePriceTask
     {
         private readonly Func<decimal, CancellationToken, Task> _action;
         private decimal _price;
         private readonly Task _task;
         private CancellationTokenSource? _cancellationTokenSource;
 
-        public UpdateTakeProfitTask(decimal entryPrice, Func<decimal, CancellationToken, Task> action)
+        public UpdatePriceTask(decimal entryPrice, Func<decimal, CancellationToken, Task> action)
         {
             _price = entryPrice;
             _action = action ?? throw new ArgumentNullException(nameof(action));

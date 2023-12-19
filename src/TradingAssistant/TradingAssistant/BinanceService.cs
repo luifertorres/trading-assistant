@@ -440,7 +440,7 @@ namespace TradingAssistant
             return true;
         }
 
-        public async Task<bool> TryPlaceTakeProfitAsync(string symbol,
+        public async Task<bool> TryPlaceTakeProfitBehindAsync(string symbol,
             decimal price,
             OrderSide orderSide,
             CancellationToken cancellationToken = default)
@@ -450,6 +450,34 @@ namespace TradingAssistant
             var placeOrderResult = await _rest.UsdFuturesApi.Trading.PlaceOrderAsync(symbol,
                 orderSide,
                 FuturesOrderType.StopMarket,
+                quantity: null,
+                stopPrice: ApplyPriceFilter(price, symbolInformation?.PriceFilter),
+                closePosition: true,
+                timeInForce: TimeInForce.GoodTillCanceled,
+                newClientOrderId: string.Format(TakeProfitIdFormat, symbol.ToLower()),
+                priceProtect: true,
+                ct: cancellationToken);
+
+            if (!placeOrderResult.Success)
+            {
+                _logger.LogError("Place TP order failed. {Error}", placeOrderResult.Error);
+
+                return false;
+            }
+
+            return true;
+        }
+
+        public async Task<bool> TryPlaceTakeProfitAsync(string symbol,
+            decimal price,
+            OrderSide orderSide,
+            CancellationToken cancellationToken = default)
+        {
+            TryGetSymbolInformation(symbol, out var symbolInformation);
+
+            var placeOrderResult = await _rest.UsdFuturesApi.Trading.PlaceOrderAsync(symbol,
+                orderSide,
+                FuturesOrderType.TakeProfitMarket,
                 quantity: null,
                 stopPrice: ApplyPriceFilter(price, symbolInformation?.PriceFilter),
                 closePosition: true,

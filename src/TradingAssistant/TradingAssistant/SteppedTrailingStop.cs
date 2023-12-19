@@ -1,6 +1,6 @@
 ﻿namespace TradingAssistant
 {
-    public class TrailingStop(decimal entryPrice, decimal quantity, int leverage)
+    public class SteppedTrailingStop(decimal entryPrice, decimal quantity, int leverage)
     {
         private const decimal Step = 100m;
         private const decimal Offset = Step / 2;
