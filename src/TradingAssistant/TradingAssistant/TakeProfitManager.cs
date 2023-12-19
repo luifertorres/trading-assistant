@@ -1,14 +1,15 @@
-﻿using Binance.Net.Objects.Models.Futures.Socket;
+﻿using System.Collections.Concurrent;
+using Binance.Net.Objects.Models.Futures.Socket;
 
 using CryptoExchange.Net.Sockets;
 
 namespace TradingAssistant
 {
-    public class TakeProfitManager(BinanceService binanceService) : BackgroundService
+    public class TakeProfitManager(ILogger<TakeProfitManager> logger, BinanceService binanceService) : BackgroundService
     {
+        private readonly ILogger<TakeProfitManager> _logger = logger;
         private readonly BinanceService _binanceService = binanceService;
-        private readonly object _synchronizer = new();
-        private Task _updateTakeProfitTask = Task.CompletedTask;
+        private readonly ConcurrentDictionary<string, UpdateTakeProfitTask> _updateTakeProfitTasks = [];
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -28,42 +29,52 @@ namespace TradingAssistant
                         continue;
                     }
 
+                    if (_updateTakeProfitTasks.TryRemove(position.Symbol, out var updateTakeProfitTask))
+                    {
+                        updateTakeProfitTask.Stop();
+                    }
+
                     var trailingStop = new TrailingStop(position.EntryPrice, position.Quantity, leverage);
 
+                    updateTakeProfitTask = new UpdateTakeProfitTask(position.EntryPrice, (price, token) =>
+                    {
+                        return UpdateSteppedTrailingStopAsync(price, position, trailingStop, token);
+                    });
+
+                    if (!_updateTakeProfitTasks.TryAdd(position.Symbol, updateTakeProfitTask))
+                    {
+                        updateTakeProfitTask.Stop();
+
+                        continue;
+                    }
+
                     await _binanceService.TrySubscribeToPriceAsync(position.Symbol,
-                        action: price => UpdateTakeProfit(price, position, trailingStop, cancellationToken),
+                        action: updateTakeProfitTask.UpdatePrice,
                         cancellationToken);
                 }
                 else
                 {
+                    if (_updateTakeProfitTasks.TryRemove(position.Symbol, out var updateTakeProfitTask))
+                    {
+                        updateTakeProfitTask.Stop();
+                    }
+
                     await _binanceService.TryUnsubscribeFromPriceAsync(position.Symbol);
                 }
             }
         }
 
-        private void UpdateTakeProfit(decimal currentPrice, BinanceFuturesStreamPosition position, TrailingStop trailingStop, CancellationToken cancellationToken = default)
-        {
-            lock (_synchronizer)
-            {
-                if (!_updateTakeProfitTask.IsCompleted)
-                {
-                    return;
-                }
-
-                _updateTakeProfitTask = Task.Run(async () =>
-                {
-                    await UpdateTrailingStop(currentPrice, position, trailingStop, cancellationToken);
-                },
-                cancellationToken);
-            }
-        }
-
-        private async Task UpdateTrailingStop(decimal currentPrice, BinanceFuturesStreamPosition position, TrailingStop trailingStop, CancellationToken cancellationToken)
+        private async Task UpdateSteppedTrailingStopAsync(decimal currentPrice,
+            BinanceFuturesStreamPosition position,
+            TrailingStop trailingStop,
+            CancellationToken cancellationToken = default)
         {
             if (!trailingStop.TryAdvance(currentPrice, out var stopPrice))
             {
                 return;
             }
+
+            _logger.LogDebug("{Symbol} Trailing Stop advanced due to current price: {Price}", position.Symbol, currentPrice);
 
             await _binanceService.TryCancelTakeProfitAsync(position.Symbol, cancellationToken);
             await _binanceService.TryPlaceTakeProfitAsync(position.Symbol,
