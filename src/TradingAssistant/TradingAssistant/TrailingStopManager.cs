@@ -49,7 +49,7 @@ namespace TradingAssistant
 
             if (!isTrailingStopPlaced)
             {
-                await _binanceService.TryCancelTakeProfitAsync(position.Symbol, cancellationToken);
+                await _binanceService.TryCancelTrailingStopAsync(position.Symbol, cancellationToken);
                 await _binanceService.TryPlaceTrailingStopAsync(position.Symbol,
                     position.Quantity.AsOrderSide().Reverse(),
                     position.Quantity,

@@ -76,7 +76,7 @@ namespace TradingAssistant
 
             _logger.LogDebug("{Symbol} Trailing Stop advanced due to current price: {Price}", position.Symbol, currentPrice);
 
-            await _binanceService.TryCancelTakeProfitAsync(position.Symbol, cancellationToken);
+            await _binanceService.TryCancelSteppedTrailingAsync(position.Symbol, cancellationToken);
             await _binanceService.TryPlaceTakeProfitBehindAsync(position.Symbol,
                 stopPrice,
                 position.Quantity.AsOrderSide().Reverse(),

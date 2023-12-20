@@ -17,6 +17,8 @@ namespace TradingAssistant
         private const string Secret = "agiBFSg0TpCuGz17lcOLT4H4GOJ3k8cA3lW7Oi2LiRE7VGtFAuF9uFAHimqixFjt";
         private const string StopLossIdFormat = "{0}-stop-loss";
         private const string TakeProfitIdFormat = "{0}-take-profit";
+        private const string SteppedTrailingIdFormat = "{0}-stepped-trailing";
+        private const string TrailingStopIdFormat = "{0}-trailing-stop";
         private readonly ILogger<BinanceService> _logger;
         private readonly BinanceRestClient _rest = new(o => o.ApiCredentials = new ApiCredentials(Key, Secret));
         private readonly BinanceSocketClient _socket = new(o => o.ApiCredentials = new ApiCredentials(Key, Secret));
@@ -385,6 +387,38 @@ namespace TradingAssistant
             return true;
         }
 
+        public async Task<bool> TryCancelSteppedTrailingAsync(string symbol, CancellationToken cancellationToken = default)
+        {
+            var cancelOrderResult = await _rest.UsdFuturesApi.Trading.CancelOrderAsync(symbol,
+                origClientOrderId: string.Format(SteppedTrailingIdFormat, symbol.ToLower()),
+                ct: cancellationToken);
+
+            if (!cancelOrderResult.Success)
+            {
+                _logger.LogDebug("Cancel old Stepped Trailing order failed. {Error}", cancelOrderResult.Error);
+
+                return false;
+            }
+
+            return true;
+        }
+
+        public async Task<bool> TryCancelTrailingStopAsync(string symbol, CancellationToken cancellationToken = default)
+        {
+            var cancelOrderResult = await _rest.UsdFuturesApi.Trading.CancelOrderAsync(symbol,
+                origClientOrderId: string.Format(TrailingStopIdFormat, symbol.ToLower()),
+                ct: cancellationToken);
+
+            if (!cancelOrderResult.Success)
+            {
+                _logger.LogDebug("Cancel old Trailing Stop order failed. {Error}", cancelOrderResult.Error);
+
+                return false;
+            }
+
+            return true;
+        }
+
         public async Task<bool> TryPlaceStopLossAsync(string symbol,
             decimal entryPrice,
             decimal quantity,
@@ -454,7 +488,7 @@ namespace TradingAssistant
                 stopPrice: ApplyPriceFilter(price, symbolInformation?.PriceFilter),
                 closePosition: true,
                 timeInForce: TimeInForce.GoodTillCanceled,
-                newClientOrderId: string.Format(TakeProfitIdFormat, symbol.ToLower()),
+                newClientOrderId: string.Format(SteppedTrailingIdFormat, symbol.ToLower()),
                 priceProtect: true,
                 ct: cancellationToken);
 
@@ -530,7 +564,7 @@ namespace TradingAssistant
                 quantity: Math.Abs(quantity),
                 timeInForce: TimeInForce.GoodTillCanceled,
                 reduceOnly: true,
-                newClientOrderId: string.Format(TakeProfitIdFormat, symbol.ToLower()),
+                newClientOrderId: string.Format(TrailingStopIdFormat, symbol.ToLower()),
                 activationPrice: price.HasValue ? ApplyPriceFilter(price.Value, symbolInformation?.PriceFilter) : null,
                 callbackRate: Math.Round(callbackRate, decimals: 1),
                 priceProtect: true,
