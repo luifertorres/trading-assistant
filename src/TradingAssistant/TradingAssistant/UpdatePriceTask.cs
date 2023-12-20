@@ -19,13 +19,19 @@
         {
             while (_cancellationTokenSource is not null)
             {
-                if (_cancellationTokenSource.Token.IsCancellationRequested)
+                try
                 {
-                    break;
-                }
+                    if (_cancellationTokenSource.Token.IsCancellationRequested)
+                    {
+                        break;
+                    }
 
-                await _action(_price, _cancellationTokenSource.Token);
-                await Task.Delay(1_000, _cancellationTokenSource.Token);
+                    await _action(_price, _cancellationTokenSource.Token);
+                    await Task.Delay(1_000, _cancellationTokenSource.Token);
+                }
+                catch
+                {
+                }
             }
         }
 
