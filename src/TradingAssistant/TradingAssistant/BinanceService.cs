@@ -460,7 +460,7 @@ namespace TradingAssistant
 
             if (!placeOrderResult.Success)
             {
-                _logger.LogError("Place TP order failed. {Error}", placeOrderResult.Error);
+                _logger.LogError("Place stepped TP order failed. {Error}", placeOrderResult.Error);
 
                 return false;
             }
@@ -469,17 +469,36 @@ namespace TradingAssistant
         }
 
         public async Task<bool> TryPlaceTakeProfitAsync(string symbol,
-            decimal price,
-            OrderSide orderSide,
+            decimal entryPrice,
+            decimal quantity,
+            decimal roi,
             CancellationToken cancellationToken = default)
         {
+            var trading = _rest.UsdFuturesApi.Trading;
+            var sign = decimal.Sign(quantity);
+            var positionCost = entryPrice * Math.Abs(quantity);
+
+            if (!TryGetLeverage(symbol, out var leverage))
+            {
+                return false;
+            }
+
+            var margin = positionCost / leverage;
+            var profit = margin * roi / 100;
+            var takeProfitPrice = (positionCost + (sign * profit)) / Math.Abs(quantity);
+            var entryCommissionCost = positionCost * 0.05m / 100;
+            var entryCommissionPriceDistance = entryCommissionCost / quantity;
+            var takeProfitPriceAfterEntryCommission = takeProfitPrice + entryCommissionPriceDistance;
+            var profitAfterExitCommission = 1 - (sign * 0.05m / 100);
+            var takeProfitPriceAfterTotalFees = takeProfitPriceAfterEntryCommission / profitAfterExitCommission;
+
             TryGetSymbolInformation(symbol, out var symbolInformation);
 
-            var placeOrderResult = await _rest.UsdFuturesApi.Trading.PlaceOrderAsync(symbol,
-                orderSide,
+            var placeOrderResult = await trading.PlaceOrderAsync(symbol,
+                quantity.AsOrderSide().Reverse(),
                 FuturesOrderType.TakeProfitMarket,
                 quantity: null,
-                stopPrice: ApplyPriceFilter(price, symbolInformation?.PriceFilter),
+                stopPrice: ApplyPriceFilter(takeProfitPriceAfterTotalFees, symbolInformation?.PriceFilter),
                 closePosition: true,
                 timeInForce: TimeInForce.GoodTillCanceled,
                 newClientOrderId: string.Format(TakeProfitIdFormat, symbol.ToLower()),
@@ -519,7 +538,7 @@ namespace TradingAssistant
 
             if (!placeOrderResult.Success)
             {
-                _logger.LogError("Place TP order failed. {Error}", placeOrderResult.Error);
+                _logger.LogError("Place trailing TP order failed. {Error}", placeOrderResult.Error);
 
                 return false;
             }
