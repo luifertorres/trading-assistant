@@ -2,6 +2,7 @@
 
 using Binance.Net.Clients;
 using Binance.Net.Enums;
+using Binance.Net.Interfaces;
 using Binance.Net.Objects.Models;
 using Binance.Net.Objects.Models.Futures;
 using Binance.Net.Objects.Models.Futures.Socket;
@@ -19,6 +20,7 @@ namespace TradingAssistant
         private const string TakeProfitIdFormat = "{0}-take-profit";
         private const string SteppedTrailingIdFormat = "{0}-stepped-trailing";
         private const string TrailingStopIdFormat = "{0}-trailing-stop";
+        private const int MaxCandles = 240;
         private readonly ILogger<BinanceService> _logger;
         private readonly BinanceRestClient _rest = new(o => o.ApiCredentials = new ApiCredentials(Key, Secret));
         private readonly BinanceSocketClient _socket = new(o => o.ApiCredentials = new ApiCredentials(Key, Secret));
@@ -30,9 +32,11 @@ namespace TradingAssistant
         private readonly List<Action<DataEvent<BinanceStrategyUpdate>>> _strategyUpdateSubscriptions = [];
         private readonly List<Action<DataEvent<BinanceGridUpdate>>> _gridUpdateSubscriptions = [];
         private readonly List<Action<DataEvent<BinanceConditionOrderTriggerRejectUpdate>>> _conditionalOrderTriggerRejectUpdateSubscriptions = [];
+        private readonly List<Action<string, CircularTimeSeries<IBinanceKline>>> _candleClosedSubscriptions = [];
         private readonly ConcurrentDictionary<string, BinanceFuturesUsdtSymbol> _symbols = [];
         private readonly ConcurrentDictionary<string, int> _leverages = [];
         private readonly ConcurrentDictionary<string, UpdateSubscription> _priceSubscriptions = [];
+        private readonly ConcurrentDictionary<string, CircularTimeSeries<IBinanceKline>> _candlesticks = [];
         private string? _listenKey;
 
         public BinanceService(ILogger<BinanceService> logger)
@@ -63,6 +67,8 @@ namespace TradingAssistant
             {
                 throw new Exception();
             }
+
+            await SubscribeToCandlestickUpdatesAsync();
 
             _logger.LogInformation("Binance Service configured");
         }
@@ -286,6 +292,11 @@ namespace TradingAssistant
             _conditionalOrderTriggerRejectUpdateSubscriptions.Add(action);
         }
 
+        public void SubscribeToCandleClosedUpdates(Action<string, CircularTimeSeries<IBinanceKline>> onCandleClosed)
+        {
+            _candleClosedSubscriptions.Add(onCandleClosed);
+        }
+
         public bool TryGetLeverage(string symbol, out int leverage)
         {
             if (!_leverages.TryGetValue(symbol, out leverage))
@@ -340,6 +351,62 @@ namespace TradingAssistant
             }
 
             return true;
+        }
+
+        private async Task SubscribeToCandlestickUpdatesAsync(CancellationToken cancellationToken = default)
+        {
+            var interval = KlineInterval.FiveMinutes;
+
+            foreach (var symbol in _symbols)
+            {
+                var getKlinesResult = await _rest.UsdFuturesApi.ExchangeData.GetKlinesAsync(symbol.Key,
+                    interval,
+                    limit: MaxCandles,
+                    ct: cancellationToken);
+
+                if (!getKlinesResult.GetResultOrError(out var klines, out var getKlinesError))
+                {
+                    _logger.LogWarning("Get {Symbol} candlestick failed. {Error}", symbol.Key, getKlinesError);
+
+                    continue;
+                }
+
+                foreach (var candle in klines)
+                {
+                    var candlestick = _candlesticks.GetOrAdd(symbol.Key, new CircularTimeSeries<IBinanceKline>(MaxCandles));
+
+                    candlestick.Add(candle.OpenTime, candle);
+                }
+            }
+
+            _logger.LogInformation("Get all candlesticks succeeded");
+
+            var subscribeToPriceResult = await _socket.UsdFuturesApi.SubscribeToKlineUpdatesAsync(_symbols.Keys,
+                interval,
+                @event =>
+                {
+                    var candle = @event.Data.Data;
+                    var symbol = @event.Data.Symbol;
+                    var isCandleClosed = candle.Final;
+
+                    if (isCandleClosed)
+                    {
+                        var candlestick = _candlesticks.GetOrAdd(symbol, new CircularTimeSeries<IBinanceKline>(MaxCandles));
+
+                        candlestick.Add(candle.OpenTime, candle);
+                        _candleClosedSubscriptions.ForEach(onCandleClosed => onCandleClosed(symbol, candlestick));
+                    }
+                },
+                cancellationToken);
+
+            if (!subscribeToPriceResult.Success)
+            {
+                _logger.LogWarning("Subscribe to all candlesticks failed. {Error}", subscribeToPriceResult.Error);
+
+                return;
+            }
+
+            _logger.LogInformation("Subscribe to all candlesticks updates succeeded");
         }
 
         public async Task CancelAllOrdersAsync(string symbol, CancellationToken cancellationToken = default)
