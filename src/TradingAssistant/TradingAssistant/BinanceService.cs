@@ -20,7 +20,7 @@ namespace TradingAssistant
         private const string TakeProfitIdFormat = "{0}-take-profit";
         private const string SteppedTrailingIdFormat = "{0}-stepped-trailing";
         private const string TrailingStopIdFormat = "{0}-trailing-stop";
-        private const int RequestLimit = 2400;
+        private const int RequestLimit = (int)(2400 * 0.9);
         private const int MaxCandles = 1500;
         private const int MaxOpenPositions = 3;
         private static int s_requestCount;
