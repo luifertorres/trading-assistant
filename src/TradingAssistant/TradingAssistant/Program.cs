@@ -14,6 +14,11 @@ namespace TradingAssistant
                         .AddConsole();
                 }).ConfigureServices(services =>
                 {
+                    services.AddMediatR(configuration =>
+                    {
+                        configuration.RegisterServicesFromAssembly(typeof(Program).Assembly);
+                    });
+
                     services.AddSingleton<BinanceService>();
 
                     services.AddHostedService<SignalsWorker>();
