@@ -32,7 +32,8 @@ namespace TradingAssistant
 
         private async Task UpdateTakeProfitAsync(BinanceFuturesStreamPosition position, CancellationToken cancellationToken = default)
         {
-            var roi = 200;
+            var roi = 300m;
+
             var isTakeProfitPlaced = await _binanceService.TryPlaceTakeProfitAsync(position.Symbol,
                 position.EntryPrice,
                 position.Quantity,

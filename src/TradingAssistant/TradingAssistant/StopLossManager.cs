@@ -6,6 +6,7 @@ namespace TradingAssistant
 {
     public class StopLossManager(BinanceService binanceService) : BackgroundService
     {
+        private readonly decimal? _nullDecimal;
         private readonly BinanceService _binanceService = binanceService;
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -32,9 +33,9 @@ namespace TradingAssistant
 
         private async Task UpdateStopLoss(BinanceFuturesStreamPosition position, CancellationToken cancellationToken = default)
         {
-            var nullDecimal = default(decimal?);
-            var roi = 200;
-            var moneyToLose = nullDecimal;
+            var roi = 100m;
+            var moneyToLose = _nullDecimal;
+
             var isStopLossPlaced = await _binanceService.TryPlaceStopLossAsync(position.Symbol,
                 position.EntryPrice,
                 position.Quantity,
