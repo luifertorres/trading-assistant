@@ -6,7 +6,6 @@ using Binance.Net.Interfaces;
 using Binance.Net.Objects.Models;
 using Binance.Net.Objects.Models.Futures;
 using Binance.Net.Objects.Models.Futures.Socket;
-
 using CryptoExchange.Net.Authentication;
 using CryptoExchange.Net.Sockets;
 
@@ -16,11 +15,16 @@ namespace TradingAssistant
     {
         private const string Key = "Lvf6bhdcC4xkdruLKv6VTyJ8ETJrNcnemmpCo7VpPwIQUu2WJolCHpiDdj9bYZ3B";
         private const string Secret = "agiBFSg0TpCuGz17lcOLT4H4GOJ3k8cA3lW7Oi2LiRE7VGtFAuF9uFAHimqixFjt";
+        private const string EntryOrderIdFormat = "{0}-entry-order";
         private const string StopLossIdFormat = "{0}-stop-loss";
         private const string TakeProfitIdFormat = "{0}-take-profit";
         private const string SteppedTrailingIdFormat = "{0}-stepped-trailing";
         private const string TrailingStopIdFormat = "{0}-trailing-stop";
-        private const int MaxCandles = 240;
+        private const int RequestLimit = 2400;
+        private const int MaxCandles = 1500;
+        private const int MaxOpenPositions = 3;
+        private static int s_requestCount;
+        private static int s_openPositions;
         private readonly ILogger<BinanceService> _logger;
         private readonly BinanceRestClient _rest = new(o => o.ApiCredentials = new ApiCredentials(Key, Secret));
         private readonly BinanceSocketClient _socket = new(o => o.ApiCredentials = new ApiCredentials(Key, Secret));
@@ -37,16 +41,49 @@ namespace TradingAssistant
         private readonly ConcurrentDictionary<string, int> _leverages = [];
         private readonly ConcurrentDictionary<string, UpdateSubscription> _priceSubscriptions = [];
         private readonly ConcurrentDictionary<string, CircularTimeSeries<IBinanceKline>> _candlesticks = [];
+        private Timer? _requestLimitResetTimer;
         private string? _listenKey;
+
+        private static int OpenPositions
+        {
+            get => Volatile.Read(ref s_openPositions);
+            set => Volatile.Write(ref s_openPositions, value);
+        }
 
         public BinanceService(ILogger<BinanceService> logger)
         {
             _logger = logger;
 
-            Initialize();
+            ConfigureRequestLimit();
+            ConfigureService();
         }
 
-        private async void Initialize()
+        private void ConfigureRequestLimit()
+        {
+            var currentTime = DateTime.Now;
+            var millisecondsUntilNextMinute = 60_000 - (currentTime.Second * 1_000 + currentTime.Millisecond);
+
+            _requestLimitResetTimer = new Timer(ResetRequestCount, state: null, millisecondsUntilNextMinute, period: 60_000);
+        }
+
+        private static void ResetRequestCount(object? _)
+        {
+            Interlocked.Exchange(ref s_requestCount, value: 0);
+        }
+
+        private static async Task EnsureRequestLimitAsync(int weight, CancellationToken cancellationToken)
+        {
+            if (Interlocked.Add(ref s_requestCount, weight) >= RequestLimit)
+            {
+                var delay = 60_000 - (DateTime.Now.Second * 1_000 + DateTime.Now.Millisecond);
+
+                await Task.Delay(delay, cancellationToken);
+
+                Interlocked.Exchange(ref s_requestCount, value: 0);
+            }
+        }
+
+        private async void ConfigureService()
         {
             if (!await TryConfigureSymbolsAsync())
             {
@@ -71,6 +108,68 @@ namespace TradingAssistant
             await SubscribeToCandlestickUpdatesAsync();
 
             _logger.LogInformation("Binance Service configured");
+        }
+
+        private static decimal ApplyMarketQuantityFilter(decimal quantity,
+            decimal price,
+            BinanceSymbolMinNotionalFilter? minNotionalFilter,
+            BinanceSymbolMarketLotSizeFilter? marketLotSizeFilter)
+        {
+            if (minNotionalFilter is not null)
+            {
+                var notionalValue = quantity * price;
+
+                if (notionalValue < minNotionalFilter.MinNotional)
+                {
+                    quantity = minNotionalFilter.MinNotional / price;
+                }
+            }
+
+            if (marketLotSizeFilter is not null)
+            {
+                quantity = Math.Max(Math.Min(quantity, marketLotSizeFilter.MaxQuantity), marketLotSizeFilter.MinQuantity);
+
+                var remainder = (quantity - marketLotSizeFilter.MinQuantity) % marketLotSizeFilter.StepSize;
+
+                if (remainder > 0)
+                {
+                    quantity -= remainder;
+                    quantity += marketLotSizeFilter.StepSize;
+                }
+            }
+
+            return quantity;
+        }
+
+        private static decimal ApplyLimitQuantityFilter(decimal quantity,
+            decimal price,
+            BinanceSymbolMinNotionalFilter? minNotionalFilter,
+            BinanceSymbolLotSizeFilter? lotSizeFilter)
+        {
+            if (minNotionalFilter is not null)
+            {
+                var notionalValue = quantity * price;
+
+                if (notionalValue < minNotionalFilter.MinNotional)
+                {
+                    quantity = minNotionalFilter.MinNotional / price;
+                }
+            }
+
+            if (lotSizeFilter is not null)
+            {
+                quantity = Math.Max(Math.Min(quantity, lotSizeFilter.MaxQuantity), lotSizeFilter.MinQuantity);
+
+                var remainder = (quantity - lotSizeFilter.MinQuantity) % lotSizeFilter.StepSize;
+
+                if (remainder > 0)
+                {
+                    quantity -= remainder;
+                    quantity += lotSizeFilter.StepSize;
+                }
+            }
+
+            return quantity;
         }
 
         private static decimal ApplyPriceFilter(decimal price, BinanceSymbolPriceFilter? filter)
@@ -122,6 +221,8 @@ namespace TradingAssistant
 
         private async Task<bool> TryStartUserDataStreamAsync(CancellationToken cancellationToken = default)
         {
+            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
+
             var account = _rest.UsdFuturesApi.Account;
             var startUserStreamResult = await account.StartUserStreamAsync(cancellationToken);
 
@@ -140,6 +241,7 @@ namespace TradingAssistant
 
                     try
                     {
+                        await EnsureRequestLimitAsync(weight: 1, cancellationToken);
                         await account.KeepAliveUserStreamAsync(_listenKey, cancellationToken);
                     }
                     catch
@@ -174,7 +276,10 @@ namespace TradingAssistant
 
         private async Task<bool> TryConfigureSymbolsAsync(CancellationToken cancellationToken = default)
         {
-            var getExchangeInfoResult = await _rest.UsdFuturesApi.ExchangeData.GetExchangeInfoAsync(cancellationToken);
+            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
+
+            var exchangeData = _rest.UsdFuturesApi.ExchangeData;
+            var getExchangeInfoResult = await exchangeData.GetExchangeInfoAsync(cancellationToken);
 
             if (!getExchangeInfoResult.GetResultOrError(out var exchangeInfo, out var getExchangeInfoError))
             {
@@ -195,8 +300,9 @@ namespace TradingAssistant
 
             foreach (var symbol in _symbols)
             {
+                await EnsureRequestLimitAsync(weight: 1, cancellationToken);
                 await account.ChangeMarginTypeAsync(symbol.Key, FuturesMarginType.Cross, ct: cancellationToken);
-            }
+            };
 
             _logger.LogInformation("Margin type configuration finished");
 
@@ -206,6 +312,8 @@ namespace TradingAssistant
         private async Task<bool> TryConfigureLeverageAsync(CancellationToken cancellationToken = default)
         {
             SubscribeToLeverageUpdates(HandleLeverageUpdate);
+
+            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
 
             var account = _rest.UsdFuturesApi.Account;
             var getLeverageBracketsResult = await account.GetBracketsAsync(ct: cancellationToken);
@@ -224,6 +332,7 @@ namespace TradingAssistant
 
             foreach (var leverage in _leverages)
             {
+                await EnsureRequestLimitAsync(weight: 1, cancellationToken);
                 await account.ChangeInitialLeverageAsync(leverage.Key, leverage.Value, ct: cancellationToken);
             }
 
@@ -309,6 +418,57 @@ namespace TradingAssistant
             return true;
         }
 
+        public async Task<BinanceFuturesAccountInfo?> TryGetAccountInformationAsync(CancellationToken cancellationToken = default)
+        {
+            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
+
+            var account = _rest.UsdFuturesApi.Account;
+            var getAccountInfoResult = await account.GetAccountInfoAsync(ct: cancellationToken);
+
+            if (!getAccountInfoResult.GetResultOrError(out var accountInfo, out var getAccountInfoError))
+            {
+                _logger.LogError("Get account information failed. {Error}", getAccountInfoError);
+
+                return default;
+            }
+
+            return accountInfo;
+        }
+
+        public async Task<BinancePositionDetailsUsdt?> TryGetPositionInformationAsync(string symbol, CancellationToken cancellationToken = default)
+        {
+            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
+
+            var account = _rest.UsdFuturesApi.Account;
+            var getPositionResult = await account.GetPositionInformationAsync(symbol, ct: cancellationToken);
+
+            if (!getPositionResult.GetResultOrError(out var positions, out var getPositionError))
+            {
+                _logger.LogError("Get position information failed. {Error}", getPositionError);
+
+                return default;
+            }
+
+            return positions.FirstOrDefault(p => p.EntryPrice != 0 && p.Quantity != 0);
+        }
+
+        public async Task<IEnumerable<BinanceFuturesOrder>> TryGetOpenOrdersAsync(string symbol, CancellationToken cancellationToken = default)
+        {
+            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
+
+            var trading = _rest.UsdFuturesApi.Trading;
+            var getOpenOrdersResult = await trading.GetOpenOrdersAsync(symbol, ct: cancellationToken);
+
+            if (!getOpenOrdersResult.GetResultOrError(out var openOrders, out var getOpenOrdersError))
+            {
+                _logger.LogError("Get open orders failed. {Error}", getOpenOrdersError);
+
+                return [];
+            }
+
+            return openOrders;
+        }
+
         public async Task<bool> TryUnsubscribeFromPriceAsync(string symbol)
         {
             if (!_priceSubscriptions.TryRemove(symbol, out var oldPriceSubscription))
@@ -356,10 +516,71 @@ namespace TradingAssistant
         private async Task SubscribeToCandlestickUpdatesAsync(CancellationToken cancellationToken = default)
         {
             var interval = KlineInterval.FiveMinutes;
+            var subscribeToKlineUpdatesResult = await _socket.UsdFuturesApi.SubscribeToKlineUpdatesAsync(_symbols.Keys,
+                interval,
+                @event =>
+                {
+                    var candle = @event.Data.Data;
+                    var symbol = @event.Data.Symbol;
+                    var isCandleClosed = candle.Final;
+
+                    if (isCandleClosed)
+                    {
+                        var candlestick = _candlesticks.GetOrAdd(symbol, new CircularTimeSeries<IBinanceKline>(MaxCandles));
+
+                        candlestick.Add(candle.OpenTime, candle);
+                        _candleClosedSubscriptions.ForEach(onCandleClosed => onCandleClosed(symbol, candlestick));
+                    }
+                },
+                cancellationToken);
+
+            if (!subscribeToKlineUpdatesResult.Success)
+            {
+                _logger.LogWarning("Subscribe to all candlesticks failed. {Error}", subscribeToKlineUpdatesResult.Error);
+
+                return;
+            }
+
+            _logger.LogInformation("Subscribe to all candlesticks updates succeeded");
+
+            var weight = MaxCandles switch
+            {
+                >= 1 and < 100 => 1,
+                >= 100 and < 500 => 2,
+                >= 500 and <= 1000 => 5,
+                _ => 10
+            };
 
             foreach (var symbol in _symbols)
             {
-                var getKlinesResult = await _rest.UsdFuturesApi.ExchangeData.GetKlinesAsync(symbol.Key,
+                await EnsureRequestLimitAsync(weight, cancellationToken);
+
+                var exchangeData = _rest.UsdFuturesApi.ExchangeData;
+                var getKlinesResult = await exchangeData.GetKlinesAsync(symbol.Key,
+                    interval,
+                    limit: MaxCandles,
+                    ct: cancellationToken);
+
+                if (!getKlinesResult.GetResultOrError(out var klines, out var getKlinesError))
+                {
+                    _logger.LogWarning("Get {Symbol} candlestick failed. {Error}", symbol.Key, getKlinesError);
+
+                    continue;
+                }
+
+                foreach (var candle in klines)
+                {
+                    var candlestick = _candlesticks.GetOrAdd(symbol.Key, new CircularTimeSeries<IBinanceKline>(MaxCandles));
+
+                    candlestick.Add(candle.OpenTime, candle);
+                }
+            }
+            foreach (var symbol in _symbols)
+            {
+                await EnsureRequestLimitAsync(weight, cancellationToken);
+
+                var exchangeData = _rest.UsdFuturesApi.ExchangeData;
+                var getKlinesResult = await exchangeData.GetKlinesAsync(symbol.Key,
                     interval,
                     limit: MaxCandles,
                     ct: cancellationToken);
@@ -380,37 +601,12 @@ namespace TradingAssistant
             }
 
             _logger.LogInformation("Get all candlesticks succeeded");
-
-            var subscribeToPriceResult = await _socket.UsdFuturesApi.SubscribeToKlineUpdatesAsync(_symbols.Keys,
-                interval,
-                @event =>
-                {
-                    var candle = @event.Data.Data;
-                    var symbol = @event.Data.Symbol;
-                    var isCandleClosed = candle.Final;
-
-                    if (isCandleClosed)
-                    {
-                        var candlestick = _candlesticks.GetOrAdd(symbol, new CircularTimeSeries<IBinanceKline>(MaxCandles));
-
-                        candlestick.Add(candle.OpenTime, candle);
-                        _candleClosedSubscriptions.ForEach(onCandleClosed => onCandleClosed(symbol, candlestick));
-                    }
-                },
-                cancellationToken);
-
-            if (!subscribeToPriceResult.Success)
-            {
-                _logger.LogWarning("Subscribe to all candlesticks failed. {Error}", subscribeToPriceResult.Error);
-
-                return;
-            }
-
-            _logger.LogInformation("Subscribe to all candlesticks updates succeeded");
         }
 
         public async Task CancelAllOrdersAsync(string symbol, CancellationToken cancellationToken = default)
         {
+            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
+
             var trading = _rest.UsdFuturesApi.Trading;
             var cancelAllOrdersResult = await trading.CancelAllOrdersAsync(symbol, ct: cancellationToken);
 
@@ -424,7 +620,10 @@ namespace TradingAssistant
 
         public async Task<bool> TryCancelStopLossAsync(string symbol, CancellationToken cancellationToken = default)
         {
-            var cancelOrderResult = await _rest.UsdFuturesApi.Trading.CancelOrderAsync(symbol,
+            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
+
+            var trading = _rest.UsdFuturesApi.Trading;
+            var cancelOrderResult = await trading.CancelOrderAsync(symbol,
                 origClientOrderId: string.Format(StopLossIdFormat, symbol.ToLower()),
                 ct: cancellationToken);
 
@@ -440,7 +639,10 @@ namespace TradingAssistant
 
         public async Task<bool> TryCancelTakeProfitAsync(string symbol, CancellationToken cancellationToken = default)
         {
-            var cancelOrderResult = await _rest.UsdFuturesApi.Trading.CancelOrderAsync(symbol,
+            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
+
+            var trading = _rest.UsdFuturesApi.Trading;
+            var cancelOrderResult = await trading.CancelOrderAsync(symbol,
                 origClientOrderId: string.Format(TakeProfitIdFormat, symbol.ToLower()),
                 ct: cancellationToken);
 
@@ -456,7 +658,10 @@ namespace TradingAssistant
 
         public async Task<bool> TryCancelSteppedTrailingAsync(string symbol, CancellationToken cancellationToken = default)
         {
-            var cancelOrderResult = await _rest.UsdFuturesApi.Trading.CancelOrderAsync(symbol,
+            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
+
+            var trading = _rest.UsdFuturesApi.Trading;
+            var cancelOrderResult = await trading.CancelOrderAsync(symbol,
                 origClientOrderId: string.Format(SteppedTrailingIdFormat, symbol.ToLower()),
                 ct: cancellationToken);
 
@@ -472,13 +677,51 @@ namespace TradingAssistant
 
         public async Task<bool> TryCancelTrailingStopAsync(string symbol, CancellationToken cancellationToken = default)
         {
-            var cancelOrderResult = await _rest.UsdFuturesApi.Trading.CancelOrderAsync(symbol,
+            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
+
+            var trading = _rest.UsdFuturesApi.Trading;
+            var cancelOrderResult = await trading.CancelOrderAsync(symbol,
                 origClientOrderId: string.Format(TrailingStopIdFormat, symbol.ToLower()),
                 ct: cancellationToken);
 
             if (!cancelOrderResult.Success)
             {
                 _logger.LogDebug("Cancel old Trailing Stop order failed. {Error}", cancelOrderResult.Error);
+
+                return false;
+            }
+
+            return true;
+        }
+
+        public async Task<bool> TryPlaceEntryOrderAsync(string symbol,
+            OrderSide orderSide,
+            decimal quantity,
+            decimal? entryPrice = default,
+            CancellationToken cancellationToken = default)
+        {
+            var trading = _rest.UsdFuturesApi.Trading;
+
+            TryGetSymbolInformation(symbol, out var symbolInformation);
+
+            quantity = entryPrice.HasValue
+                ? ApplyLimitQuantityFilter(quantity, entryPrice.Value, symbolInformation?.MinNotionalFilter, symbolInformation?.LotSizeFilter)
+                : ApplyMarketQuantityFilter(quantity, price: default, symbolInformation?.MinNotionalFilter, symbolInformation?.MarketLotSizeFilter);
+
+            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
+
+            var placeOrderResult = await trading.PlaceOrderAsync(symbol,
+                orderSide,
+                entryPrice.HasValue ? FuturesOrderType.Limit : FuturesOrderType.Market,
+                quantity,
+                price: entryPrice.HasValue ? ApplyPriceFilter(entryPrice.Value, symbolInformation?.PriceFilter) : null,
+                timeInForce: TimeInForce.GoodTillCanceled,
+                newClientOrderId: string.Format(EntryOrderIdFormat, symbol.ToLower()),
+                ct: cancellationToken);
+
+            if (!placeOrderResult.Success)
+            {
+                _logger.LogError("Place Entry order failed. {Error}", placeOrderResult.Error);
 
                 return false;
             }
@@ -520,6 +763,8 @@ namespace TradingAssistant
 
             TryGetSymbolInformation(symbol, out var symbolInformation);
 
+            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
+
             var placeOrderResult = await trading.PlaceOrderAsync(symbol,
                 quantity.AsOrderSide().Reverse(),
                 FuturesOrderType.StopMarket,
@@ -548,7 +793,10 @@ namespace TradingAssistant
         {
             TryGetSymbolInformation(symbol, out var symbolInformation);
 
-            var placeOrderResult = await _rest.UsdFuturesApi.Trading.PlaceOrderAsync(symbol,
+            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
+
+            var trading = _rest.UsdFuturesApi.Trading;
+            var placeOrderResult = await trading.PlaceOrderAsync(symbol,
                 orderSide,
                 FuturesOrderType.StopMarket,
                 quantity: null,
@@ -595,11 +843,13 @@ namespace TradingAssistant
 
             TryGetSymbolInformation(symbol, out var symbolInformation);
 
+            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
+
             var placeOrderResult = await trading.PlaceOrderAsync(symbol,
                 quantity.AsOrderSide().Reverse(),
                 FuturesOrderType.TakeProfitMarket,
                 quantity: null,
-                stopPrice: ApplyPriceFilter(takeProfitPriceAfterTotalFees, symbolInformation?.PriceFilter),
+                stopPrice: ApplyPriceFilter(takeProfitPrice, symbolInformation?.PriceFilter),
                 closePosition: true,
                 timeInForce: TimeInForce.GoodTillCanceled,
                 newClientOrderId: string.Format(TakeProfitIdFormat, symbol.ToLower()),
@@ -625,7 +875,10 @@ namespace TradingAssistant
         {
             TryGetSymbolInformation(symbol, out var symbolInformation);
 
-            var placeOrderResult = await _rest.UsdFuturesApi.Trading.PlaceOrderAsync(symbol,
+            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
+
+            var trading = _rest.UsdFuturesApi.Trading;
+            var placeOrderResult = await trading.PlaceOrderAsync(symbol,
                 orderSide,
                 FuturesOrderType.TrailingStopMarket,
                 quantity: Math.Abs(quantity),
