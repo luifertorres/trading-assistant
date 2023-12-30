@@ -298,11 +298,11 @@ namespace TradingAssistant
         {
             var account = _rest.UsdFuturesApi.Account;
 
-            foreach (var symbol in _symbols)
+            await Parallel.ForEachAsync(_symbols, cancellationToken, async (symbol, token) =>
             {
-                await EnsureRequestLimitAsync(weight: 1, cancellationToken);
-                await account.ChangeMarginTypeAsync(symbol.Key, FuturesMarginType.Cross, ct: cancellationToken);
-            };
+                await EnsureRequestLimitAsync(weight: 1, token);
+                await account.ChangeMarginTypeAsync(symbol.Key, FuturesMarginType.Cross, ct: token);
+            });
 
             _logger.LogInformation("Margin type configuration finished");
 
@@ -330,11 +330,11 @@ namespace TradingAssistant
                 _leverages.TryAdd(bracket.Symbol, bracket.Brackets.Max(b => b.InitialLeverage));
             });
 
-            foreach (var leverage in _leverages)
+            await Parallel.ForEachAsync(_leverages, cancellationToken, async (leverage, token) =>
             {
-                await EnsureRequestLimitAsync(weight: 1, cancellationToken);
-                await account.ChangeInitialLeverageAsync(leverage.Key, leverage.Value, ct: cancellationToken);
-            }
+                await EnsureRequestLimitAsync(weight: 1, token);
+                await account.ChangeInitialLeverageAsync(leverage.Key, leverage.Value, ct: token);
+            });
 
             _logger.LogInformation("Leverage configuration finished");
 
@@ -551,21 +551,21 @@ namespace TradingAssistant
                 _ => 10
             };
 
-            foreach (var symbol in _symbols)
+            await Parallel.ForEachAsync(_symbols, cancellationToken, async (symbol, token) =>
             {
-                await EnsureRequestLimitAsync(weight, cancellationToken);
+                await EnsureRequestLimitAsync(weight, token);
 
                 var exchangeData = _rest.UsdFuturesApi.ExchangeData;
                 var getKlinesResult = await exchangeData.GetKlinesAsync(symbol.Key,
                     interval,
                     limit: MaxCandles,
-                    ct: cancellationToken);
+                    ct: token);
 
                 if (!getKlinesResult.GetResultOrError(out var klines, out var getKlinesError))
                 {
                     _logger.LogWarning("Get {Symbol} candlestick failed. {Error}", symbol.Key, getKlinesError);
 
-                    continue;
+                    return;
                 }
 
                 foreach (var candle in klines)
@@ -574,31 +574,7 @@ namespace TradingAssistant
 
                     candlestick.Add(candle.OpenTime, candle);
                 }
-            }
-            foreach (var symbol in _symbols)
-            {
-                await EnsureRequestLimitAsync(weight, cancellationToken);
-
-                var exchangeData = _rest.UsdFuturesApi.ExchangeData;
-                var getKlinesResult = await exchangeData.GetKlinesAsync(symbol.Key,
-                    interval,
-                    limit: MaxCandles,
-                    ct: cancellationToken);
-
-                if (!getKlinesResult.GetResultOrError(out var klines, out var getKlinesError))
-                {
-                    _logger.LogWarning("Get {Symbol} candlestick failed. {Error}", symbol.Key, getKlinesError);
-
-                    continue;
-                }
-
-                foreach (var candle in klines)
-                {
-                    var candlestick = _candlesticks.GetOrAdd(symbol.Key, new CircularTimeSeries<IBinanceKline>(MaxCandles));
-
-                    candlestick.Add(candle.OpenTime, candle);
-                }
-            }
+            });
 
             _logger.LogInformation("Get all candlesticks succeeded");
         }
