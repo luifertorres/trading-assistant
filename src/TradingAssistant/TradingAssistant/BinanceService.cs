@@ -20,8 +20,9 @@ namespace TradingAssistant
         private const string TakeProfitIdFormat = "{0}-take-profit";
         private const string SteppedTrailingIdFormat = "{0}-stepped-trailing";
         private const string TrailingStopIdFormat = "{0}-trailing-stop";
-        private const int RequestLimit = (int)(2400 * 0.9);
-        private const int MaxCandles = 1500;
+        private const int RequestLimit = (int)(2400 * 0.8);
+        private const int MaxCandlesPerRequest = 1500;
+        private const int MinRequiredCandles = 12001;
         private const int MaxOpenPositions = 3;
         private static int s_requestCount;
         private static int s_openPositions;
@@ -515,7 +516,7 @@ namespace TradingAssistant
 
         private async Task SubscribeToCandlestickUpdatesAsync(CancellationToken cancellationToken = default)
         {
-            var interval = KlineInterval.FiveMinutes;
+            var interval = KlineInterval.OneMinute;
             var subscribeToKlineUpdatesResult = await _socket.UsdFuturesApi.SubscribeToKlineUpdatesAsync(_symbols.Keys,
                 interval,
                 @event =>
@@ -526,7 +527,7 @@ namespace TradingAssistant
 
                     if (isCandleClosed)
                     {
-                        var candlestick = _candlesticks.GetOrAdd(symbol, new CircularTimeSeries<IBinanceKline>(MaxCandles));
+                        var candlestick = _candlesticks.GetOrAdd(symbol, value: new CircularTimeSeries<IBinanceKline>(MinRequiredCandles));
 
                         candlestick.Add(candle.OpenTime, candle);
                         _candleClosedSubscriptions.ForEach(onCandleClosed => onCandleClosed(symbol, candlestick));
@@ -543,7 +544,7 @@ namespace TradingAssistant
 
             _logger.LogInformation("Subscribe to all candlesticks updates succeeded");
 
-            var weight = MaxCandles switch
+            var weight = MaxCandlesPerRequest switch
             {
                 >= 1 and < 100 => 1,
                 >= 100 and < 500 => 2,
@@ -553,27 +554,46 @@ namespace TradingAssistant
 
             await Parallel.ForEachAsync(_symbols, cancellationToken, async (symbol, token) =>
             {
-                await EnsureRequestLimitAsync(weight, token);
+                var candles = new List<IBinanceKline>();
+                var endTime = default(DateTime?);
+                var requiredRequests = (int)Math.Ceiling(MinRequiredCandles / (double)MaxCandlesPerRequest);
 
-                var exchangeData = _rest.UsdFuturesApi.ExchangeData;
-                var getKlinesResult = await exchangeData.GetKlinesAsync(symbol.Key,
-                    interval,
-                    limit: MaxCandles,
-                    ct: token);
-
-                if (!getKlinesResult.GetResultOrError(out var klines, out var getKlinesError))
+                for (var requestCount = 0; requestCount < requiredRequests; requestCount++)
                 {
-                    _logger.LogWarning("Get {Symbol} candlestick failed. {Error}", symbol.Key, getKlinesError);
+                    await EnsureRequestLimitAsync(weight, token);
 
-                    return;
+                    var exchangeData = _rest.UsdFuturesApi.ExchangeData;
+                    var getKlinesResult = await exchangeData.GetKlinesAsync(symbol.Key,
+                        interval,
+                        endTime: endTime,
+                        limit: MaxCandlesPerRequest,
+                        ct: token);
+
+                    if (!getKlinesResult.GetResultOrError(out var klines, out var getKlinesError))
+                    {
+                        _logger.LogWarning("Get {Symbol} candlestick failed. {Error}", symbol.Key, getKlinesError);
+
+                        return;
+                    }
+
+                    candles.AddRange(klines);
+
+                    endTime = klines.FirstOrDefault()?.OpenTime;
+
+                    if (klines.Count() < MaxCandlesPerRequest)
+                    {
+                        break;
+                    }
                 }
 
-                foreach (var candle in klines)
-                {
-                    var candlestick = _candlesticks.GetOrAdd(symbol.Key, new CircularTimeSeries<IBinanceKline>(MaxCandles));
+                var candlestick = _candlesticks.GetOrAdd(symbol.Key, value: new CircularTimeSeries<IBinanceKline>(MinRequiredCandles));
 
+                foreach (var candle in candles)
+                {
                     candlestick.Add(candle.OpenTime, candle);
                 }
+
+                _logger.LogInformation("Get {Symbol} {Candles} candles succeeded", symbol.Key, candles.Count);
             });
 
             _logger.LogInformation("Get all candlesticks succeeded");
