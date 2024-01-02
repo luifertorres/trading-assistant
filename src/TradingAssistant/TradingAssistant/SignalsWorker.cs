@@ -8,17 +8,25 @@ namespace TradingAssistant
 {
     public class SignalsWorker : BackgroundService
     {
+        // 1H lengths
         private const int Length5 = 5;
         private const int Length8 = 8;
         private const int Length20 = 20;
         private const int Length200 = 200;
+        // 5m equivalent lengths
         private const int Length60 = 60;
         private const int Length96 = 96;
         private const int Length240 = 240;
-        private const int LengthA = Length5;
-        private const int LengthB = Length60;
-        private const int LengthC = Length96;
-        private const int LengthD = Length240;
+        private const int Length2400 = 2400;
+        // 1m equivalent lengths
+        private const int Length300 = 300;
+        private const int Length480 = 480;
+        private const int Length1200 = 1200;
+        private const int Length12000 = 12000;
+        private const int LengthA = Length300;
+        private const int LengthB = Length480;
+        private const int LengthC = Length1200;
+        private const int LengthD = Length12000;
         private readonly ILogger<SignalsWorker> _logger;
         private readonly BinanceService _binanceService;
         private readonly IPublisher _publisher;
@@ -34,7 +42,7 @@ namespace TradingAssistant
         {
             _binanceService.SubscribeToCandleClosedUpdates((symbol, candlestick) =>
             {
-                var lookbackPeriod = Length240 + 1;
+                var lookbackPeriod = LengthD + 1;
                 var candles = candlestick.Last(lookbackPeriod);
 
                 if (candles.Count < lookbackPeriod)
@@ -47,7 +55,7 @@ namespace TradingAssistant
                     return;
                 }
 
-                const KlineInterval TimeFrame = KlineInterval.FiveMinutes;
+                const KlineInterval TimeFrame = KlineInterval.OneMinute;
 
                 var time = candles.Last().CloseTime.AddSeconds(1).ToLocalTime();
                 var entryPrice = candles.Last().ClosePrice;
@@ -139,20 +147,20 @@ namespace TradingAssistant
             var quotes = candles.Select(ToQuote);
             var rsi20 = (decimal)quotes.GetRsi(Length20).Last().Rsi!.Value;
 
-            const int OversoldRsi20Max = 40;
-            const int OversoldRsi20Min = 30;
-
-            if (rsi20 >= OversoldRsi20Max || rsi20 <= OversoldRsi20Min)
-            {
-                return false;
-            }
-
             const int OversoldRsi8Max = 50;
             const int OversoldRsi8Min = 40;
 
             var rsi8 = (decimal)quotes.GetRsi(Length8).Last().Rsi!.Value;
 
             if (rsi8 >= OversoldRsi8Max || rsi8 <= OversoldRsi8Min)
+            {
+                return false;
+            }
+
+            const int OversoldRsi20Max = 40;
+            const int OversoldRsi20Min = 30;
+
+            if (rsi20 >= OversoldRsi20Max || rsi20 <= OversoldRsi20Min)
             {
                 return false;
             }
@@ -191,11 +199,17 @@ namespace TradingAssistant
             }
 
             var distanceToFastestEma = Math.Abs(((emaB / lastCandle.ClosePrice) - 1) * 100);
-            var distanceToSlowestEma = Math.Abs(((emaD / lastCandle.ClosePrice) - 1) * 100);
             var minDistanceToFastestEma = 300m / leverage;
+
+            if (distanceToFastestEma <= minDistanceToFastestEma)
+            {
+                return false;
+            }
+
+            var distanceToSlowestEma = Math.Abs(((emaD / lastCandle.ClosePrice) - 1) * 100);
             var minDistanceToSlowestEma = 2 * minDistanceToFastestEma;
 
-            return distanceToFastestEma >= minDistanceToFastestEma && distanceToSlowestEma >= minDistanceToSlowestEma;
+            return distanceToSlowestEma > minDistanceToSlowestEma;
         }
 
         private static bool IsShortPattern(List<IBinanceKline> candles, int leverage)
@@ -269,11 +283,17 @@ namespace TradingAssistant
             }
 
             var distanceToFastestEma = Math.Abs(((emaB / lastCandle.ClosePrice) - 1) * 100);
-            var distanceToSlowestEma = Math.Abs(((emaD / lastCandle.ClosePrice) - 1) * 100);
             var minDistanceToFastestEma = 300m / leverage;
+
+            if (distanceToFastestEma <= minDistanceToFastestEma)
+            {
+                return false;
+            }
+
+            var distanceToSlowestEma = Math.Abs(((emaD / lastCandle.ClosePrice) - 1) * 100);
             var minDistanceToSlowestEma = 2 * minDistanceToFastestEma;
 
-            return distanceToFastestEma >= minDistanceToFastestEma && distanceToSlowestEma >= minDistanceToSlowestEma;
+            return distanceToSlowestEma > minDistanceToSlowestEma;
         }
 
         private static Quote ToQuote(IBinanceKline candle)
