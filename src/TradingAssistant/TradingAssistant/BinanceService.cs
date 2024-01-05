@@ -289,6 +289,17 @@ namespace TradingAssistant
                 return false;
             }
 
+            var symbols = exchangeInfo.Symbols.Where(symbol => symbol.QuoteAsset == "USDT")
+                .Where(symbol => symbol.ContractType == ContractType.Perpetual);
+
+            foreach (var symbol in symbols)
+            {
+                if (!_symbols.TryAdd(symbol.Name, symbol))
+                {
+                    _logger.LogWarning("Store {Symbol} info failed. {Error}", symbol.Name, getExchangeInfoError);
+                }
+            }
+
             exchangeInfo.Symbols.ToList().ForEach(symbol => _symbols.TryAdd(symbol.Name, symbol));
             _logger.LogInformation("Get exchange info symbols succeeded");
 
