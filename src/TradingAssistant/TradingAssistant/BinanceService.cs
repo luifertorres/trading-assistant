@@ -300,7 +300,6 @@ namespace TradingAssistant
                 }
             }
 
-            exchangeInfo.Symbols.ToList().ForEach(symbol => _symbols.TryAdd(symbol.Name, symbol));
             _logger.LogInformation("Get exchange info symbols succeeded");
 
             return true;
@@ -555,7 +554,11 @@ namespace TradingAssistant
 
             _logger.LogInformation("Subscribe to all candlesticks updates succeeded");
 
-            var weight = MaxCandlesPerRequest switch
+            const int CandlesPerRequest = MinRequiredCandles < MaxCandlesPerRequest
+                ? MinRequiredCandles
+                : MaxCandlesPerRequest;
+
+            var weight = CandlesPerRequest switch
             {
                 >= 1 and < 100 => 1,
                 >= 100 and < 500 => 2,
@@ -577,7 +580,7 @@ namespace TradingAssistant
                     var getKlinesResult = await exchangeData.GetKlinesAsync(symbol.Key,
                         interval,
                         endTime: endTime,
-                        limit: MaxCandlesPerRequest,
+                        limit: CandlesPerRequest,
                         ct: token);
 
                     if (!getKlinesResult.GetResultOrError(out var klines, out var getKlinesError))
