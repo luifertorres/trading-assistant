@@ -13,8 +13,6 @@ namespace TradingAssistant
 {
     public class BinanceService
     {
-        private const string Key = "Lvf6bhdcC4xkdruLKv6VTyJ8ETJrNcnemmpCo7VpPwIQUu2WJolCHpiDdj9bYZ3B";
-        private const string Secret = "agiBFSg0TpCuGz17lcOLT4H4GOJ3k8cA3lW7Oi2LiRE7VGtFAuF9uFAHimqixFjt";
         private const string EntryOrderIdFormat = "{0}-entry-order";
         private const string StopLossIdFormat = "{0}-stop-loss";
         private const string TakeProfitIdFormat = "{0}-take-profit";
@@ -27,8 +25,9 @@ namespace TradingAssistant
         private static int s_requestCount;
         private static int s_openPositions;
         private readonly ILogger<BinanceService> _logger;
-        private readonly BinanceRestClient _rest = new(o => o.ApiCredentials = new ApiCredentials(Key, Secret));
-        private readonly BinanceSocketClient _socket = new(o => o.ApiCredentials = new ApiCredentials(Key, Secret));
+        private readonly IConfiguration _configuration;
+        private readonly BinanceRestClient _rest;
+        private readonly BinanceSocketClient _socket;
         private readonly List<Action<DataEvent<BinanceFuturesStreamConfigUpdate>>> _leverageUpdateSubscriptions = [];
         private readonly List<Action<DataEvent<BinanceFuturesStreamMarginUpdate>>> _marginUpdateSubscriptions = [];
         private readonly List<Action<DataEvent<BinanceFuturesStreamAccountUpdate>>> _accountUpdateSubscriptions = [];
@@ -51,9 +50,16 @@ namespace TradingAssistant
             set => Volatile.Write(ref s_openPositions, value);
         }
 
-        public BinanceService(ILogger<BinanceService> logger)
+        public BinanceService(ILogger<BinanceService> logger, IConfiguration configuration)
         {
             _logger = logger;
+            _configuration = configuration;
+
+            var key = _configuration["Binance:Futures:ApiKey"]!;
+            var secret = _configuration["Binance:Futures:ApiSecret"]!;
+
+            _rest = new(o => o.ApiCredentials = new ApiCredentials(key, secret));
+            _socket = new(o => o.ApiCredentials = new ApiCredentials(key, secret));
 
             ConfigureRequestLimit();
             ConfigureService();
