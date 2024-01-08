@@ -4,9 +4,16 @@ using CryptoExchange.Net.Sockets;
 
 namespace TradingAssistant
 {
-    public class TakeProfitManager(BinanceService binanceService) : BackgroundService
+    public class TakeProfitManager : BackgroundService
     {
-        private readonly BinanceService _binanceService = binanceService;
+        private readonly BinanceService _binanceService;
+        private readonly IConfiguration _configuration;
+
+        public TakeProfitManager(IConfiguration configuration, BinanceService binanceService)
+        {
+            _configuration = configuration;
+            _binanceService = binanceService;
+        }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -32,8 +39,7 @@ namespace TradingAssistant
 
         private async Task UpdateTakeProfitAsync(BinanceFuturesStreamPosition position, CancellationToken cancellationToken = default)
         {
-            var roi = 300m;
-
+            var roi = _configuration.GetValue<decimal>("Binance:RiskManagement:TakeProfitRoi");
             var isTakeProfitPlaced = await _binanceService.TryPlaceTakeProfitAsync(position.Symbol,
                 position.EntryPrice,
                 position.Quantity,

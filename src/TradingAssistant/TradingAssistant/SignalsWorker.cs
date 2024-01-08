@@ -8,41 +8,46 @@ namespace TradingAssistant
 {
     public class SignalsWorker : BackgroundService
     {
-        // 1H lengths
-        private const int Length5 = 5;
-        private const int Length8 = 8;
-        private const int Length20 = 20;
-        private const int Length200 = 200;
-        // 5m equivalent lengths
-        private const int Length60 = 60;
-        private const int Length96 = 96;
-        private const int Length240 = 240;
-        private const int Length2400 = 2400;
-        // 1m equivalent lengths
-        private const int Length300 = 300;
-        private const int Length480 = 480;
-        private const int Length1200 = 1200;
-        private const int Length12000 = 12000;
-        private const int LengthA = Length300;
-        private const int LengthB = Length480;
-        private const int LengthC = Length1200;
-        private const int LengthD = Length12000;
         private readonly ILogger<SignalsWorker> _logger;
+        private readonly IConfiguration _configuration;
         private readonly BinanceService _binanceService;
         private readonly IPublisher _publisher;
+        private readonly KlineInterval _timeFrame;
+        private readonly int _lengthA;
+        private readonly int _lengthB;
+        private readonly int _lengthC;
+        private readonly int _lengthD;
+        private readonly decimal _minRoiToLengthA;
+        private readonly decimal _minRoiToLengthB;
+        private readonly decimal _minRoiToLengthC;
+        private readonly decimal _minRoiToLengthD;
 
-        public SignalsWorker(ILogger<SignalsWorker> logger, BinanceService binanceService, IPublisher publisher)
+        public SignalsWorker(ILogger<SignalsWorker> logger,
+            IConfiguration configuration,
+            BinanceService binanceService,
+            IPublisher publisher)
         {
             _logger = logger;
+            _configuration = configuration;
             _binanceService = binanceService;
             _publisher = publisher;
+
+            _timeFrame = _configuration.GetValue<KlineInterval>("Binance:Service:TimeFrameSeconds");
+            _lengthA = _configuration.GetValue<int>("Binance:Strategy:LengthA");
+            _lengthB = _configuration.GetValue<int>("Binance:Strategy:LengthB");
+            _lengthC = _configuration.GetValue<int>("Binance:Strategy:LengthC");
+            _lengthD = _configuration.GetValue<int>("Binance:Strategy:LengthD");
+            _minRoiToLengthA = _configuration.GetValue<decimal>("Binance:Strategy:MinRoiToLengthA");
+            _minRoiToLengthB = _configuration.GetValue<decimal>("Binance:Strategy:MinRoiToLengthB");
+            _minRoiToLengthC = _configuration.GetValue<decimal>("Binance:Strategy:MinRoiToLengthC");
+            _minRoiToLengthD = _configuration.GetValue<decimal>("Binance:Strategy:MinRoiToLengthD");
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _binanceService.SubscribeToCandleClosedUpdates((symbol, candlestick) =>
             {
-                var lookbackPeriod = LengthD + 1;
+                var lookbackPeriod = _lengthD + 1;
                 var candles = candlestick.Last(lookbackPeriod);
 
                 if (candles.Count < lookbackPeriod)
@@ -54,8 +59,6 @@ namespace TradingAssistant
                 {
                     return;
                 }
-
-                const KlineInterval TimeFrame = KlineInterval.OneMinute;
 
                 var time = candles.Last().CloseTime.AddSeconds(1).ToLocalTime();
                 var entryPrice = candles.Last().ClosePrice;
@@ -76,13 +79,13 @@ namespace TradingAssistant
                         Environment.NewLine,
                         entryPrice,
                         Environment.NewLine,
-                        EnumConverter.GetString(TimeFrame),
+                        EnumConverter.GetString(_timeFrame),
                         Environment.NewLine);
 
                     _publisher.Publish(new EmaReversionSignal
                     {
                         Time = time,
-                        TimeFrame = TimeFrame,
+                        TimeFrame = _timeFrame,
                         Direction = PositionSide.Long,
                         Side = OrderSide.Buy,
                         Symbol = symbol,
@@ -108,27 +111,28 @@ namespace TradingAssistant
                         Environment.NewLine,
                         entryPrice,
                         Environment.NewLine,
-                        EnumConverter.GetString(TimeFrame),
+                        EnumConverter.GetString(_timeFrame),
                         Environment.NewLine);
 
                     _publisher.Publish(new EmaReversionSignal
                     {
                         Time = time,
-                        TimeFrame = TimeFrame,
+                        TimeFrame = _timeFrame,
                         Direction = PositionSide.Short,
                         Side = OrderSide.Sell,
                         Symbol = symbol,
                         EntryPrice = entryPrice,
                     });
 
-                    Console.Beep(frequency: 1000, duration: 100);
+                    Console.Beep(frequency: 1000, duration: 250);
+                    Console.Beep(frequency: 1000, duration: 250);
                 }
             });
 
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
 
-        private static bool IsLongPattern(List<IBinanceKline> candles, int leverage)
+        private bool IsLongPattern(List<IBinanceKline> candles, int leverage)
         {
             var lastCandle = candles.Last();
 
@@ -145,12 +149,12 @@ namespace TradingAssistant
             }
 
             var quotes = candles.Select(ToQuote);
-            var rsi20 = (decimal)quotes.GetRsi(Length20).Last().Rsi!.Value;
+            var rsi20 = (decimal)quotes.GetRsi(20).Last().Rsi!.Value;
 
             const int OversoldRsi8Max = 50;
             const int OversoldRsi8Min = 40;
 
-            var rsi8 = (decimal)quotes.GetRsi(Length8).Last().Rsi!.Value;
+            var rsi8 = (decimal)quotes.GetRsi(8).Last().Rsi!.Value;
 
             if (rsi8 >= OversoldRsi8Max || rsi8 <= OversoldRsi8Min)
             {
@@ -165,7 +169,7 @@ namespace TradingAssistant
                 return false;
             }
 
-            var rsi200 = (decimal)quotes.GetRsi(Length200).Last().Rsi!.Value;
+            var rsi200 = (decimal)quotes.GetRsi(200).Last().Rsi!.Value;
 
             if (rsi200 >= 45)
             {
@@ -177,42 +181,58 @@ namespace TradingAssistant
                 return false;
             }
 
-            var emaA = (decimal)quotes.GetEma(LengthA).Last().Ema!.Value;
-            var emaB = (decimal)quotes.GetEma(LengthB).Last().Ema!.Value;
+            var emaA = (decimal)quotes.GetEma(_lengthA).Last().Ema!.Value;
+            var emaB = (decimal)quotes.GetEma(_lengthB).Last().Ema!.Value;
 
             if (emaA <= emaB)
             {
                 return false;
             }
-            var emaC = (decimal)quotes.GetEma(LengthC).Last().Ema!.Value;
+            var emaC = (decimal)quotes.GetEma(_lengthC).Last().Ema!.Value;
 
             if (emaB <= emaC)
             {
                 return false;
             }
 
-            var emaD = (decimal)quotes.GetEma(LengthD).Last().Ema!.Value;
+            var emaD = (decimal)quotes.GetEma(_lengthD).Last().Ema!.Value;
 
             if (emaC <= emaD)
             {
                 return false;
             }
 
-            var distanceToFastestEma = Math.Abs(((emaB / lastCandle.ClosePrice) - 1) * 100);
-            var minDistanceToFastestEma = 300m / leverage;
+            var distanceToEmaA = Math.Abs(((emaA / lastCandle.ClosePrice) - 1) * 100);
+            var minDistanceToEmaA = _minRoiToLengthA / leverage;
 
-            if (distanceToFastestEma <= minDistanceToFastestEma)
+            if (distanceToEmaA <= minDistanceToEmaA)
             {
                 return false;
             }
 
-            var distanceToSlowestEma = Math.Abs(((emaD / lastCandle.ClosePrice) - 1) * 100);
-            var minDistanceToSlowestEma = 2 * minDistanceToFastestEma;
+            var distanceToEmaB = Math.Abs(((emaB / lastCandle.ClosePrice) - 1) * 100);
+            var minDistanceToEmaB = _minRoiToLengthB / leverage;
 
-            return distanceToSlowestEma > minDistanceToSlowestEma;
+            if (distanceToEmaB <= minDistanceToEmaB)
+            {
+                return false;
+            }
+
+            var distanceToEmaC = Math.Abs(((emaC / lastCandle.ClosePrice) - 1) * 100);
+            var minDistanceToEmaC = _minRoiToLengthC / leverage;
+
+            if (distanceToEmaC <= minDistanceToEmaC)
+            {
+                return false;
+            }
+
+            var distanceToEmaD = Math.Abs(((emaD / lastCandle.ClosePrice) - 1) * 100);
+            var minDistanceToEmaD = _minRoiToLengthD;
+
+            return distanceToEmaD > minDistanceToEmaD;
         }
 
-        private static bool IsShortPattern(List<IBinanceKline> candles, int leverage)
+        private bool IsShortPattern(List<IBinanceKline> candles, int leverage)
         {
             var lastCandle = candles.Last();
 
@@ -229,7 +249,7 @@ namespace TradingAssistant
             }
 
             var quotes = candles.Select(ToQuote);
-            var rsi20 = (decimal)quotes.GetRsi(Length20).Last().Rsi!.Value;
+            var rsi20 = (decimal)quotes.GetRsi(20).Last().Rsi!.Value;
 
             const int OverboughtRsi20Max = 70;
             const int OverboughtRsi20Min = 60;
@@ -239,7 +259,7 @@ namespace TradingAssistant
                 return false;
             }
 
-            var rsi8 = (decimal)quotes.GetRsi(Length8).Last().Rsi!.Value;
+            var rsi8 = (decimal)quotes.GetRsi(8).Last().Rsi!.Value;
 
             const int OverboughtRsi8Max = 60;
             const int OverboughtRsi8Min = 50;
@@ -249,7 +269,7 @@ namespace TradingAssistant
                 return false;
             }
 
-            var rsi200 = (decimal)quotes.GetRsi(Length200).Last().Rsi!.Value;
+            var rsi200 = (decimal)quotes.GetRsi(200).Last().Rsi!.Value;
 
             if (rsi200 <= 55)
             {
@@ -261,39 +281,55 @@ namespace TradingAssistant
                 return false;
             }
 
-            var emaA = (decimal)quotes.GetEma(LengthA).Last().Ema!.Value;
-            var emaB = (decimal)quotes.GetEma(LengthB).Last().Ema!.Value;
+            var emaA = (decimal)quotes.GetEma(_lengthA).Last().Ema!.Value;
+            var emaB = (decimal)quotes.GetEma(_lengthB).Last().Ema!.Value;
 
             if (emaA <= emaB)
             {
                 return false;
             }
-            var emaC = (decimal)quotes.GetEma(LengthC).Last().Ema!.Value;
+            var emaC = (decimal)quotes.GetEma(_lengthC).Last().Ema!.Value;
 
             if (emaB <= emaC)
             {
                 return false;
             }
 
-            var emaD = (decimal)quotes.GetEma(LengthD).Last().Ema!.Value;
+            var emaD = (decimal)quotes.GetEma(_lengthD).Last().Ema!.Value;
 
             if (emaC <= emaD)
             {
                 return false;
             }
 
-            var distanceToFastestEma = Math.Abs(((emaB / lastCandle.ClosePrice) - 1) * 100);
-            var minDistanceToFastestEma = 300m / leverage;
+            var distanceToEmaA = Math.Abs(((emaA / lastCandle.ClosePrice) - 1) * 100);
+            var minDistanceToEmaA = _minRoiToLengthA / leverage;
 
-            if (distanceToFastestEma <= minDistanceToFastestEma)
+            if (distanceToEmaA <= minDistanceToEmaA)
             {
                 return false;
             }
 
-            var distanceToSlowestEma = Math.Abs(((emaD / lastCandle.ClosePrice) - 1) * 100);
-            var minDistanceToSlowestEma = 2 * minDistanceToFastestEma;
+            var distanceToEmaB = Math.Abs(((emaB / lastCandle.ClosePrice) - 1) * 100);
+            var minDistanceToEmaB = _minRoiToLengthB / leverage;
 
-            return distanceToSlowestEma > minDistanceToSlowestEma;
+            if (distanceToEmaB <= minDistanceToEmaB)
+            {
+                return false;
+            }
+
+            var distanceToEmaC = Math.Abs(((emaC / lastCandle.ClosePrice) - 1) * 100);
+            var minDistanceToEmaC = _minRoiToLengthC / leverage;
+
+            if (distanceToEmaC <= minDistanceToEmaC)
+            {
+                return false;
+            }
+
+            var distanceToEmaD = Math.Abs(((emaD / lastCandle.ClosePrice) - 1) * 100);
+            var minDistanceToEmaD = _minRoiToLengthD;
+
+            return distanceToEmaD > minDistanceToEmaD;
         }
 
         private static Quote ToQuote(IBinanceKline candle)

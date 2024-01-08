@@ -2,9 +2,16 @@
 
 namespace TradingAssistant
 {
-    public class EmaReversionSignalHandler(BinanceService binanceService) : INotificationHandler<EmaReversionSignal>
+    public class EmaReversionSignalHandler : INotificationHandler<EmaReversionSignal>
     {
-        private readonly BinanceService _binanceService = binanceService;
+        private readonly IConfiguration _configuration;
+        private readonly BinanceService _binanceService;
+
+        public EmaReversionSignalHandler(IConfiguration configuration, BinanceService binanceService)
+        {
+            _configuration = configuration;
+            _binanceService = binanceService;
+        }
 
         public async Task Handle(EmaReversionSignal notification, CancellationToken cancellationToken)
         {
@@ -34,10 +41,9 @@ namespace TradingAssistant
                 return;
             }
 
-            const decimal MarginPercentage = 0.1m;
-
-            var riskPercentage = MarginPercentage * leverage;
-            var notional = account.AvailableBalance * riskPercentage / 100;
+            var accountMarginPercentage = _configuration.GetValue<decimal>("Binance:RiskManagement:AccountMarginPercentage");
+            var accountPercentageForEntry = accountMarginPercentage * leverage;
+            var notional = account.AvailableBalance * accountPercentageForEntry / 100;
             var quantity = notional / notification.EntryPrice;
 
             await _binanceService.TryPlaceEntryOrderAsync(notification.Symbol,

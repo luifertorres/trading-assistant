@@ -4,10 +4,16 @@ using CryptoExchange.Net.Sockets;
 
 namespace TradingAssistant
 {
-    public class TrailingStopManager(ILogger<TrailingStopManager> logger, BinanceService binanceService) : BackgroundService
+    public class TrailingStopManager : BackgroundService
     {
-        private readonly ILogger<TrailingStopManager> _logger = logger;
-        private readonly BinanceService _binanceService = binanceService;
+        private readonly IConfiguration _configuration;
+        private readonly BinanceService _binanceService;
+
+        public TrailingStopManager(IConfiguration configuration, BinanceService binanceService)
+        {
+            _configuration = configuration;
+            _binanceService = binanceService;
+        }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -38,7 +44,7 @@ namespace TradingAssistant
 
         private async Task PlaceTrailingStopAsync(BinanceFuturesStreamPosition position, int leverage, CancellationToken cancellationToken = default)
         {
-            var roi = 200m;
+            var roi = _configuration.GetValue<decimal>("Binance:RiskManagement:TrailingStopRoi");
             var distance = roi / leverage;
 
             var isTrailingStopPlaced = await _binanceService.TryPlaceTrailingStopAsync(position.Symbol,

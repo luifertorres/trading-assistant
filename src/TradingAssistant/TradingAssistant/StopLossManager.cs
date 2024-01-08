@@ -4,10 +4,17 @@ using CryptoExchange.Net.Sockets;
 
 namespace TradingAssistant
 {
-    public class StopLossManager(BinanceService binanceService) : BackgroundService
+    public class StopLossManager : BackgroundService
     {
+        private readonly IConfiguration _configuration;
+        private readonly BinanceService _binanceService;
         private readonly decimal? _nullDecimal;
-        private readonly BinanceService _binanceService = binanceService;
+
+        public StopLossManager(IConfiguration configuration, BinanceService binanceService)
+        {
+            _configuration = configuration;
+            _binanceService = binanceService;
+        }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -33,7 +40,7 @@ namespace TradingAssistant
 
         private async Task UpdateStopLoss(BinanceFuturesStreamPosition position, CancellationToken cancellationToken = default)
         {
-            var roi = 100m;
+            var roi = _configuration.GetValue<decimal>("Binance:RiskManagement:StopLossRoi");
             var moneyToLose = _nullDecimal;
 
             var isStopLossPlaced = await _binanceService.TryPlaceStopLossAsync(position.Symbol,
