@@ -8,6 +8,9 @@ namespace TradingAssistant
 {
     public class SignalsWorker : BackgroundService
     {
+        private const int Length8 = 8;
+        private const int Length20 = 20;
+        private const int Length200 = 200;
         private readonly ILogger<SignalsWorker> _logger;
         private readonly IConfiguration _configuration;
         private readonly BinanceService _binanceService;
@@ -141,42 +144,34 @@ namespace TradingAssistant
                 return false;
             }
 
-            var penultimateCandle = candles.TakeLast(2).First();
-
-            if (penultimateCandle.ClosePrice <= penultimateCandle.OpenPrice)
-            {
-                return false;
-            }
-
             var quotes = candles.Select(ToQuote);
-            var rsi20 = (decimal)quotes.GetRsi(20).Last().Rsi!.Value;
 
-            const int OversoldRsi8Max = 50;
-            const int OversoldRsi8Min = 40;
+            const int OversoldRsi = 30;
 
-            var rsi8 = (decimal)quotes.GetRsi(8).Last().Rsi!.Value;
+            var penultimateRsi8 = (decimal)quotes.GetRsi(Length8).TakeLast(2).First().Rsi!.Value;
+            var penultimateRsi20 = (decimal)quotes.GetRsi(Length20).TakeLast(2).First().Rsi!.Value;
 
-            if (rsi8 >= OversoldRsi8Max || rsi8 <= OversoldRsi8Min)
+            if (penultimateRsi8 > OversoldRsi || penultimateRsi20 > OversoldRsi)
             {
                 return false;
             }
 
-            const int OversoldRsi20Max = 40;
-            const int OversoldRsi20Min = 30;
+            var lastRsi8 = (decimal)quotes.GetRsi(Length8).Last().Rsi!.Value;
+            var lastRsi20 = (decimal)quotes.GetRsi(Length20).Last().Rsi!.Value;
 
-            if (rsi20 >= OversoldRsi20Max || rsi20 <= OversoldRsi20Min)
+            if (lastRsi8 <= OversoldRsi && lastRsi20 <= OversoldRsi)
             {
                 return false;
             }
 
-            var rsi200 = (decimal)quotes.GetRsi(200).Last().Rsi!.Value;
+            var rsi200 = (decimal)quotes.GetRsi(Length200).Last().Rsi!.Value;
 
             if (rsi200 >= 45)
             {
                 return false;
             }
 
-            if (rsi20 >= rsi8)
+            if (lastRsi20 >= lastRsi8)
             {
                 return false;
             }
@@ -241,42 +236,34 @@ namespace TradingAssistant
                 return false;
             }
 
-            var penultimateCandle = candles.TakeLast(2).First();
-
-            if (penultimateCandle.ClosePrice >= penultimateCandle.OpenPrice)
-            {
-                return false;
-            }
-
             var quotes = candles.Select(ToQuote);
-            var rsi20 = (decimal)quotes.GetRsi(20).Last().Rsi!.Value;
 
-            const int OverboughtRsi20Max = 70;
-            const int OverboughtRsi20Min = 60;
+            const int OverboughtRsi = 70;
 
-            if (rsi20 <= OverboughtRsi20Min || rsi20 >= OverboughtRsi20Max)
+            var penultimateRsi8 = (decimal)quotes.GetRsi(Length8).TakeLast(2).First().Rsi!.Value;
+            var penultimateRsi20 = (decimal)quotes.GetRsi(Length20).TakeLast(2).First().Rsi!.Value;
+
+            if (penultimateRsi8 < OverboughtRsi || penultimateRsi20 < OverboughtRsi)
             {
                 return false;
             }
 
-            var rsi8 = (decimal)quotes.GetRsi(8).Last().Rsi!.Value;
+            var lastRsi8 = (decimal)quotes.GetRsi(Length8).Last().Rsi!.Value;
+            var lastRsi20 = (decimal)quotes.GetRsi(Length20).Last().Rsi!.Value;
 
-            const int OverboughtRsi8Max = 60;
-            const int OverboughtRsi8Min = 50;
-
-            if (rsi8 <= OverboughtRsi8Min || rsi8 >= OverboughtRsi8Max)
+            if (lastRsi8 >= OverboughtRsi && lastRsi20 >= OverboughtRsi)
             {
                 return false;
             }
 
-            var rsi200 = (decimal)quotes.GetRsi(200).Last().Rsi!.Value;
+            var rsi200 = (decimal)quotes.GetRsi(Length200).Last().Rsi!.Value;
 
             if (rsi200 <= 55)
             {
                 return false;
             }
 
-            if (rsi20 <= rsi8)
+            if (lastRsi8 >= lastRsi20)
             {
                 return false;
             }
@@ -288,6 +275,7 @@ namespace TradingAssistant
             {
                 return false;
             }
+
             var emaC = (decimal)quotes.GetEma(_lengthC).Last().Ema!.Value;
 
             if (emaB <= emaC)
