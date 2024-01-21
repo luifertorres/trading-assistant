@@ -304,7 +304,8 @@ namespace TradingAssistant
                 return false;
             }
 
-            var symbols = exchangeInfo.Symbols.Where(symbol => symbol.QuoteAsset == "USDT")
+            var symbols = exchangeInfo.Symbols.Where(symbol => symbol.BaseAsset != "USDC")
+                .Where(symbol => symbol.QuoteAsset == "USDT")
                 .Where(symbol => symbol.ContractType == ContractType.Perpetual);
 
             foreach (var symbol in symbols)
