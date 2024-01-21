@@ -894,7 +894,7 @@ namespace TradingAssistant
                 quantity.AsOrderSide().Reverse(),
                 FuturesOrderType.TakeProfitMarket,
                 quantity: null,
-                stopPrice: ApplyPriceFilter(takeProfitPrice, symbolInformation?.PriceFilter),
+                stopPrice: ApplyPriceFilter(takeProfitPriceAfterTotalFees, symbolInformation?.PriceFilter),
                 closePosition: true,
                 timeInForce: TimeInForce.GoodTillCanceled,
                 newClientOrderId: string.Format(TakeProfitIdFormat, symbol.ToLower()),
