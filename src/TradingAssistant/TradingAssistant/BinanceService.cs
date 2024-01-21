@@ -741,27 +741,33 @@ namespace TradingAssistant
 
         public async Task<bool> TryPlaceEntryOrderAsync(string symbol,
             OrderSide orderSide,
+            FuturesOrderType orderType,
             decimal quantity,
-            decimal? entryPrice = default,
-            CancellationToken cancellationToken = default)
+            decimal? entryPrice = default, CancellationToken cancellationToken = default)
         {
-            var trading = _rest.UsdFuturesApi.Trading;
+            if (orderType != FuturesOrderType.Market && orderType != FuturesOrderType.Limit)
+            {
+                return false;
+            }
 
             TryGetSymbolInformation(symbol, out var symbolInformation);
 
-            quantity = entryPrice.HasValue
-                ? ApplyLimitQuantityFilter(quantity, entryPrice.Value, symbolInformation?.MinNotionalFilter, symbolInformation?.LotSizeFilter)
-                : ApplyMarketQuantityFilter(quantity, price: default, symbolInformation?.MinNotionalFilter, symbolInformation?.MarketLotSizeFilter);
+            var isLimitOrder = orderType is FuturesOrderType.Limit;
+
+            quantity = isLimitOrder
+                ? ApplyLimitQuantityFilter(quantity, entryPrice!.Value, symbolInformation?.MinNotionalFilter, symbolInformation?.LotSizeFilter)
+                : ApplyMarketQuantityFilter(quantity, entryPrice!.Value, symbolInformation?.MinNotionalFilter, symbolInformation?.MarketLotSizeFilter);
 
             await EnsureRequestLimitAsync(weight: 1, cancellationToken);
 
+            var trading = _rest.UsdFuturesApi.Trading;
             var placeOrderResult = await trading.PlaceOrderAsync(symbol,
                 orderSide,
-                entryPrice.HasValue ? FuturesOrderType.Limit : FuturesOrderType.Market,
+                orderType,
                 quantity,
-                price: entryPrice.HasValue ? ApplyPriceFilter(entryPrice.Value, symbolInformation?.PriceFilter) : null,
-                timeInForce: TimeInForce.GoodTillCanceled,
-                newClientOrderId: string.Format(EntryOrderIdFormat, symbol.ToLower()),
+                price: isLimitOrder ? ApplyPriceFilter(entryPrice.Value, symbolInformation?.PriceFilter) : null,
+                timeInForce: isLimitOrder ? TimeInForce.GoodTillCanceled : null,
+                newClientOrderId: isLimitOrder ? string.Format(EntryOrderIdFormat, symbol.ToLower()) : null,
                 ct: cancellationToken);
 
             if (!placeOrderResult.Success)
