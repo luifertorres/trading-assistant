@@ -479,6 +479,23 @@ namespace TradingAssistant
             return positions.FirstOrDefault(p => p.EntryPrice != 0 && p.Quantity != 0);
         }
 
+        public async Task<IEnumerable<BinancePositionDetailsUsdt>> TryGetPositionsAsync(CancellationToken cancellationToken = default)
+        {
+            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
+
+            var account = _rest.UsdFuturesApi.Account;
+            var getPositionsResult = await account.GetPositionInformationAsync(ct: cancellationToken);
+
+            if (!getPositionsResult.GetResultOrError(out var positions, out var getPositionsError))
+            {
+                _logger.LogError("Get positions failed. {Error}", getPositionsError);
+
+                return [];
+            }
+
+            return positions.Where(p => p.EntryPrice != 0 && p.Quantity != 0);
+        }
+
         public async Task<IEnumerable<BinanceFuturesOrder>> TryGetOpenOrdersAsync(string symbol, CancellationToken cancellationToken = default)
         {
             await EnsureRequestLimitAsync(weight: 1, cancellationToken);
