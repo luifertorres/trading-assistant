@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using Binance.Net.Enums;
+using MediatR;
 
 namespace TradingAssistant
 {
@@ -22,13 +23,6 @@ namespace TradingAssistant
                 return;
             }
 
-            var openOrders = await _binanceService.TryGetOpenOrdersAsync(notification.Symbol, cancellationToken);
-
-            if (openOrders.Any())
-            {
-                return;
-            }
-
             if (!_binanceService.TryGetLeverage(notification.Symbol, out var leverage))
             {
                 return;
@@ -48,6 +42,7 @@ namespace TradingAssistant
 
             await _binanceService.TryPlaceEntryOrderAsync(notification.Symbol,
                 notification.Side,
+                FuturesOrderType.Market,
                 quantity,
                 notification.EntryPrice,
                 cancellationToken);
