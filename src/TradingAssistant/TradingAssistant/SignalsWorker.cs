@@ -16,6 +16,7 @@ namespace TradingAssistant
         private readonly BinanceService _binanceService;
         private readonly IPublisher _publisher;
         private readonly KlineInterval _timeFrame;
+        private readonly int _candlestickSize;
         private readonly int _lengthA;
         private readonly int _lengthB;
         private readonly int _lengthC;
@@ -36,6 +37,7 @@ namespace TradingAssistant
             _publisher = publisher;
 
             _timeFrame = _configuration.GetValue<KlineInterval>("Binance:Service:TimeFrameSeconds");
+            _candlestickSize = _configuration.GetValue<int>("Binance:Service:CandlestickSize");
             _lengthA = _configuration.GetValue<int>("Binance:Strategy:LengthA");
             _lengthB = _configuration.GetValue<int>("Binance:Strategy:LengthB");
             _lengthC = _configuration.GetValue<int>("Binance:Strategy:LengthC");
@@ -50,7 +52,7 @@ namespace TradingAssistant
         {
             _binanceService.SubscribeToCandleClosedUpdates((symbol, candlestick) =>
             {
-                var lookbackPeriod = _lengthD + 1;
+                var lookbackPeriod = _candlestickSize;
                 var candles = candlestick.Last(lookbackPeriod);
 
                 if (candles.Count < lookbackPeriod)
