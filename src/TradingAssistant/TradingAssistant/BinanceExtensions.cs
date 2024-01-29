@@ -13,5 +13,10 @@ namespace TradingAssistant
         {
             return side == OrderSide.Buy ? OrderSide.Sell : OrderSide.Buy;
         }
+
+        internal static PositionSide AsPositionSide(this OrderSide side)
+        {
+            return side == OrderSide.Buy ? PositionSide.Long : PositionSide.Short;
+        }
     }
 }
