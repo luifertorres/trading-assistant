@@ -16,9 +16,14 @@ namespace TradingAssistant
 
         public async Task Handle(EmaReversionSignal notification, CancellationToken cancellationToken)
         {
-            var position = await _binanceService.TryGetPositionInformationAsync(notification.Symbol, cancellationToken);
+            var positions = await _binanceService.TryGetPositionsAsync(cancellationToken);
 
-            if (position is not null)
+            if (positions.Any(p => p.Symbol == notification.Symbol))
+            {
+                return;
+            }
+
+            if (positions.Any(p => p.Quantity.AsOrderSide() == notification.Side))
             {
                 return;
             }
