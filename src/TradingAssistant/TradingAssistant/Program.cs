@@ -20,12 +20,14 @@ namespace TradingAssistant
                     });
 
                     services.AddSingleton<BinanceService>();
+                    services.AddSingleton<Rsi200SignalGenerator>();
 
                     services.AddHostedService<SignalsWorker>();
                     services.AddHostedService<StopLossManager>();
                     services.AddHostedService<TakeProfitManager>();
-                    //services.AddHostedService<SteppedTrailingStopManager>();
+                    services.AddHostedService<SteppedTrailingStopManager>();
                     services.AddHostedService<TrailingStopManager>();
+                    services.AddHostedService<Rsi200ClosePositiontWorker>();
                 })
                 .Build();
 

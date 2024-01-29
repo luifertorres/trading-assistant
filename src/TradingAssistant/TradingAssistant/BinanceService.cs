@@ -34,11 +34,11 @@ namespace TradingAssistant
         private readonly List<Action<DataEvent<BinanceStrategyUpdate>>> _strategyUpdateSubscriptions = [];
         private readonly List<Action<DataEvent<BinanceGridUpdate>>> _gridUpdateSubscriptions = [];
         private readonly List<Action<DataEvent<BinanceConditionOrderTriggerRejectUpdate>>> _conditionalOrderTriggerRejectUpdateSubscriptions = [];
-        private readonly List<Action<string, CircularTimeSeries<IBinanceKline>>> _candleClosedSubscriptions = [];
+        private readonly CandleClosedProvider _candleClosedProvider = new();
         private readonly ConcurrentDictionary<string, BinanceFuturesUsdtSymbol> _symbols = [];
         private readonly ConcurrentDictionary<string, int> _leverages = [];
         private readonly ConcurrentDictionary<string, UpdateSubscription> _priceSubscriptions = [];
-        private readonly ConcurrentDictionary<string, CircularTimeSeries<IBinanceKline>> _candlesticks = [];
+        private readonly ConcurrentDictionary<string, CircularTimeSeries<string, IBinanceKline>> _candlesticks = [];
         private BinanceRestClient _rest = new();
         private BinanceSocketClient _socket = new();
         private KlineInterval _interval;
@@ -428,9 +428,9 @@ namespace TradingAssistant
             _conditionalOrderTriggerRejectUpdateSubscriptions.Add(action);
         }
 
-        public void SubscribeToCandleClosedUpdates(Action<string, CircularTimeSeries<IBinanceKline>> onCandleClosed)
+        public IObservable<CircularTimeSeries<string, IBinanceKline>> GetCandleClosedEvent()
         {
-            _candleClosedSubscriptions.Add(onCandleClosed);
+            return _candleClosedProvider;
         }
 
         public bool TryGetLeverage(string symbol, out int leverage)
@@ -569,10 +569,10 @@ namespace TradingAssistant
 
                     if (isCandleClosed)
                     {
-                        var candlestick = _candlesticks.GetOrAdd(symbol, value: new CircularTimeSeries<IBinanceKline>(_candlestickSize));
+                        var candlestick = _candlesticks.GetOrAdd(symbol, value: new CircularTimeSeries<string, IBinanceKline>(symbol, _candlestickSize));
 
                         candlestick.Add(candle.OpenTime, candle);
-                        _candleClosedSubscriptions.ForEach(onCandleClosed => onCandleClosed(symbol, candlestick));
+                        _candleClosedProvider.Update(candlestick);
                     }
                 },
                 cancellationToken);
@@ -632,7 +632,8 @@ namespace TradingAssistant
                     }
                 }
 
-                var candlestick = _candlesticks.GetOrAdd(symbol.Key, value: new CircularTimeSeries<IBinanceKline>(_candlestickSize));
+                var candlestick = _candlesticks.GetOrAdd(symbol.Key,
+                    value: new CircularTimeSeries<string, IBinanceKline>(symbol.Key, _candlestickSize));
 
                 foreach (var candle in candles)
                 {

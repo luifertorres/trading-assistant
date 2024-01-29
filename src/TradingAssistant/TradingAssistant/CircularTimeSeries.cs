@@ -2,12 +2,15 @@
 
 namespace TradingAssistant
 {
-    public class CircularTimeSeries<T>(int maxSize)
+    public class CircularTimeSeries<TKey, TValue>(TKey symbol, int maxSize)
     {
+        private readonly TKey _symbol = symbol;
         private readonly int _maxSize = maxSize;
-        private readonly SortedDictionary<DateTime, T> _series = [];
+        private readonly SortedDictionary<DateTime, TValue> _series = [];
 
-        public void Add(DateTime time, T value)
+        public TKey Symbol => _symbol;
+
+        public void Add(DateTime time, TValue value)
         {
             _series[time] = value;
             EnsureMaxSize();
@@ -23,7 +26,7 @@ namespace TradingAssistant
             }
         }
 
-        public bool TryGetValue(DateTime time, out T? value)
+        public bool TryGetValue(DateTime time, out TValue? value)
         {
             if (!_series.TryGetValue(time, out value))
             {
@@ -33,12 +36,14 @@ namespace TradingAssistant
             return true;
         }
 
-        public List<T> Last(int count)
+        public List<TValue> Last(int count)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(count, nameof(count));
             ArgumentOutOfRangeException.ThrowIfGreaterThan(count, _maxSize, nameof(count));
 
-            return new List<T>(_series.ToImmutableList().TakeLast(count).Select(p => p.Value));
+            return _series.ToArray().TakeLast(count).Select(p => p.Value).ToList();
         }
+
+        public List<TValue> Snapshot() => _series.ToArray().Select(p => p.Value).ToList();
     }
 }
