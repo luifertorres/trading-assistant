@@ -950,5 +950,29 @@ namespace TradingAssistant
 
             return true;
         }
+
+        public async Task<bool> TryClosePositionAtMarketAsync(string symbol,
+            decimal quantity,
+            CancellationToken cancellationToken = default)
+        {
+            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
+
+            var trading = _rest.UsdFuturesApi.Trading;
+            var placeOrderResult = await trading.PlaceOrderAsync(symbol,
+                quantity.AsOrderSide().Reverse(),
+                FuturesOrderType.Market,
+                Math.Abs(quantity),
+                reduceOnly: true,
+                ct: cancellationToken);
+
+            if (!placeOrderResult.Success)
+            {
+                _logger.LogError("Close position at market price failed. {Error}", placeOrderResult.Error);
+
+                return false;
+            }
+
+            return true;
+        }
     }
 }
