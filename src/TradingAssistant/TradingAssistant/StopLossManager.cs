@@ -8,7 +8,6 @@ namespace TradingAssistant
     {
         private readonly IConfiguration _configuration;
         private readonly BinanceService _binanceService;
-        private readonly decimal? _nullDecimal;
 
         public StopLossManager(IConfiguration configuration, BinanceService binanceService)
         {
@@ -41,12 +40,9 @@ namespace TradingAssistant
         private async Task UpdateStopLoss(BinanceFuturesStreamPosition position, CancellationToken cancellationToken = default)
         {
             var roi = _configuration.GetValue<decimal>("Binance:RiskManagement:StopLossRoi");
-            var moneyToLose = _nullDecimal;
-
             var isStopLossPlaced = await _binanceService.TryPlaceStopLossAsync(position.Symbol,
                 position.EntryPrice,
                 position.Quantity,
-                moneyToLose,
                 roi,
                 cancellationToken: cancellationToken);
 
@@ -56,7 +52,6 @@ namespace TradingAssistant
                 await _binanceService.TryPlaceStopLossAsync(position.Symbol,
                     position.EntryPrice,
                     position.Quantity,
-                    moneyToLose,
                     roi,
                     cancellationToken: cancellationToken);
             }

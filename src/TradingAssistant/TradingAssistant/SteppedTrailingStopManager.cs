@@ -5,11 +5,17 @@ using CryptoExchange.Net.Sockets;
 
 namespace TradingAssistant
 {
-    public class SteppedTrailingStopManager(ILogger<SteppedTrailingStopManager> logger, BinanceService binanceService) : BackgroundService
+    public class SteppedTrailingStopManager : BackgroundService
     {
-        private readonly ILogger<SteppedTrailingStopManager> _logger = logger;
-        private readonly BinanceService _binanceService = binanceService;
+        private readonly ILogger<SteppedTrailingStopManager> _logger;
+        private readonly BinanceService _binanceService;
         private readonly ConcurrentDictionary<string, UpdatePriceTask> _updateTakeProfitTasks = [];
+
+        public SteppedTrailingStopManager(ILogger<SteppedTrailingStopManager> logger, BinanceService binanceService)
+        {
+            _logger = logger;
+            _binanceService = binanceService;
+        }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {

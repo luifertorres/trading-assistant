@@ -5,13 +5,13 @@ using CryptoExchange.Net.Sockets;
 
 namespace TradingAssistant
 {
-    public class Rsi200ClosePositiontWorker : BackgroundService
+    public class Rsi200ClosePositionWorker : BackgroundService
     {
         private readonly IConfiguration _configuration;
         private readonly BinanceService _service;
         private readonly ConcurrentDictionary<string, Rsi200ClosePositionTracker> _closePositionTrackers = [];
 
-        public Rsi200ClosePositiontWorker(IConfiguration configuration, BinanceService binanceService)
+        public Rsi200ClosePositionWorker(IConfiguration configuration, BinanceService binanceService)
         {
             _configuration = configuration;
             _service = binanceService;

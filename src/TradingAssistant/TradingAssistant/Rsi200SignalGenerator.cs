@@ -8,9 +8,6 @@ namespace TradingAssistant
 {
     public class Rsi200SignalGenerator : IObserver<CircularTimeSeries<string, IBinanceKline>>
     {
-        private const int Length200 = 200;
-        private const int OversoldRsi = 45;
-        private const int OverboughtRsi = 55;
         private readonly ILogger<Rsi200SignalGenerator> _logger;
         private readonly IConfiguration _configuration;
         private readonly IPublisher _publisher;
@@ -47,7 +44,7 @@ namespace TradingAssistant
         {
         }
 
-        public virtual void OnNext(CircularTimeSeries<string, IBinanceKline> candlestick)
+        public virtual async void OnNext(CircularTimeSeries<string, IBinanceKline> candlestick)
         {
             var candles = candlestick.Snapshot();
 
@@ -82,7 +79,7 @@ namespace TradingAssistant
                     EnumConverter.GetString(_timeFrame),
                     Environment.NewLine);
 
-                _publisher.Publish(new EmaReversionSignal
+                await _publisher.Publish(new EmaReversionSignal
                 {
                     Time = time,
                     TimeFrame = _timeFrame,
@@ -92,7 +89,7 @@ namespace TradingAssistant
                     EntryPrice = entryPrice,
                 });
 
-                Console.Beep(frequency: 500, duration: 500);
+                //Console.Beep(frequency: 500, duration: 500);
             }
         }
 
@@ -103,14 +100,14 @@ namespace TradingAssistant
 
         private static OrderSide? GetSignalOrderSide(List<IBinanceKline> candles)
         {
-            var rsi200 = candles.Select(ToQuote).GetRsi(Length200).ToArray();
-            var penultimateRsi200 = (decimal)rsi200[^2].Rsi!.Value;
-            var lastRsi200 = (decimal)rsi200[^1].Rsi!.Value;
+            var rsi200 = candles.Select(ToQuote).GetRsi(Length.TwoHundred).ToArray();
+            var penultimateRsi200 = rsi200[^2].Rsi!.Value;
+            var lastRsi200 = rsi200[^1].Rsi!.Value;
 
             return (penultimateRsi200, lastRsi200) switch
             {
-                ( <= OversoldRsi, > OversoldRsi) => OrderSide.Buy,
-                ( >= OverboughtRsi, < OverboughtRsi) => OrderSide.Sell,
+                ( <= Rsi.Oversold, > Rsi.Oversold) => OrderSide.Buy,
+                ( >= Rsi.Overbought, < Rsi.Overbought) => OrderSide.Sell,
                 _ => null,
             };
         }

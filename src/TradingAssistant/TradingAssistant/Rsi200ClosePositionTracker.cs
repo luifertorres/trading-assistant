@@ -6,10 +6,6 @@ namespace TradingAssistant
 {
     public class Rsi200ClosePositionTracker : IObserver<CircularTimeSeries<string, IBinanceKline>>
     {
-        private const int Length200 = 200;
-        private const int OverboughtRsi = 55;
-        private const int MiddleRsi = 50;
-        private const int OversoldRsi = 45;
         private readonly BinanceFuturesStreamPosition _position;
         private readonly BinanceService _service;
         private IDisposable? _unsubscriber;
@@ -59,15 +55,17 @@ namespace TradingAssistant
 
         private static bool IsRsi200GettingOutOfLimits(List<IBinanceKline> candles)
         {
-            var rsi200 = candles.Select(ToQuote).GetRsi(Length200).ToArray();
-            var penultimateRsi200 = (decimal)rsi200[^2].Rsi!.Value;
-            var lastRsi200 = (decimal)rsi200[^1].Rsi!.Value;
-            var isBecomingOversold = penultimateRsi200 >= OversoldRsi && lastRsi200 < OversoldRsi;
-            var isBecomingOverbought = penultimateRsi200 < OverboughtRsi && lastRsi200 >= OverboughtRsi;
-            var isCrossingMiddleRsi = (penultimateRsi200 < MiddleRsi && lastRsi200 >= MiddleRsi)
-                || (penultimateRsi200 > MiddleRsi && lastRsi200 <= MiddleRsi);
+            var rsi200 = candles.Select(ToQuote).GetRsi(Length.TwoHundred).ToArray();
+            var penultimateRsi200 = rsi200[^2].Rsi!.Value;
+            var lastRsi200 = rsi200[^1].Rsi!.Value;
+            var isBecomingOversold = penultimateRsi200 >= Rsi.Oversold && lastRsi200 < Rsi.Oversold;
+            var isBecomingOverbought = penultimateRsi200 < Rsi.Overbought && lastRsi200 >= Rsi.Overbought;
+            var isCrossingMiddleRsi = (penultimateRsi200 < Rsi.Middle && lastRsi200 >= Rsi.Middle)
+                || (penultimateRsi200 > Rsi.Middle && lastRsi200 <= Rsi.Middle);
 
-            return isBecomingOversold || isCrossingMiddleRsi || isBecomingOverbought;
+            return isBecomingOversold
+                || isCrossingMiddleRsi
+                || isBecomingOverbought;
         }
 
         private static Quote ToQuote(IBinanceKline candle)

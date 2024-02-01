@@ -24,10 +24,11 @@ namespace TradingAssistant
 
                     services.AddHostedService<SignalsWorker>();
                     services.AddHostedService<StopLossManager>();
+                    services.AddHostedService<BreakEvenWorker>();
                     services.AddHostedService<TakeProfitManager>();
                     services.AddHostedService<SteppedTrailingStopManager>();
                     services.AddHostedService<TrailingStopManager>();
-                    services.AddHostedService<Rsi200ClosePositiontWorker>();
+                    services.AddHostedService<Rsi200ClosePositionWorker>();
                 })
                 .Build();
 

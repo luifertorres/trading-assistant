@@ -21,13 +21,13 @@
             {
                 try
                 {
-                    if (_cancellationTokenSource.Token.IsCancellationRequested)
+                    if (_cancellationTokenSource?.Token.IsCancellationRequested ?? default)
                     {
                         break;
                     }
 
-                    await _action(_price, _cancellationTokenSource.Token);
-                    await Task.Delay(1_000, _cancellationTokenSource.Token);
+                    await _action(_price, _cancellationTokenSource?.Token ?? default);
+                    await Task.Delay(1_000);
                 }
                 catch
                 {

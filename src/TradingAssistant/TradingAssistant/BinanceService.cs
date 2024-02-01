@@ -16,6 +16,7 @@ namespace TradingAssistant
     {
         private const string EntryOrderIdFormat = "{0}-entry-order";
         private const string StopLossIdFormat = "{0}-stop-loss";
+        private const string BreakEvenIdFormat = "{0}-break-even";
         private const string TakeProfitIdFormat = "{0}-take-profit";
         private const string SteppedTrailingIdFormat = "{0}-stepped-trailing";
         private const string TrailingStopIdFormat = "{0}-trailing-stop";
@@ -202,37 +203,9 @@ namespace TradingAssistant
             return price - remainder;
         }
 
-        private void EnsureLossValuesAreValid(decimal? moneyToLose, decimal? roi)
+        private static void EnsureStopLossRoiIsValid(decimal roi)
         {
-            if (moneyToLose is null && roi is null)
-            {
-                _logger.LogCritical("Both money to lose or ROI are null. " +
-                    "You have to pass one of them to place a Stop Loss");
-
-                throw new ArgumentNullException($"{moneyToLose} or {roi}",
-                    "Both money to lose or ROI are null. " +
-                    "You have to pass one of them to place a Stop Loss");
-            }
-
-            if (moneyToLose is not null && roi is not null)
-            {
-                _logger.LogCritical("Both money to lose or ROI are passed. " +
-                    "You have to pass only one of them to place a Stop Loss");
-
-                throw new ArgumentNullException($"{moneyToLose} or {roi}",
-                    "Both money to lose or ROI are passed. " +
-                    "You have to pass only one of them to place a Stop Loss");
-            }
-
-            if (moneyToLose is 0 || roi is 0)
-            {
-                _logger.LogCritical("Either money to lose or ROI are 0. " +
-                    "You have to pass one of them as non-zero value to place a Stop Loss");
-
-                throw new ArgumentNullException($"{moneyToLose} or {roi}",
-                    "Either money to lose or ROI are 0. " +
-                    "You have to pass one of them as non-zero value to place a Stop Loss");
-            }
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(roi);
         }
 
         private async Task<bool> TryStartUserDataStreamAsync(CancellationToken cancellationToken = default)
@@ -683,6 +656,25 @@ namespace TradingAssistant
             return true;
         }
 
+        public async Task<bool> TryCancelBreakEvenAsync(string symbol, CancellationToken cancellationToken = default)
+        {
+            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
+
+            var trading = _rest.UsdFuturesApi.Trading;
+            var cancelOrderResult = await trading.CancelOrderAsync(symbol,
+                origClientOrderId: string.Format(BreakEvenIdFormat, symbol.ToLower()),
+                ct: cancellationToken);
+
+            if (!cancelOrderResult.Success)
+            {
+                _logger.LogDebug("Cancel old BE order failed. {Error}", cancelOrderResult.Error);
+
+                return false;
+            }
+
+            return true;
+        }
+
         public async Task<bool> TryCancelTakeProfitAsync(string symbol, CancellationToken cancellationToken = default)
         {
             await EnsureRequestLimitAsync(weight: 1, cancellationToken);
@@ -784,34 +776,19 @@ namespace TradingAssistant
         public async Task<bool> TryPlaceStopLossAsync(string symbol,
             decimal entryPrice,
             decimal quantity,
-            decimal? moneyToLose = default,
-            decimal? roi = default,
+            decimal roi,
             CancellationToken cancellationToken = default)
         {
-            EnsureLossValuesAreValid(moneyToLose, roi);
+            EnsureStopLossRoiIsValid(roi);
 
             var trading = _rest.UsdFuturesApi.Trading;
-            var sign = decimal.Sign(quantity);
-            var positionCost = entryPrice * Math.Abs(quantity);
 
-            if (moneyToLose is null)
+            if (!TryGetLeverage(symbol, out var leverage))
             {
-                if (!TryGetLeverage(symbol, out var leverage))
-                {
-                    return false;
-                }
-
-                var margin = positionCost / leverage;
-
-                moneyToLose = margin * roi / 100;
+                return false;
             }
 
-            var stopLossPrice = (positionCost - (sign * moneyToLose!.Value)) / Math.Abs(quantity);
-            var entryCommissionCost = positionCost * 0.05m / 100;
-            var entryCommissionPriceDistance = entryCommissionCost / quantity;
-            var stopLossPriceAfterEntryCommission = stopLossPrice + entryCommissionPriceDistance;
-            var lossAfterFees = 1 - sign * 0.05m / 100;
-            var stopLossPriceAfterTotalFees = stopLossPriceAfterEntryCommission / lossAfterFees;
+            var stopLossPrice = CommissionPriceCalculator.CalculateStopLossPriceBeforeFees(entryPrice, quantity, roi, leverage);
 
             TryGetSymbolInformation(symbol, out var symbolInformation);
 
@@ -821,7 +798,7 @@ namespace TradingAssistant
                 quantity.AsOrderSide().Reverse(),
                 FuturesOrderType.StopMarket,
                 quantity: null,
-                stopPrice: ApplyPriceFilter(stopLossPriceAfterTotalFees, symbolInformation?.PriceFilter),
+                stopPrice: ApplyPriceFilter(stopLossPrice, symbolInformation?.PriceFilter),
                 closePosition: true,
                 timeInForce: TimeInForce.GoodTillCanceled,
                 newClientOrderId: string.Format(StopLossIdFormat, symbol.ToLower()),
@@ -831,6 +808,38 @@ namespace TradingAssistant
             if (!placeOrderResult.Success)
             {
                 _logger.LogError("Place SL order failed. {Error}", placeOrderResult.Error);
+
+                return false;
+            }
+
+            return true;
+        }
+
+        public async Task<bool> TryPlaceBreakEvenAsync(string symbol,
+            OrderSide positionSide,
+            decimal stopPrice,
+            CancellationToken cancellationToken = default)
+        {
+            var trading = _rest.UsdFuturesApi.Trading;
+
+            TryGetSymbolInformation(symbol, out var symbolInformation);
+
+            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
+
+            var placeOrderResult = await trading.PlaceOrderAsync(symbol,
+                positionSide.Reverse(),
+                FuturesOrderType.StopMarket,
+                quantity: null,
+                stopPrice: ApplyPriceFilter(stopPrice, symbolInformation?.PriceFilter),
+                closePosition: true,
+                timeInForce: TimeInForce.GoodTillCanceled,
+                newClientOrderId: string.Format(BreakEvenIdFormat, symbol.ToLower()),
+                priceProtect: true,
+                ct: cancellationToken);
+
+            if (!placeOrderResult.Success)
+            {
+                _logger.LogError("Place BE order failed. {Error}", placeOrderResult.Error);
 
                 return false;
             }
@@ -876,22 +885,13 @@ namespace TradingAssistant
             CancellationToken cancellationToken = default)
         {
             var trading = _rest.UsdFuturesApi.Trading;
-            var sign = decimal.Sign(quantity);
-            var positionCost = entryPrice * Math.Abs(quantity);
 
             if (!TryGetLeverage(symbol, out var leverage))
             {
                 return false;
             }
 
-            var margin = positionCost / leverage;
-            var profit = margin * roi / 100;
-            var takeProfitPrice = (positionCost + (sign * profit)) / Math.Abs(quantity);
-            var entryCommissionCost = positionCost * 0.05m / 100;
-            var entryCommissionPriceDistance = entryCommissionCost / quantity;
-            var takeProfitPriceAfterEntryCommission = takeProfitPrice + entryCommissionPriceDistance;
-            var profitAfterExitCommission = 1 - (sign * 0.05m / 100);
-            var takeProfitPriceAfterTotalFees = takeProfitPriceAfterEntryCommission / profitAfterExitCommission;
+            var takeProfitPrice = CommissionPriceCalculator.CalculateTakeProfitPriceBeforeFees(entryPrice, quantity, roi, leverage);
 
             TryGetSymbolInformation(symbol, out var symbolInformation);
 
@@ -901,7 +901,7 @@ namespace TradingAssistant
                 quantity.AsOrderSide().Reverse(),
                 FuturesOrderType.TakeProfitMarket,
                 quantity: null,
-                stopPrice: ApplyPriceFilter(takeProfitPriceAfterTotalFees, symbolInformation?.PriceFilter),
+                stopPrice: ApplyPriceFilter(takeProfitPrice, symbolInformation?.PriceFilter),
                 closePosition: true,
                 timeInForce: TimeInForce.GoodTillCanceled,
                 newClientOrderId: string.Format(TakeProfitIdFormat, symbol.ToLower()),
