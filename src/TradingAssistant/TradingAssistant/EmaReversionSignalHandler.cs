@@ -23,7 +23,7 @@ namespace TradingAssistant
                 return;
             }
 
-            if (positions.Any(p => p.Quantity.AsOrderSide() == notification.Side))
+            if (notification.Symbol is not "BTCUSDT" && positions.Any(p => p.Quantity.AsOrderSide() == notification.Side))
             {
                 return;
             }
