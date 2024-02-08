@@ -53,19 +53,33 @@ namespace TradingAssistant
             _unsubscriber?.Dispose();
         }
 
-        private static bool IsRsi200GettingOutOfLimits(List<IBinanceKline> candles)
+        private bool IsRsi200GettingOutOfLimits(List<IBinanceKline> candles)
         {
             var rsi200 = candles.Select(ToQuote).GetRsi(Length.TwoHundred).ToArray();
             var penultimateRsi200 = rsi200[^2].Rsi!.Value;
             var lastRsi200 = rsi200[^1].Rsi!.Value;
-            var isBecomingOversold = penultimateRsi200 >= Rsi.Oversold && lastRsi200 < Rsi.Oversold;
-            var isBecomingOverbought = penultimateRsi200 < Rsi.Overbought && lastRsi200 >= Rsi.Overbought;
+            var isOversold = penultimateRsi200 >= Rsi.OversoldMax && lastRsi200 < Rsi.OversoldMax;
+            var isOverbought = penultimateRsi200 < Rsi.OverboughtMin && lastRsi200 >= Rsi.OverboughtMin;
             var isCrossingMiddleRsi = (penultimateRsi200 < Rsi.Middle && lastRsi200 >= Rsi.Middle)
                 || (penultimateRsi200 > Rsi.Middle && lastRsi200 <= Rsi.Middle);
+            var lastPrice = candles.Last().ClosePrice;
+            var isLosingLong = lastPrice < _position.EntryPrice
+                && (lastRsi200 < Rsi.OversoldMin)
+                && (penultimateRsi200 > lastRsi200);
+            var isLosingShort = lastPrice > _position.EntryPrice
+                && (lastRsi200 > Rsi.OverboughtMax)
+                && (penultimateRsi200 < lastRsi200);
 
-            return isBecomingOversold
-                || isCrossingMiddleRsi
-                || isBecomingOverbought;
+            return _position.Quantity.AsOrderSide() switch
+            {
+                //OrderSide.Buy => isOverbought || isLosingLong,
+
+                //OrderSide.Sell => isOversold || isLosingShort,
+
+                //_ => false,
+
+                _ => isOverbought || isOversold,
+            };
         }
 
         private static Quote ToQuote(IBinanceKline candle)

@@ -41,9 +41,9 @@ namespace TradingAssistant
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(count, nameof(count));
             ArgumentOutOfRangeException.ThrowIfGreaterThan(count, _maxSize, nameof(count));
 
-            return _series.TakeLast(count).Select(p => p.Value).ToList();
+            return _series.ToList().TakeLast(count).Select(p => p.Value).ToList();
         }
 
-        public List<TValue> Snapshot() => _series.Select(p => p.Value).ToList();
+        public List<TValue> Snapshot() => _series.ToList().Select(p => p.Value).ToList();
     }
 }

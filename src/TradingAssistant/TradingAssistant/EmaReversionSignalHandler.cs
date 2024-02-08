@@ -5,6 +5,7 @@ namespace TradingAssistant
 {
     public class EmaReversionSignalHandler : INotificationHandler<EmaReversionSignal>
     {
+        private const string BtcUsdt = "BTCUSDT";
         private readonly IConfiguration _configuration;
         private readonly BinanceService _binanceService;
 
@@ -14,21 +15,23 @@ namespace TradingAssistant
             _binanceService = binanceService;
         }
 
-        public async Task Handle(EmaReversionSignal notification, CancellationToken cancellationToken)
+        public async Task Handle(EmaReversionSignal signal, CancellationToken cancellationToken)
         {
+            await Task.Delay(Random.Shared.Next(maxValue: 1000), cancellationToken);
+
             var positions = await _binanceService.TryGetPositionsAsync(cancellationToken);
 
-            if (positions.Any(p => p.Symbol == notification.Symbol))
+            if (positions.Any(p => p.Symbol == signal.Symbol))
             {
                 return;
             }
 
-            if (notification.Symbol is not "BTCUSDT" && positions.Any(p => p.Quantity.AsOrderSide() == notification.Side))
+            if (positions.Any(p => p.Quantity.AsOrderSide() == signal.Side))
             {
                 return;
             }
 
-            if (!_binanceService.TryGetLeverage(notification.Symbol, out var leverage))
+            if (!_binanceService.TryGetLeverage(signal.Symbol, out var leverage))
             {
                 return;
             }
@@ -43,13 +46,13 @@ namespace TradingAssistant
             var accountMarginPercentage = _configuration.GetValue<decimal>("Binance:RiskManagement:AccountMarginPercentage");
             var accountPercentageForEntry = accountMarginPercentage * leverage;
             var notional = account.AvailableBalance * accountPercentageForEntry / 100;
-            var quantity = notional / notification.EntryPrice;
+            var quantity = notional / signal.EntryPrice;
 
-            await _binanceService.TryPlaceEntryOrderAsync(notification.Symbol,
-                notification.Side,
+            await _binanceService.TryPlaceEntryOrderAsync(signal.Symbol,
+                signal.Side,
                 FuturesOrderType.Market,
                 quantity,
-                notification.EntryPrice,
+                signal.EntryPrice,
                 cancellationToken);
         }
     }

@@ -751,6 +751,19 @@ namespace TradingAssistant
                 ? ApplyLimitQuantityFilter(quantity, entryPrice!.Value, symbolInformation?.MinNotionalFilter, symbolInformation?.LotSizeFilter)
                 : ApplyMarketQuantityFilter(quantity, entryPrice!.Value, symbolInformation?.MinNotionalFilter, symbolInformation?.MarketLotSizeFilter);
 
+            if (!TryGetLeverage(symbol, out var leverage))
+            {
+                return false;
+            }
+
+            var notional = quantity * entryPrice!.Value;
+            var margin = notional / leverage;
+
+            if (margin > 0.5m)
+            {
+                return false;
+            }
+
             await EnsureRequestLimitAsync(weight: 1, cancellationToken);
 
             var trading = _rest.UsdFuturesApi.Trading;

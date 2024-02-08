@@ -79,6 +79,7 @@ namespace TradingAssistant
                     EnumConverter.GetString(_timeFrame),
                     Environment.NewLine);
 
+                await Task.Delay(millisecondsDelay: Random.Shared.Next(maxValue: 1000));
                 await _publisher.Publish(new EmaReversionSignal
                 {
                     Time = time,
@@ -106,8 +107,12 @@ namespace TradingAssistant
 
             return (penultimateRsi200, lastRsi200) switch
             {
-                ( <= Rsi.Oversold, > Rsi.Oversold) => OrderSide.Buy,
-                ( >= Rsi.Overbought, < Rsi.Overbought) => OrderSide.Sell,
+                //var (a, b) when a <= Rsi.OversoldMin && a < b => OrderSide.Buy,
+                //var (a, b) when a >= Rsi.OverboughtMax && a > b => OrderSide.Sell,
+
+                ( <= Rsi.OversoldMax, > Rsi.OversoldMax) => OrderSide.Buy,
+                ( >= Rsi.OverboughtMin, < Rsi.OverboughtMin) => OrderSide.Sell,
+
                 _ => null,
             };
         }
