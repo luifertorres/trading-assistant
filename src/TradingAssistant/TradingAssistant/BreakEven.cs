@@ -20,7 +20,7 @@
                 return false;
             }
 
-            stopPrice = CommissionPriceCalculator.CalculateTakeProfitPriceBeforeFees(_entryPrice, _quantity, roi: 0, _leverage);
+            stopPrice = TakeProfitPrice.Calculate(_entryPrice, _quantity, roi: 0, leverage: _leverage, includeFees: true);
 
             return true;
         }

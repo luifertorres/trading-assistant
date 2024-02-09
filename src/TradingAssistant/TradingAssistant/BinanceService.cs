@@ -801,7 +801,7 @@ namespace TradingAssistant
                 return false;
             }
 
-            var stopLossPrice = CommissionPriceCalculator.CalculateStopLossPriceBeforeFees(entryPrice, quantity, roi, leverage);
+            var stopLossPrice = StopLossPrice.Calculate(entryPrice, quantity, roi, leverage, includeFees: true);
 
             TryGetSymbolInformation(symbol, out var symbolInformation);
 
@@ -904,7 +904,7 @@ namespace TradingAssistant
                 return false;
             }
 
-            var takeProfitPrice = CommissionPriceCalculator.CalculateTakeProfitPriceBeforeFees(entryPrice, quantity, roi, leverage);
+            var takeProfitPrice = TakeProfitPrice.Calculate(entryPrice, quantity, roi, leverage, includeFees: true);
 
             TryGetSymbolInformation(symbol, out var symbolInformation);
 
