@@ -19,10 +19,13 @@ namespace TradingAssistant
                         configuration.RegisterServicesFromAssembly(typeof(Program).Assembly);
                     });
 
+                    services.AddDbContext<TradingContext>();
+
                     services.AddSingleton<BinanceService>();
                     services.AddSingleton<Rsi200SignalGenerator>();
 
                     services.AddHostedService<SignalsWorker>();
+                    services.AddHostedService<PositionWriterWorker>();
                     services.AddHostedService<StopLossManager>();
                     services.AddHostedService<BreakEvenWorker>();
                     services.AddHostedService<TakeProfitManager>();

@@ -5,38 +5,39 @@ namespace TradingAssistant
 {
     public class EmaReversionSignalHandler : INotificationHandler<EmaReversionSignal>
     {
-        private const string BtcUsdt = "BTCUSDT";
         private readonly IConfiguration _configuration;
-        private readonly BinanceService _binanceService;
+        private readonly IServiceScopeFactory _factory;
+        private readonly BinanceService _binance;
 
-        public EmaReversionSignalHandler(IConfiguration configuration, BinanceService binanceService)
+        public EmaReversionSignalHandler(IConfiguration configuration, IServiceScopeFactory factory, BinanceService binance)
         {
             _configuration = configuration;
-            _binanceService = binanceService;
+            _factory = factory;
+            _binance = binance;
         }
 
         public async Task Handle(EmaReversionSignal signal, CancellationToken cancellationToken)
         {
             await Task.Delay(Random.Shared.Next(maxValue: 1000), cancellationToken);
 
-            var positions = await _binanceService.TryGetPositionsAsync(cancellationToken);
+            using var database = _factory.CreateScope().ServiceProvider.GetRequiredService<TradingContext>();
 
-            if (positions.Any(p => p.Symbol == signal.Symbol))
+            if (database.OpenPositions.Any(p => p.Symbol == signal.Symbol))
             {
                 return;
             }
 
-            if (positions.Any(p => p.Quantity.AsOrderSide() == signal.Side))
+            if (database.OpenPositions.Any(p => !p.HasStopLossInBreakEven))
             {
                 return;
             }
 
-            if (!_binanceService.TryGetLeverage(signal.Symbol, out var leverage))
+            if (!_binance.TryGetLeverage(signal.Symbol, out var leverage))
             {
                 return;
             }
 
-            var account = await _binanceService.TryGetAccountInformationAsync(cancellationToken);
+            var account = await _binance.TryGetAccountInformationAsync(cancellationToken);
 
             if (account is null)
             {
@@ -48,7 +49,7 @@ namespace TradingAssistant
             var notional = account.AvailableBalance * accountPercentageForEntry / 100;
             var quantity = notional / signal.EntryPrice;
 
-            await _binanceService.TryPlaceEntryOrderAsync(signal.Symbol,
+            await _binance.TryPlaceEntryOrderAsync(signal.Symbol,
                 signal.Side,
                 FuturesOrderType.Market,
                 quantity,

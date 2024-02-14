@@ -2,6 +2,7 @@
 using Binance.Net.Objects.Models.Futures.Socket;
 
 using CryptoExchange.Net.Sockets;
+using Microsoft.EntityFrameworkCore;
 
 namespace TradingAssistant
 {
@@ -9,21 +10,24 @@ namespace TradingAssistant
     {
         private readonly ILogger<BreakEvenWorker> _logger;
         private readonly IConfiguration _configuration;
-        private readonly BinanceService _binanceService;
+        private readonly IServiceScopeFactory _factory;
+        private readonly BinanceService _binance;
         private readonly ConcurrentDictionary<string, UpdatePriceTask> _updateBreakEvenTasks = [];
 
         public BreakEvenWorker(ILogger<BreakEvenWorker> logger,
             IConfiguration configuration,
-            BinanceService binanceService)
+            IServiceScopeFactory factory,
+            BinanceService binance)
         {
             _logger = logger;
             _configuration = configuration;
-            _binanceService = binanceService;
+            _factory = factory;
+            _binance = binance;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _binanceService.SubscribeToAccountUpdates(@event => HandleAccountUpdate(@event, stoppingToken));
+            _binance.SubscribeToAccountUpdates(@event => HandleAccountUpdate(@event, stoppingToken));
 
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
@@ -34,7 +38,7 @@ namespace TradingAssistant
             {
                 if (position.EntryPrice != 0 && position.Quantity != 0)
                 {
-                    if (!_binanceService.TryGetLeverage(position.Symbol, out var leverage))
+                    if (!_binance.TryGetLeverage(position.Symbol, out var leverage))
                     {
                         continue;
                     }
@@ -59,13 +63,13 @@ namespace TradingAssistant
                         continue;
                     }
 
-                    await _binanceService.TrySubscribeToPriceAsync(position.Symbol,
+                    await _binance.TrySubscribeToPriceAsync(position.Symbol,
                         action: updateBreakEvenTask.UpdatePrice,
                         cancellationToken);
                 }
                 else
                 {
-                    await _binanceService.TryUnsubscribeFromPriceAsync(position.Symbol);
+                    await _binance.TryUnsubscribeFromPriceAsync(position.Symbol);
 
                     if (_updateBreakEvenTasks.TryRemove(position.Symbol, out var updateBreakEvenTask))
                     {
@@ -87,21 +91,34 @@ namespace TradingAssistant
 
             _logger.LogDebug("{Symbol} Break Even will be placed due to current price: {Price}", position.Symbol, currentPrice);
 
-            var isBreakEvenPlaced = await _binanceService.TryPlaceBreakEvenAsync(position.Symbol,
+            var isBreakEvenPlaced = await _binance.TryPlaceBreakEvenAsync(position.Symbol,
                     position.Quantity.AsOrderSide(),
                     stopPrice,
                     cancellationToken);
 
             if (!isBreakEvenPlaced)
             {
-                await _binanceService.TryCancelBreakEvenAsync(position.Symbol, cancellationToken);
-                await _binanceService.TryPlaceBreakEvenAsync(position.Symbol,
+                await _binance.TryCancelBreakEvenAsync(position.Symbol, cancellationToken);
+                await _binance.TryPlaceBreakEvenAsync(position.Symbol,
                     position.Quantity.AsOrderSide(),
                     stopPrice,
                     cancellationToken);
             }
 
-            await _binanceService.TryUnsubscribeFromPriceAsync(position.Symbol);
+            using var database = _factory.CreateScope().ServiceProvider.GetRequiredService<TradingContext>();
+
+            var openPosition = await database.OpenPositions.FirstOrDefaultAsync(p => p.Symbol == position.Symbol,
+                cancellationToken);
+
+            if (openPosition is not null)
+            {
+                openPosition.BreakEvenPrice = stopPrice;
+                openPosition.HasStopLossInBreakEven = true;
+
+                await database.SaveChangesAsync(cancellationToken);
+            }
+
+            await _binance.TryUnsubscribeFromPriceAsync(position.Symbol);
 
             if (_updateBreakEvenTasks.TryRemove(position.Symbol, out var updateBreakEvenTask))
             {
