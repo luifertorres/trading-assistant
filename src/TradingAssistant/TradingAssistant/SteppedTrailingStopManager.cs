@@ -8,18 +8,22 @@ namespace TradingAssistant
     public class SteppedTrailingStopManager : BackgroundService
     {
         private readonly ILogger<SteppedTrailingStopManager> _logger;
-        private readonly BinanceService _binanceService;
+        private readonly IConfiguration _configuration;
+        private readonly BinanceService _binance;
         private readonly ConcurrentDictionary<string, UpdatePriceTask> _updateTakeProfitTasks = [];
 
-        public SteppedTrailingStopManager(ILogger<SteppedTrailingStopManager> logger, BinanceService binanceService)
+        public SteppedTrailingStopManager(ILogger<SteppedTrailingStopManager> logger,
+            IConfiguration configuration,
+            BinanceService binance)
         {
             _logger = logger;
-            _binanceService = binanceService;
+            _configuration = configuration;
+            _binance = binance;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _binanceService.SubscribeToAccountUpdates(@event => HandleAccountUpdate(@event, stoppingToken));
+            _binance.SubscribeToAccountUpdates(@event => HandleAccountUpdate(@event, stoppingToken));
 
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
@@ -30,7 +34,7 @@ namespace TradingAssistant
             {
                 if (position.EntryPrice != 0 && position.Quantity != 0)
                 {
-                    if (!_binanceService.TryGetLeverage(position.Symbol, out var leverage))
+                    if (!_binance.TryGetLeverage(position.Symbol, out var leverage))
                     {
                         continue;
                     }
@@ -40,7 +44,13 @@ namespace TradingAssistant
                         updateTakeProfitTask.Stop();
                     }
 
-                    var trailingStop = new SteppedTrailingStop(position.EntryPrice, position.Quantity, leverage);
+                    var stepRoi = _configuration.GetValue<decimal>("Binance:RiskManagement:SteppedTrailingStepRoi");
+                    var detectionOffsetRoi = _configuration.GetValue<decimal>("Binance:RiskManagement:SteppedTrailingDetectionOffsetRoi");
+                    var trailingStop = new SteppedTrailingStop(position.EntryPrice,
+                        position.Quantity,
+                        leverage,
+                        stepRoi,
+                        detectionOffsetRoi);
 
                     updateTakeProfitTask = new UpdatePriceTask(position.EntryPrice, (price, token) =>
                     {
@@ -54,7 +64,7 @@ namespace TradingAssistant
                         continue;
                     }
 
-                    await _binanceService.TrySubscribeToPriceAsync(position.Symbol,
+                    await _binance.TrySubscribeToPriceAsync(position.Symbol,
                         action: updateTakeProfitTask.UpdatePrice,
                         cancellationToken);
                 }
@@ -65,7 +75,7 @@ namespace TradingAssistant
                         updateTakeProfitTask.Stop();
                     }
 
-                    await _binanceService.TryUnsubscribeFromPriceAsync(position.Symbol);
+                    await _binance.TryUnsubscribeFromPriceAsync(position.Symbol);
                 }
             }
         }
@@ -82,8 +92,8 @@ namespace TradingAssistant
 
             _logger.LogDebug("{Symbol} Trailing Stop advanced due to current price: {Price}", position.Symbol, currentPrice);
 
-            await _binanceService.TryCancelSteppedTrailingAsync(position.Symbol, cancellationToken);
-            await _binanceService.TryPlaceTakeProfitBehindAsync(position.Symbol,
+            await _binance.TryCancelSteppedTrailingAsync(position.Symbol, cancellationToken);
+            await _binance.TryPlaceTakeProfitBehindAsync(position.Symbol,
                 stopPrice,
                 position.Quantity.AsOrderSide().Reverse(),
                 cancellationToken);

@@ -1,15 +1,32 @@
 ﻿namespace TradingAssistant
 {
-    public class SteppedTrailingStop(decimal entryPrice, decimal quantity, int leverage)
+    public class SteppedTrailingStop
     {
-        private const decimal Step = 100m;
-        private const decimal Offset = Step / 2;
-        private readonly decimal _entryPrice = entryPrice;
-        private readonly decimal _quantity = quantity;
-        private readonly int _leverage = leverage;
+        private readonly decimal _entryPrice;
+        private readonly decimal _quantity;
+        private readonly int _leverage;
+        private readonly decimal _stepRoi;
+        private readonly decimal _detectionOffsetRoi;
         private decimal _stopPrice;
         private decimal _highestRoi;
         private decimal _stopRoiMultiplier;
+
+        public SteppedTrailingStop(decimal entryPrice,
+            decimal quantity,
+            int leverage,
+            decimal stepRoi = 100,
+            decimal detectionOffsetRoi = 50)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(stepRoi);
+            ArgumentOutOfRangeException.ThrowIfNegative(detectionOffsetRoi);
+            ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(detectionOffsetRoi, stepRoi);
+
+            _entryPrice = entryPrice;
+            _quantity = quantity;
+            _leverage = leverage;
+            _stepRoi = stepRoi;
+            _detectionOffsetRoi = detectionOffsetRoi;
+        }
 
         public bool TryAdvance(decimal currentPrice, out decimal stopPrice)
         {
@@ -19,7 +36,7 @@
             var pnlPercentage = sign * ((currentPrice / _entryPrice) - 1) * 100;
             var roi = pnlPercentage * _leverage;
 
-            if (roi < Offset)
+            if (roi < _detectionOffsetRoi)
             {
                 return false;
             }
@@ -31,12 +48,12 @@
 
             _highestRoi = roi;
 
-            var remainder = roi % Step;
-            var multiplier = (roi - remainder) / Step;
+            var remainder = roi % _stepRoi;
+            var multiplier = (roi - remainder) / _stepRoi;
 
-            _stopRoiMultiplier = remainder < Offset ? multiplier - 1 : multiplier;
+            _stopRoiMultiplier = remainder < _detectionOffsetRoi ? multiplier - 1 : multiplier;
 
-            var target = Step * _stopRoiMultiplier;
+            var target = _stepRoi * _stopRoiMultiplier;
 
             stopPrice = _entryPrice * (1 + (sign * target / _leverage / 100));
 
