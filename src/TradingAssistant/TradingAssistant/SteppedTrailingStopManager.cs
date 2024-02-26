@@ -2,6 +2,7 @@
 using Binance.Net.Objects.Models.Futures.Socket;
 
 using CryptoExchange.Net.Sockets;
+using Microsoft.EntityFrameworkCore;
 
 namespace TradingAssistant
 {
@@ -9,15 +10,18 @@ namespace TradingAssistant
     {
         private readonly ILogger<SteppedTrailingStopManager> _logger;
         private readonly IConfiguration _configuration;
+        private readonly IServiceScopeFactory _factory;
         private readonly BinanceService _binance;
         private readonly ConcurrentDictionary<string, UpdatePriceTask> _updateTakeProfitTasks = [];
 
         public SteppedTrailingStopManager(ILogger<SteppedTrailingStopManager> logger,
             IConfiguration configuration,
+            IServiceScopeFactory factory,
             BinanceService binance)
         {
             _logger = logger;
             _configuration = configuration;
+            _factory = factory;
             _binance = binance;
         }
 
@@ -92,11 +96,32 @@ namespace TradingAssistant
 
             _logger.LogDebug("{Symbol} Trailing Stop advanced due to current price: {Price}", position.Symbol, currentPrice);
 
-            await _binance.TryCancelSteppedTrailingAsync(position.Symbol, cancellationToken);
-            await _binance.TryPlaceTakeProfitBehindAsync(position.Symbol,
-                stopPrice,
-                position.Quantity.AsOrderSide().Reverse(),
+            var isTrailingPlaced = await _binance.TryPlaceTakeProfitBehindAsync(position.Symbol,
+                    stopPrice,
+                    position.Quantity.AsOrderSide().Reverse(),
+                    cancellationToken);
+
+            if (!isTrailingPlaced)
+            {
+                await _binance.TryCancelSteppedTrailingAsync(position.Symbol, cancellationToken);
+                await _binance.TryPlaceTakeProfitBehindAsync(position.Symbol,
+                    stopPrice,
+                    position.Quantity.AsOrderSide().Reverse(),
+                    cancellationToken);
+            }
+
+            using var database = _factory.CreateScope().ServiceProvider.GetRequiredService<TradingContext>();
+
+            var openPosition = await database.OpenPositions.FirstOrDefaultAsync(p => p.Symbol == position.Symbol,
                 cancellationToken);
+
+            if (openPosition is not null && !openPosition.HasStopLossInBreakEven)
+            {
+                openPosition.BreakEvenPrice = stopPrice;
+                openPosition.HasStopLossInBreakEven = true;
+
+                await database.SaveChangesAsync(cancellationToken);
+            }
         }
     }
 }
