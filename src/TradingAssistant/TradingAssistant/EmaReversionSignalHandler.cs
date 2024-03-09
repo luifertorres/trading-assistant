@@ -18,8 +18,6 @@ namespace TradingAssistant
 
         public async Task Handle(EmaReversionSignal signal, CancellationToken cancellationToken)
         {
-            await Task.Delay(Random.Shared.Next(maxValue: 1000), cancellationToken);
-
             using var database = _factory.CreateScope().ServiceProvider.GetRequiredService<TradingContext>();
 
             if (database.OpenPositions.Any(p => p.Symbol == signal.Symbol))

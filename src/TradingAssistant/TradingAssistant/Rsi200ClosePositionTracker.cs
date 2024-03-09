@@ -58,16 +58,16 @@ namespace TradingAssistant
             var rsi200 = candles.Select(ToQuote).GetRsi(Length.TwoHundred).ToArray();
             var penultimateRsi200 = rsi200[^2].Rsi!.Value;
             var lastRsi200 = rsi200[^1].Rsi!.Value;
-            var isOversold = penultimateRsi200 >= Rsi.OversoldMax && lastRsi200 < Rsi.OversoldMax;
-            var isOverbought = penultimateRsi200 < Rsi.OverboughtMin && lastRsi200 >= Rsi.OverboughtMin;
+            var isOversold = penultimateRsi200 >= Rsi.OversoldFor200 && lastRsi200 < Rsi.OversoldFor200;
+            var isOverbought = penultimateRsi200 < Rsi.OverboughtFor200 && lastRsi200 >= Rsi.OverboughtFor200;
             var isCrossingMiddleRsi = (penultimateRsi200 < Rsi.Middle && lastRsi200 >= Rsi.Middle)
                 || (penultimateRsi200 > Rsi.Middle && lastRsi200 <= Rsi.Middle);
             var lastPrice = candles.Last().ClosePrice;
             var isLosingLong = lastPrice < _position.EntryPrice
-                && (lastRsi200 < Rsi.OversoldMin)
+                && (lastRsi200 < Rsi.Oversold)
                 && (penultimateRsi200 > lastRsi200);
             var isLosingShort = lastPrice > _position.EntryPrice
-                && (lastRsi200 > Rsi.OverboughtMax)
+                && (lastRsi200 > Rsi.Overbought)
                 && (penultimateRsi200 < lastRsi200);
 
             return _position.Quantity.AsOrderSide() switch

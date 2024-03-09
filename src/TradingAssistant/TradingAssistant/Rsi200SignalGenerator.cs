@@ -79,7 +79,6 @@ namespace TradingAssistant
                     EnumConverter.GetString(_timeFrame),
                     Environment.NewLine);
 
-                await Task.Delay(millisecondsDelay: Random.Shared.Next(maxValue: 1000));
                 await _publisher.Publish(new EmaReversionSignal
                 {
                     Time = time,
@@ -99,22 +98,130 @@ namespace TradingAssistant
             _unsubscriber?.Dispose();
         }
 
-        private static OrderSide? GetSignalOrderSide(List<IBinanceKline> candles)
+        private OrderSide? GetSignalOrderSide(List<IBinanceKline> candles)
         {
-            var rsi200 = candles.Select(ToQuote).GetRsi(Length.TwoHundred).ToArray();
-            var penultimateRsi200 = rsi200[^2].Rsi!.Value;
-            var lastRsi200 = rsi200[^1].Rsi!.Value;
+            return _timeFrame is KlineInterval.OneMinute
+                ? GetRsiSignalsFrom1m(candles)
+                : GetRsiSignals(candles);
+        }
 
-            return (penultimateRsi200, lastRsi200) switch
+        private static OrderSide? GetRsiSignalsFrom1m(List<IBinanceKline> candles)
+        {
+            var lengths = new[]
             {
-                //var (a, b) when a <= Rsi.OversoldMin && a < b => OrderSide.Buy,
-                //var (a, b) when a >= Rsi.OverboughtMax && a > b => OrderSide.Sell,
-
-                ( <= Rsi.OversoldMax, > Rsi.OversoldMax) => OrderSide.Buy,
-                ( >= Rsi.OverboughtMin, < Rsi.OverboughtMin) => OrderSide.Sell,
-
-                _ => null,
+                Length.Five,
+                Length.Eight,
+                Length.Twenty,
+                Length.TwoHundred
             };
+
+            var timeFrames = new[]
+            {
+                PeriodSize.OneMinute,
+                PeriodSize.FiveMinutes,
+                PeriodSize.FifteenMinutes,
+                PeriodSize.ThirtyMinutes,
+                PeriodSize.OneHour
+            };
+
+            foreach (var timeFrame in timeFrames)
+            {
+                var rsis = lengths.Select(length => timeFrame is PeriodSize.OneMinute
+                    ? GetRsi(candles, length)
+                    : GetRsi(candles, length, timeFrame));
+                var rsi200PenultimateSignal = GetRsi200PenultimateSignal(rsis.Last());
+                var areFasterRsiPenultimateSignalsEqualToRsi200Signal = rsis.Take(3)
+                    .Select(GetRsiPenultimateSignal)
+                    .All(signal => signal == rsi200PenultimateSignal);
+
+                if (!areFasterRsiPenultimateSignalsEqualToRsi200Signal)
+                {
+                    return null;
+                }
+            }
+
+            var rsisIn1m = lengths.Select(length => GetRsi(candles, length));
+            var rsi200PenultimateSignalIn1m = GetRsi200PenultimateSignal(rsisIn1m.Last());
+            var isAnyFasterRsiLastSignalEqualToRsi200SignalIn1m = rsisIn1m.Take(3)
+                .Select(GetRsiLastSignal)
+                .Any(signal => signal == rsi200PenultimateSignalIn1m);
+
+            if (!isAnyFasterRsiLastSignalEqualToRsi200SignalIn1m)
+            {
+                return null;
+            }
+
+            return rsi200PenultimateSignalIn1m;
+
+            static OrderSide? GetRsi200PenultimateSignal(double[] rsi) => rsi switch
+            {
+                [.., <= Rsi.OversoldFor200, _] => OrderSide.Buy,
+                [.., >= Rsi.OverboughtFor200, _] => OrderSide.Sell,
+
+                _ => default(OrderSide?),
+            };
+
+            static OrderSide? GetRsiPenultimateSignal(double[] rsi) => rsi switch
+            {
+                [.., <= Rsi.Oversold, _] => OrderSide.Buy,
+                [.., >= Rsi.Overbought, _] => OrderSide.Sell,
+
+                _ => default(OrderSide?),
+            };
+
+            static OrderSide? GetRsiLastSignal(double[] rsi) => rsi switch
+            {
+                [.., <= Rsi.Oversold, > Rsi.Oversold] => OrderSide.Buy,
+                [.., >= Rsi.Overbought, < Rsi.Overbought] => OrderSide.Sell,
+
+                _ => default(OrderSide?),
+            };
+        }
+
+        private static OrderSide? GetRsiSignals(List<IBinanceKline> candles)
+        {
+            var lengths = new[] { Length.Five, Length.Eight, Length.Twenty, Length.TwoHundred };
+            var rsis = lengths.Select(length => GetRsi(candles, length));
+            var rsi200Signal = rsis.Last() switch
+            {
+                [.., <= Rsi.OversoldFor200, _] => OrderSide.Buy,
+                [.., >= Rsi.OverboughtFor200, _] => OrderSide.Sell,
+
+                _ => default(OrderSide?),
+            };
+
+            var areFasterRsiSignalsEqualToRsi200Signal = rsis.Take(3)
+                .Select(rsi => rsi switch
+                {
+                    [.., <= Rsi.Oversold, > Rsi.Oversold] => OrderSide.Buy,
+                    [.., >= Rsi.Overbought, < Rsi.Overbought] => OrderSide.Sell,
+
+                    _ => default(OrderSide?),
+                })
+                .All(rsi => rsi == rsi200Signal);
+
+            return areFasterRsiSignalsEqualToRsi200Signal ? rsi200Signal : null;
+        }
+
+        private static double[] GetRsi(List<IBinanceKline> candles, int length, PeriodSize? higherTimeFrame = null)
+        {
+            var quotes = candles.Select(ToQuote).Validate();
+
+            var postWarmupPeriod = 102;
+
+            if (higherTimeFrame.HasValue)
+            {
+                return quotes.Aggregate(higherTimeFrame.Value)
+                    .TakeLast(length + postWarmupPeriod)
+                    .GetRsi(length)
+                    .Select(rsi => rsi.Rsi.GetValueOrDefault())
+                    .ToArray();
+            }
+
+            return quotes.TakeLast(length + postWarmupPeriod)
+                .GetRsi(length)
+                .Select(rsi => rsi.Rsi.GetValueOrDefault())
+                .ToArray();
         }
 
         private static Quote ToQuote(IBinanceKline candle)
