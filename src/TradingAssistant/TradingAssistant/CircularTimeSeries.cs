@@ -2,18 +2,28 @@
 
 namespace TradingAssistant
 {
-    public class CircularTimeSeries<TKey, TValue>(TKey symbol, int maxSize)
+    public class CircularTimeSeries<TKey, TValue>
     {
-        private readonly TKey _symbol = symbol;
-        private readonly int _maxSize = maxSize;
+        private static readonly object s_synchronizer = new();
+        private readonly TKey _symbol;
+        private readonly int _maxSize;
         private readonly SortedDictionary<DateTime, TValue> _series = [];
 
         public TKey Symbol => _symbol;
 
+        public CircularTimeSeries(TKey symbol, int maxSize)
+        {
+            _symbol = symbol;
+            _maxSize = maxSize;
+        }
+
         public void Add(DateTime time, TValue value)
         {
-            _series[time] = value;
-            EnsureMaxSize();
+            lock (s_synchronizer)
+            {
+                _series[time] = value;
+                EnsureMaxSize();
+            }
         }
 
         private void EnsureMaxSize()
@@ -41,9 +51,18 @@ namespace TradingAssistant
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(count, nameof(count));
             ArgumentOutOfRangeException.ThrowIfGreaterThan(count, _maxSize, nameof(count));
 
-            return _series.ToList().TakeLast(count).Select(p => p.Value).ToList();
+            lock (s_synchronizer)
+            {
+                return _series.TakeLast(count).Select(p => p.Value).ToList();
+            }
         }
 
-        public List<TValue> Snapshot() => _series.ToList().Select(p => p.Value).ToList();
+        public List<TValue> Snapshot()
+        {
+            lock (s_synchronizer)
+            {
+                return _series.Select(p => p.Value).ToList();
+            }
+        }
     }
 }
