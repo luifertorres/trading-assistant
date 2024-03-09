@@ -98,6 +98,7 @@ namespace TradingAssistant
 
             var isTrailingPlaced = await _binance.TryPlaceTakeProfitBehindAsync(position.Symbol,
                     stopPrice,
+                    position.Quantity,
                     position.Quantity.AsOrderSide().Reverse(),
                     cancellationToken);
 
@@ -106,6 +107,7 @@ namespace TradingAssistant
                 await _binance.TryCancelSteppedTrailingAsync(position.Symbol, cancellationToken);
                 await _binance.TryPlaceTakeProfitBehindAsync(position.Symbol,
                     stopPrice,
+                    position.Quantity,
                     position.Quantity.AsOrderSide().Reverse(),
                     cancellationToken);
             }

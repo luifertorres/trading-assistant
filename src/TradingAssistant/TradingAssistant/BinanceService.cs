@@ -751,19 +751,6 @@ namespace TradingAssistant
                 ? ApplyLimitQuantityFilter(quantity, entryPrice!.Value, symbolInformation?.MinNotionalFilter, symbolInformation?.LotSizeFilter)
                 : ApplyMarketQuantityFilter(quantity, entryPrice!.Value, symbolInformation?.MinNotionalFilter, symbolInformation?.MarketLotSizeFilter);
 
-            if (!TryGetLeverage(symbol, out var leverage))
-            {
-                return false;
-            }
-
-            var notional = quantity * entryPrice!.Value;
-            var margin = notional / leverage;
-
-            if (margin > 0.5m)
-            {
-                return false;
-            }
-
             await EnsureRequestLimitAsync(weight: 1, cancellationToken);
 
             var trading = _rest.UsdFuturesApi.Trading;
@@ -862,9 +849,12 @@ namespace TradingAssistant
 
         public async Task<bool> TryPlaceTakeProfitBehindAsync(string symbol,
             decimal price,
+            decimal quantity,
             OrderSide orderSide,
             CancellationToken cancellationToken = default)
         {
+            var takeProfitPrice = TakeProfitPrice.Calculate(price, quantity, offset: 0, includeFees: true);
+
             TryGetSymbolInformation(symbol, out var symbolInformation);
 
             await EnsureRequestLimitAsync(weight: 1, cancellationToken);
@@ -874,7 +864,7 @@ namespace TradingAssistant
                 orderSide,
                 FuturesOrderType.StopMarket,
                 quantity: null,
-                stopPrice: ApplyPriceFilter(price, symbolInformation?.PriceFilter),
+                stopPrice: ApplyPriceFilter(takeProfitPrice, symbolInformation?.PriceFilter),
                 closePosition: true,
                 timeInForce: TimeInForce.GoodTillCanceled,
                 newClientOrderId: string.Format(SteppedTrailingIdFormat, symbol.ToLower()),
