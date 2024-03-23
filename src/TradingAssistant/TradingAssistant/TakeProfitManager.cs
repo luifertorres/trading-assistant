@@ -1,6 +1,5 @@
 ﻿using Binance.Net.Objects.Models.Futures.Socket;
-
-using CryptoExchange.Net.Sockets;
+using CryptoExchange.Net.Objects.Sockets;
 
 namespace TradingAssistant
 {

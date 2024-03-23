@@ -1,4 +1,6 @@
-﻿using X.Extensions.Logging.Telegram;
+﻿using CryptoExchange.Net.Authentication;
+using CryptoExchange.Net.Objects;
+using X.Extensions.Logging.Telegram;
 
 namespace TradingAssistant
 {
@@ -12,11 +14,34 @@ namespace TradingAssistant
                     builder.ClearProviders()
                         .AddTelegram(context.Configuration)
                         .AddConsole();
-                }).ConfigureServices(services =>
+                }).ConfigureServices((context, services) =>
                 {
                     services.AddMediatR(configuration =>
                     {
                         configuration.RegisterServicesFromAssembly(typeof(Program).Assembly);
+                    });
+
+                    services.AddBinance(restOptions =>
+                    {
+                        var key = context.Configuration["Binance:Futures:ApiKey"]!;
+                        var secret = context.Configuration["Binance:Futures:ApiSecret"]!;
+
+                        restOptions.ApiCredentials = new ApiCredentials(key, secret);
+
+                        const int RateLimitPeriod = 1;
+                        const int Limit = 2400 / (60 / RateLimitPeriod);
+
+                        var perTimePeriod = TimeSpan.FromSeconds(RateLimitPeriod);
+                        var totalRateLimiter = new RateLimiter().AddTotalRateLimit(Limit, perTimePeriod);
+
+                        restOptions.UsdFuturesOptions.RateLimiters.Add(totalRateLimiter);
+                    },
+                    socketOptions =>
+                    {
+                        var key = context.Configuration["Binance:Futures:ApiKey"]!;
+                        var secret = context.Configuration["Binance:Futures:ApiSecret"]!;
+
+                        socketOptions.ApiCredentials = new ApiCredentials(key, secret);
                     });
 
                     services.AddDbContext<TradingContext>();

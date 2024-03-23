@@ -1,7 +1,4 @@
-﻿using Binance.Net.Enums;
-using MediatR;
-
-namespace TradingAssistant
+﻿namespace TradingAssistant
 {
     public class SignalsWorker : BackgroundService
     {

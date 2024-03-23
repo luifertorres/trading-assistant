@@ -1,14 +1,14 @@
 ﻿using System.Collections.Concurrent;
-
 using Binance.Net.Clients;
 using Binance.Net.Enums;
 using Binance.Net.Interfaces;
+using Binance.Net.Interfaces.Clients;
 using Binance.Net.Objects.Models;
 using Binance.Net.Objects.Models.Futures;
 using Binance.Net.Objects.Models.Futures.Socket;
-using CryptoExchange.Net.Authentication;
-using CryptoExchange.Net.Converters;
-using CryptoExchange.Net.Sockets;
+using CryptoExchange.Net.Converters.SystemTextJson;
+using CryptoExchange.Net.Objects;
+using CryptoExchange.Net.Objects.Sockets;
 
 namespace TradingAssistant
 {
@@ -20,13 +20,11 @@ namespace TradingAssistant
         private const string TakeProfitIdFormat = "{0}-take-profit";
         private const string SteppedTrailingIdFormat = "{0}-stepped-trailing";
         private const string TrailingStopIdFormat = "{0}-trailing-stop";
-        private const int RequestLimit = (int)(2400 * 0.8);
         private const int MaxCandlesPerRequest = 1500;
-        private const int MaxOpenPositions = 3;
-        private static int s_requestCount;
-        private static int s_openPositions;
         private readonly ILogger<BinanceService> _logger;
         private readonly IConfiguration _configuration;
+        private readonly IBinanceRestClient _rest;
+        private readonly IBinanceSocketClient _socket;
         private readonly List<Action<DataEvent<BinanceFuturesStreamConfigUpdate>>> _leverageUpdateSubscriptions = [];
         private readonly List<Action<DataEvent<BinanceFuturesStreamMarginUpdate>>> _marginUpdateSubscriptions = [];
         private readonly List<Action<DataEvent<BinanceFuturesStreamAccountUpdate>>> _accountUpdateSubscriptions = [];
@@ -40,61 +38,21 @@ namespace TradingAssistant
         private readonly ConcurrentDictionary<string, int> _leverages = [];
         private readonly ConcurrentDictionary<string, UpdateSubscription> _priceSubscriptions = [];
         private readonly ConcurrentDictionary<string, CircularTimeSeries<string, IBinanceKline>> _candlesticks = [];
-        private BinanceRestClient _rest = new();
-        private BinanceSocketClient _socket = new();
         private KlineInterval _interval;
         private int _candlestickSize;
-        private Timer? _requestLimitResetTimer;
         private string? _listenKey;
 
-        private static int OpenPositions
-        {
-            get => Volatile.Read(ref s_openPositions);
-            set => Volatile.Write(ref s_openPositions, value);
-        }
-
-        public BinanceService(ILogger<BinanceService> logger, IConfiguration configuration)
+        public BinanceService(ILogger<BinanceService> logger,
+            IConfiguration configuration,
+            IBinanceRestClient rest,
+            IBinanceSocketClient socket)
         {
             _logger = logger;
             _configuration = configuration;
+            _rest = rest;
+            _socket = socket;
 
-            ConfigureClients();
-            ConfigureRequestLimit();
             ConfigureService();
-        }
-
-        private void ConfigureClients()
-        {
-            var key = _configuration["Binance:Futures:ApiKey"]!;
-            var secret = _configuration["Binance:Futures:ApiSecret"]!;
-
-            _rest = new(o => o.ApiCredentials = new ApiCredentials(key, secret));
-            _socket = new(o => o.ApiCredentials = new ApiCredentials(key, secret));
-        }
-
-        private void ConfigureRequestLimit()
-        {
-            var currentTime = DateTime.Now;
-            var millisecondsUntilNextMinute = 60_000 - (currentTime.Second * 1_000 + currentTime.Millisecond);
-
-            _requestLimitResetTimer = new Timer(ResetRequestCount, state: null, millisecondsUntilNextMinute, period: 60_000);
-        }
-
-        private static void ResetRequestCount(object? _)
-        {
-            Interlocked.Exchange(ref s_requestCount, value: 0);
-        }
-
-        private static async Task EnsureRequestLimitAsync(int weight, CancellationToken cancellationToken)
-        {
-            if (Interlocked.Add(ref s_requestCount, weight) >= RequestLimit)
-            {
-                var delay = 60_000 - (DateTime.Now.Second * 1_000 + DateTime.Now.Millisecond);
-
-                await Task.Delay(delay, cancellationToken);
-
-                Interlocked.Exchange(ref s_requestCount, value: 0);
-            }
         }
 
         private async void ConfigureService()
@@ -210,8 +168,6 @@ namespace TradingAssistant
 
         private async Task<bool> TryStartUserDataStreamAsync(CancellationToken cancellationToken = default)
         {
-            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
-
             var account = _rest.UsdFuturesApi.Account;
             var startUserStreamResult = await account.StartUserStreamAsync(cancellationToken);
 
@@ -230,7 +186,6 @@ namespace TradingAssistant
 
                     try
                     {
-                        await EnsureRequestLimitAsync(weight: 1, cancellationToken);
                         await account.KeepAliveUserStreamAsync(_listenKey, cancellationToken);
                     }
                     catch
@@ -265,8 +220,6 @@ namespace TradingAssistant
 
         private async Task<bool> TryConfigureSymbolsAsync(CancellationToken cancellationToken = default)
         {
-            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
-
             var exchangeData = _rest.UsdFuturesApi.ExchangeData;
             var getExchangeInfoResult = await exchangeData.GetExchangeInfoAsync(cancellationToken);
 
@@ -300,7 +253,6 @@ namespace TradingAssistant
 
             await Parallel.ForEachAsync(_symbols, cancellationToken, async (symbol, token) =>
             {
-                await EnsureRequestLimitAsync(weight: 1, token);
                 await account.ChangeMarginTypeAsync(symbol.Key, FuturesMarginType.Cross, ct: token);
             });
 
@@ -312,8 +264,6 @@ namespace TradingAssistant
         private async Task<bool> TryConfigureLeverageAsync(CancellationToken cancellationToken = default)
         {
             SubscribeToLeverageUpdates(HandleLeverageUpdate);
-
-            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
 
             var account = _rest.UsdFuturesApi.Account;
             var getLeverageBracketsResult = await account.GetBracketsAsync(ct: cancellationToken);
@@ -332,7 +282,6 @@ namespace TradingAssistant
 
             await Parallel.ForEachAsync(_leverages, cancellationToken, async (leverage, token) =>
             {
-                await EnsureRequestLimitAsync(weight: 1, token);
                 await account.ChangeInitialLeverageAsync(leverage.Key, leverage.Value, ct: token);
             });
 
@@ -343,7 +292,7 @@ namespace TradingAssistant
 
         private void HandleLeverageUpdate(DataEvent<BinanceFuturesStreamConfigUpdate> configUpdate)
         {
-            var symbol = configUpdate.Data.LeverageUpdateData.Symbol;
+            var symbol = configUpdate.Data.LeverageUpdateData!.Symbol;
             var leverage = configUpdate.Data.LeverageUpdateData.Leverage;
 
             _leverages.AddOrUpdate(symbol!, leverage, (_, _) => leverage);
@@ -420,8 +369,6 @@ namespace TradingAssistant
 
         public async Task<BinanceFuturesAccountInfo?> TryGetAccountInformationAsync(CancellationToken cancellationToken = default)
         {
-            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
-
             var account = _rest.UsdFuturesApi.Account;
             var getAccountInfoResult = await account.GetAccountInfoAsync(ct: cancellationToken);
 
@@ -437,8 +384,6 @@ namespace TradingAssistant
 
         public async Task<BinancePositionDetailsUsdt?> TryGetPositionInformationAsync(string symbol, CancellationToken cancellationToken = default)
         {
-            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
-
             var account = _rest.UsdFuturesApi.Account;
             var getPositionResult = await account.GetPositionInformationAsync(symbol, ct: cancellationToken);
 
@@ -454,8 +399,6 @@ namespace TradingAssistant
 
         public async Task<IEnumerable<BinancePositionDetailsUsdt>> TryGetPositionsAsync(CancellationToken cancellationToken = default)
         {
-            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
-
             var account = _rest.UsdFuturesApi.Account;
             var getPositionsResult = await account.GetPositionInformationAsync(ct: cancellationToken);
 
@@ -471,8 +414,6 @@ namespace TradingAssistant
 
         public async Task<IEnumerable<BinanceFuturesOrder>> TryGetOpenOrdersAsync(string symbol, CancellationToken cancellationToken = default)
         {
-            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
-
             var trading = _rest.UsdFuturesApi.Trading;
             var getOpenOrdersResult = await trading.GetOpenOrdersAsync(symbol, ct: cancellationToken);
 
@@ -579,8 +520,6 @@ namespace TradingAssistant
 
                 for (var requestCount = 0; requestCount < requiredRequests; requestCount++)
                 {
-                    await EnsureRequestLimitAsync(weight, token);
-
                     var exchangeData = _rest.UsdFuturesApi.ExchangeData;
                     var getKlinesResult = await exchangeData.GetKlinesAsync(symbol.Key,
                         _interval,
@@ -624,8 +563,6 @@ namespace TradingAssistant
 
         public async Task CancelAllOrdersAsync(string symbol, CancellationToken cancellationToken = default)
         {
-            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
-
             var trading = _rest.UsdFuturesApi.Trading;
             var cancelAllOrdersResult = await trading.CancelAllOrdersAsync(symbol, ct: cancellationToken);
 
@@ -639,8 +576,6 @@ namespace TradingAssistant
 
         public async Task<bool> TryCancelStopLossAsync(string symbol, CancellationToken cancellationToken = default)
         {
-            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
-
             var trading = _rest.UsdFuturesApi.Trading;
             var cancelOrderResult = await trading.CancelOrderAsync(symbol,
                 origClientOrderId: string.Format(StopLossIdFormat, symbol.ToLower()),
@@ -658,8 +593,6 @@ namespace TradingAssistant
 
         public async Task<bool> TryCancelBreakEvenAsync(string symbol, CancellationToken cancellationToken = default)
         {
-            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
-
             var trading = _rest.UsdFuturesApi.Trading;
             var cancelOrderResult = await trading.CancelOrderAsync(symbol,
                 origClientOrderId: string.Format(BreakEvenIdFormat, symbol.ToLower()),
@@ -677,8 +610,6 @@ namespace TradingAssistant
 
         public async Task<bool> TryCancelTakeProfitAsync(string symbol, CancellationToken cancellationToken = default)
         {
-            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
-
             var trading = _rest.UsdFuturesApi.Trading;
             var cancelOrderResult = await trading.CancelOrderAsync(symbol,
                 origClientOrderId: string.Format(TakeProfitIdFormat, symbol.ToLower()),
@@ -696,8 +627,6 @@ namespace TradingAssistant
 
         public async Task<bool> TryCancelSteppedTrailingAsync(string symbol, CancellationToken cancellationToken = default)
         {
-            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
-
             var trading = _rest.UsdFuturesApi.Trading;
             var cancelOrderResult = await trading.CancelOrderAsync(symbol,
                 origClientOrderId: string.Format(SteppedTrailingIdFormat, symbol.ToLower()),
@@ -715,8 +644,6 @@ namespace TradingAssistant
 
         public async Task<bool> TryCancelTrailingStopAsync(string symbol, CancellationToken cancellationToken = default)
         {
-            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
-
             var trading = _rest.UsdFuturesApi.Trading;
             var cancelOrderResult = await trading.CancelOrderAsync(symbol,
                 origClientOrderId: string.Format(TrailingStopIdFormat, symbol.ToLower()),
@@ -750,8 +677,6 @@ namespace TradingAssistant
             quantity = isLimitOrder
                 ? ApplyLimitQuantityFilter(quantity, entryPrice!.Value, symbolInformation?.MinNotionalFilter, symbolInformation?.LotSizeFilter)
                 : ApplyMarketQuantityFilter(quantity, entryPrice!.Value, symbolInformation?.MinNotionalFilter, symbolInformation?.MarketLotSizeFilter);
-
-            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
 
             var trading = _rest.UsdFuturesApi.Trading;
             var placeOrderResult = await trading.PlaceOrderAsync(symbol,
@@ -792,8 +717,6 @@ namespace TradingAssistant
 
             TryGetSymbolInformation(symbol, out var symbolInformation);
 
-            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
-
             var placeOrderResult = await trading.PlaceOrderAsync(symbol,
                 quantity.AsOrderSide().Reverse(),
                 FuturesOrderType.StopMarket,
@@ -823,8 +746,6 @@ namespace TradingAssistant
             var trading = _rest.UsdFuturesApi.Trading;
 
             TryGetSymbolInformation(symbol, out var symbolInformation);
-
-            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
 
             var placeOrderResult = await trading.PlaceOrderAsync(symbol,
                 positionSide.Reverse(),
@@ -856,8 +777,6 @@ namespace TradingAssistant
             var takeProfitPrice = TakeProfitPrice.Calculate(price, quantity, offset: 0, includeFees: true);
 
             TryGetSymbolInformation(symbol, out var symbolInformation);
-
-            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
 
             var trading = _rest.UsdFuturesApi.Trading;
             var placeOrderResult = await trading.PlaceOrderAsync(symbol,
@@ -898,8 +817,6 @@ namespace TradingAssistant
 
             TryGetSymbolInformation(symbol, out var symbolInformation);
 
-            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
-
             var placeOrderResult = await trading.PlaceOrderAsync(symbol,
                 quantity.AsOrderSide().Reverse(),
                 FuturesOrderType.TakeProfitMarket,
@@ -930,8 +847,6 @@ namespace TradingAssistant
         {
             TryGetSymbolInformation(symbol, out var symbolInformation);
 
-            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
-
             var trading = _rest.UsdFuturesApi.Trading;
             var placeOrderResult = await trading.PlaceOrderAsync(symbol,
                 orderSide,
@@ -959,8 +874,6 @@ namespace TradingAssistant
             decimal quantity,
             CancellationToken cancellationToken = default)
         {
-            await EnsureRequestLimitAsync(weight: 1, cancellationToken);
-
             var trading = _rest.UsdFuturesApi.Trading;
             var placeOrderResult = await trading.PlaceOrderAsync(symbol,
                 quantity.AsOrderSide().Reverse(),

@@ -1,6 +1,7 @@
-﻿using Binance.Net.Enums;
+﻿using System.Text;
+using Binance.Net.Enums;
 using Binance.Net.Interfaces;
-using CryptoExchange.Net.Converters;
+using CryptoExchange.Net.Converters.SystemTextJson;
 using MediatR;
 using Skender.Stock.Indicators;
 
