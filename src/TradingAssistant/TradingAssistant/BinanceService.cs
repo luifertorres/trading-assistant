@@ -230,9 +230,23 @@ namespace TradingAssistant
                 return false;
             }
 
-            var symbols = exchangeInfo.Symbols.Where(symbol => symbol.BaseAsset != "USDC")
-                .Where(symbol => symbol.QuoteAsset == "USDT")
-                .Where(symbol => symbol.ContractType == ContractType.Perpetual);
+            var getLast24hTickersResult = await exchangeData.GetTickersAsync(cancellationToken);
+
+            if (!getLast24hTickersResult.GetResultOrError(out var last24hTickers, out var getLast24hTickersError))
+            {
+                _logger.LogError("Get last 24-hour tickers failed. {Error}", getLast24hTickersError);
+
+                return false;
+            }
+
+            var highestTradedVolumeSymbols = last24hTickers.Where(ticker => ticker.QuoteVolume > 100_000_000)
+                .Select(ticker => ticker.Symbol);
+
+            var symbols = exchangeInfo.Symbols.Where(symbol => symbol.Status is SymbolStatus.Trading)
+                .Where(symbol => symbol.BaseAsset is not "USDC")
+                .Where(symbol => symbol.QuoteAsset is "USDT")
+                .Where(symbol => symbol.ContractType == ContractType.Perpetual)
+                .IntersectBy(highestTradedVolumeSymbols, symbol => symbol.Name);
 
             foreach (var symbol in symbols)
             {
