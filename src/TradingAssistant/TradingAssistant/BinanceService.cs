@@ -190,6 +190,8 @@ namespace TradingAssistant
                     }
                     catch
                     {
+                        // The exception can be ignored because we just need
+                        // to keep alive the stream whenever possible.
                     }
                 }
             }, cancellationToken);
