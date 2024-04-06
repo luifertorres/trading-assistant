@@ -62,22 +62,22 @@ namespace TradingAssistant
 
             if (!await TryConfigureSymbolsAsync())
             {
-                throw new Exception();
+                throw new BinanceServiceNotConfiguredException();
             }
 
             if (!await TryConfigureMarginTypeAsync())
             {
-                throw new Exception();
+                throw new BinanceServiceNotConfiguredException();
             }
 
             if (!await TryConfigureLeverageAsync())
             {
-                throw new Exception();
+                throw new BinanceServiceNotConfiguredException();
             }
 
             if (!await TryStartUserDataStreamAsync())
             {
-                throw new Exception();
+                throw new BinanceServiceNotConfiguredException();
             }
 
             await SubscribeToCandlestickUpdatesAsync();
