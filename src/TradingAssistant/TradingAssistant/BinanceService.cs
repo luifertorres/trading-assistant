@@ -52,10 +52,10 @@ namespace TradingAssistant
             _rest = rest;
             _socket = socket;
 
-            ConfigureService();
+            _ = ConfigureServiceAsync();
         }
 
-        private async void ConfigureService()
+        private async Task ConfigureServiceAsync()
         {
             _interval = _configuration.GetValue<KlineInterval>("Binance:Service:TimeFrameSeconds");
             _candlestickSize = _configuration.GetValue<int>("Binance:Service:CandlestickSize");
