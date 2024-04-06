@@ -9,6 +9,7 @@ using Binance.Net.Objects.Models.Futures.Socket;
 using CryptoExchange.Net.Converters.SystemTextJson;
 using CryptoExchange.Net.Objects;
 using CryptoExchange.Net.Objects.Sockets;
+using FASTER.core;
 
 namespace TradingAssistant
 {
@@ -23,6 +24,7 @@ namespace TradingAssistant
         private const int MaxCandlesPerRequest = 1500;
         private readonly ILogger<BinanceService> _logger;
         private readonly IConfiguration _configuration;
+        private readonly FasterKV<CandleId, Candle> _cache;
         private readonly IBinanceRestClient _rest;
         private readonly IBinanceSocketClient _socket;
         private readonly List<Action<DataEvent<BinanceFuturesStreamConfigUpdate>>> _leverageUpdateSubscriptions = [];
@@ -37,18 +39,19 @@ namespace TradingAssistant
         private readonly ConcurrentDictionary<string, BinanceFuturesUsdtSymbol> _symbols = [];
         private readonly ConcurrentDictionary<string, int> _leverages = [];
         private readonly ConcurrentDictionary<string, UpdateSubscription> _priceSubscriptions = [];
-        private readonly ConcurrentDictionary<string, CircularTimeSeries<string, IBinanceKline>> _candlesticks = [];
         private KlineInterval _interval;
         private int _candlestickSize;
         private string? _listenKey;
 
         public BinanceService(ILogger<BinanceService> logger,
             IConfiguration configuration,
+            FasterKV<CandleId, Candle> cache,
             IBinanceRestClient rest,
             IBinanceSocketClient socket)
         {
             _logger = logger;
             _configuration = configuration;
+            _cache = cache;
             _rest = rest;
             _socket = socket;
 
@@ -366,7 +369,7 @@ namespace TradingAssistant
             _conditionalOrderTriggerRejectUpdateSubscriptions.Add(action);
         }
 
-        public IObservable<CircularTimeSeries<string, IBinanceKline>> GetCandleClosedEvent()
+        public IObservable<CandleId> GetCandleClosedEvent()
         {
             return _candleClosedProvider;
         }
@@ -489,33 +492,6 @@ namespace TradingAssistant
 
         private async Task SubscribeToCandlestickUpdatesAsync(CancellationToken cancellationToken = default)
         {
-            var subscribeToKlineUpdatesResult = await _socket.UsdFuturesApi.SubscribeToKlineUpdatesAsync(_symbols.Keys,
-                _interval,
-                @event =>
-                {
-                    var candle = @event.Data.Data;
-                    var symbol = @event.Data.Symbol;
-                    var isCandleClosed = candle.Final;
-
-                    if (isCandleClosed)
-                    {
-                        var candlestick = _candlesticks.GetOrAdd(symbol, value: new CircularTimeSeries<string, IBinanceKline>(symbol, _candlestickSize));
-
-                        candlestick.Add(candle.OpenTime, candle);
-                        _candleClosedProvider.Update(candlestick);
-                    }
-                },
-                cancellationToken);
-
-            if (!subscribeToKlineUpdatesResult.Success)
-            {
-                _logger.LogWarning("Subscribe to all candlesticks failed. {Error}", subscribeToKlineUpdatesResult.Error);
-
-                return;
-            }
-
-            _logger.LogInformation("Subscribe to all candlesticks updates succeeded");
-
             var candlesPerRequest = _candlestickSize < MaxCandlesPerRequest
                 ? _candlestickSize
                 : MaxCandlesPerRequest;
@@ -528,9 +504,70 @@ namespace TradingAssistant
                 _ => 10
             };
 
+            BinanceRestClient.SetDefaultOptions(restOptions =>
+            {
+                const string Endpoint = "fapi/v1/klines";
+                const int RateLimitPeriod = 1;
+
+                var limit = 2400 / weight / (60 / RateLimitPeriod);
+                var perTimePeriod = TimeSpan.FromSeconds(RateLimitPeriod);
+                var klinesRateLimiter = new RateLimiter().AddEndpointLimit(Endpoint, limit, perTimePeriod);
+
+                restOptions.UsdFuturesOptions.RateLimiters.Add(klinesRateLimiter);
+            });
+
+            var timeFrames = new[] { _interval };
+
+            var sessionBuilder = _cache.For(new SimpleFunctions<CandleId, Candle>());
+
+            foreach (var timeFrame in timeFrames)
+            {
+            var subscribeToKlineUpdatesResult = await _socket.UsdFuturesApi.SubscribeToKlineUpdatesAsync(_symbols.Keys,
+                    timeFrame,
+                @event =>
+                {
+                        var kline = @event.Data.Data;
+                    var symbol = @event.Data.Symbol;
+
+                        using var session = sessionBuilder.NewSession<SimpleFunctions<CandleId, Candle>>();
+
+                        var candleId = new CandleId(symbol, kline.Interval, kline.OpenTime);
+                        var candle = new Candle
+                    {
+                            Symbol = symbol,
+                            Interval = kline.Interval,
+                            OpenTime = kline.OpenTime,
+                            CloseTime = kline.CloseTime,
+                            OpenPrice = kline.OpenPrice,
+                            HighPrice = kline.HighPrice,
+                            LowPrice = kline.LowPrice,
+                            ClosePrice = kline.ClosePrice,
+                        };
+
+                        session.Upsert(ref candleId, ref candle);
+
+                        if (kline.Final && (kline.Interval == _interval))
+                        {
+                            _candleClosedProvider.Update(candleId);
+                    }
+                },
+                cancellationToken);
+
+                if (!subscribeToKlineUpdatesResult.GetResultOrError(out var _, out var subscribeToKlineUpdatesError))
+            {
+                    _logger.LogWarning("Subscribe to {TimeFrame} candlesticks failed. {Error}",
+                        EnumConverter.GetString(timeFrame),
+                        subscribeToKlineUpdatesError);
+
+                return;
+            }
+
+                _logger.LogInformation("Subscribe to {TimeFrame} candlesticks updates succeeded",
+                    EnumConverter.GetString(timeFrame));
+
             await Parallel.ForEachAsync(_symbols, cancellationToken, async (symbol, token) =>
             {
-                var candles = new List<IBinanceKline>();
+                    var totalKlines = new List<IBinanceKline>();
                 var endTime = default(DateTime?);
                 var requiredRequests = (int)Math.Ceiling(_candlestickSize / (double)MaxCandlesPerRequest);
 
@@ -538,19 +575,22 @@ namespace TradingAssistant
                 {
                     var exchangeData = _rest.UsdFuturesApi.ExchangeData;
                     var getKlinesResult = await exchangeData.GetKlinesAsync(symbol.Key,
-                        _interval,
+                            timeFrame,
                         endTime: endTime,
                         limit: candlesPerRequest,
                         ct: token);
 
                     if (!getKlinesResult.GetResultOrError(out var klines, out var getKlinesError))
                     {
-                        _logger.LogWarning("Get {Symbol} candlestick failed. {Error}", symbol.Key, getKlinesError);
+                            _logger.LogWarning("Get {Symbol} {TimeFrame} candlestick failed. {Error}",
+                                symbol.Key,
+                                EnumConverter.GetString(timeFrame),
+                                getKlinesError);
 
                         return;
                     }
 
-                    candles.AddRange(klines);
+                        totalKlines.AddRange(klines);
 
                     endTime = klines.FirstOrDefault()?.OpenTime;
 
@@ -560,19 +600,33 @@ namespace TradingAssistant
                     }
                 }
 
-                var candlestick = _candlesticks.GetOrAdd(symbol.Key,
-                    value: new CircularTimeSeries<string, IBinanceKline>(symbol.Key, _candlestickSize));
+                    using (var session = sessionBuilder.NewSession<SimpleFunctions<CandleId, Candle>>())
+                    {
+                        foreach (var kline in totalKlines)
+                        {
+                            var candleId = new CandleId(symbol.Key, timeFrame, kline.OpenTime);
+                            var candle = new Candle
+                            {
+                                Symbol = symbol.Key,
+                                Interval = timeFrame,
+                                OpenTime = kline.OpenTime,
+                                CloseTime = kline.CloseTime,
+                                OpenPrice = kline.OpenPrice,
+                                HighPrice = kline.HighPrice,
+                                LowPrice = kline.LowPrice,
+                                ClosePrice = kline.ClosePrice,
+                            };
 
-                foreach (var candle in candles)
-                {
-                    candlestick.Add(candle.OpenTime, candle);
+                            session.Upsert(ref candleId, ref candle);
                 }
+                    }
 
-                _logger.LogInformation("Get {Symbol} {Count} {Interval} candles succeeded",
+                    _logger.LogInformation("Get {Count} {Symbol} {Interval} candles succeeded",
+                        _candlestickSize,
                     symbol.Key,
-                    candles.Count,
-                    EnumConverter.GetString(_interval));
+                        EnumConverter.GetString(timeFrame));
             });
+            }
 
             _logger.LogInformation("Get candlesticks succeeded");
         }

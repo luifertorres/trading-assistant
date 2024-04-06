@@ -1,5 +1,6 @@
 ﻿using CryptoExchange.Net.Authentication;
 using CryptoExchange.Net.Objects;
+using FASTER.core;
 using X.Extensions.Logging.Telegram;
 
 namespace TradingAssistant
@@ -45,6 +46,18 @@ namespace TradingAssistant
                     });
 
                     services.AddDbContext<TradingContext>();
+                    services.AddSingleton(provider =>
+                    {
+                        const string BaseDir = "c:/temp";
+
+                        var fasterLogger = provider.GetRequiredService<ILogger<FasterKV<CandleId, Candle>>>();
+                        var settings = new FasterKVSettings<CandleId, Candle>(BaseDir, logger: fasterLogger)
+                        {
+                            ConcurrencyControlMode = ConcurrencyControlMode.None,
+                        };
+
+                        return new FasterKV<CandleId, Candle>(settings);
+                    });
 
                     services.AddSingleton<BinanceService>();
                     services.AddSingleton<Rsi200SignalGenerator>();

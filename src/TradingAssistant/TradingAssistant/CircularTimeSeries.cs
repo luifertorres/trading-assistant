@@ -2,20 +2,14 @@
 
 namespace TradingAssistant
 {
-    public class CircularTimeSeries<TKey, TValue>
+    public class CircularTimeSeries<TKey, TValue>(TKey key, int maxSize)
     {
         private static readonly object s_synchronizer = new();
-        private readonly TKey _symbol;
-        private readonly int _maxSize;
+        private readonly TKey _key = key;
+        private readonly int _maxSize = maxSize;
         private readonly SortedDictionary<DateTime, TValue> _series = [];
 
-        public TKey Symbol => _symbol;
-
-        public CircularTimeSeries(TKey symbol, int maxSize)
-        {
-            _symbol = symbol;
-            _maxSize = maxSize;
-        }
+        public TKey Key => _key;
 
         public void Add(DateTime time, TValue value)
         {

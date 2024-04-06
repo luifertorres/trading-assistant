@@ -1,34 +1,34 @@
 ﻿using System.Text;
 using Binance.Net.Enums;
-using Binance.Net.Interfaces;
 using CryptoExchange.Net.Converters.SystemTextJson;
+using FASTER.core;
 using MediatR;
 using Skender.Stock.Indicators;
 
 namespace TradingAssistant
 {
-    public class Rsi200SignalGenerator : IObserver<CircularTimeSeries<string, IBinanceKline>>
+    public class Rsi200SignalGenerator : IObserver<CandleId>
     {
         private readonly ILogger<Rsi200SignalGenerator> _logger;
-        private readonly IConfiguration _configuration;
         private readonly IPublisher _publisher;
+        private readonly FasterKV<CandleId, Candle> _cache;
         private readonly KlineInterval _timeFrame;
         private readonly int _candlestickSize;
         private IDisposable? _unsubscriber;
 
         public Rsi200SignalGenerator(ILogger<Rsi200SignalGenerator> logger,
             IConfiguration configuration,
-            IPublisher publisher)
+            IPublisher publisher,
+            FasterKV<CandleId, Candle> cache)
         {
             _logger = logger;
-            _configuration = configuration;
             _publisher = publisher;
-
-            _timeFrame = _configuration.GetValue<KlineInterval>("Binance:Service:TimeFrameSeconds");
-            _candlestickSize = _configuration.GetValue<int>("Binance:Service:CandlestickSize");
+            _cache = cache;
+            _timeFrame = configuration.GetValue<KlineInterval>("Binance:Service:TimeFrameSeconds");
+            _candlestickSize = configuration.GetValue<int>("Binance:Service:CandlestickSize");
         }
 
-        public virtual void SubscribeTo(IObservable<CircularTimeSeries<string, IBinanceKline>> provider)
+        public virtual void SubscribeTo(IObservable<CandleId> provider)
         {
             if (provider is not null)
             {
@@ -41,37 +41,74 @@ namespace TradingAssistant
             Unsubscribe();
         }
 
-        public virtual void OnError(Exception exception)
+        public virtual void OnError(Exception error)
         {
         }
 
-        public virtual async void OnNext(CircularTimeSeries<string, IBinanceKline> candlestick)
+        public virtual async void OnNext(CandleId lastCandleId)
         {
-            var candles = candlestick.Snapshot();
+            var sessionBuilder = _cache.For(new SimpleFunctions<CandleId, Candle>());
+            var intervals = new[] { _timeFrame };
 
-            if (candles.Count < _candlestickSize)
+            var candlesticks = intervals.ToDictionary(interval => new CandlestickId(lastCandleId.Symbol, interval),
+                interval => new CircularTimeSeries<CandlestickId, Candle>(new(lastCandleId.Symbol, interval), _candlestickSize));
+
+            using (var session = sessionBuilder.NewSession<SimpleFunctions<CandleId, Candle>>())
+            {
+                foreach (var interval in intervals)
+                {
+                    var lastCandleOpenTimeTotalSeconds = DateTimeConverter.ConvertToSeconds(lastCandleId.OpenTime) / (long)interval;
+                    var lastCandleTime = DateTimeConverter.ConvertFromSeconds((double)lastCandleOpenTimeTotalSeconds * (long)interval);
+                    var idsLeft = _candlestickSize - 1;
+
+                    Enumerable.Repeat(lastCandleId.OpenTime, _candlestickSize)
+                        .Select(openTime => lastCandleTime.AddSeconds(-((int)interval * idsLeft--)))
+                        .Select(openTime => new CandleId(lastCandleId.Symbol, interval, openTime))
+                        .ToList()
+                        .ForEach(candleId =>
+                        {
+                            var candle = default(Candle);
+                            var status = session.Read(ref candleId, ref candle);
+
+                            if (status.Found)
+                            {
+                                candlesticks[new(lastCandleId.Symbol, candleId.TimeFrame)].Add(candleId.OpenTime, candle);
+                            }
+                        });
+                }
+            }
+
+            if (candlesticks.Any(candlestick => candlestick.Value.Snapshot().Count < _candlestickSize))
             {
                 return;
             }
 
-            var time = candles.Last().CloseTime.AddSeconds(1).ToLocalTime();
-            var entryPrice = candles.Last().ClosePrice;
-            var signalOrderSide = GetSignalOrderSide(candles);
+            var preferredTimeFrameCandles = candlesticks
+                .First(candlestick => candlestick.Key.TimeFrame == _timeFrame).Value
+                .Snapshot();
+            var time = preferredTimeFrameCandles[_candlestickSize - 1].CloseTime
+                .AddSeconds(1)
+                .ToLocalTime();
+            var entryPrice = preferredTimeFrameCandles[_candlestickSize - 1].ClosePrice;
+            var orderedCandlesticks = candlesticks.OrderBy(candlestick => candlestick.Key.TimeFrame)
+                .Select(candlestick => candlestick.Value)
+                .ToArray();
+            var signalOrderSide = GetRsiSignal(orderedCandlesticks);
 
             if (signalOrderSide is not null)
             {
                 var positionSide = signalOrderSide.Value.AsPositionSide();
 
-                _logger.LogInformation("{Time}{NewLine}" +
-                    "Binance{NewLine}" +
-                    "{Symbol}{NewLine}" +
-                    "{PositionSide}{NewLine}" +
-                    "@ {Price}{NewLine}" +
-                    "{TimeFrame}{NewLine}",
-                    time.ToString("HH:mm"),
+                _logger.LogInformation("{Time:HH:mm}{NewLine1}" +
+                    "Binance{NewLine2}" +
+                    "{Symbol}{NewLine3}" +
+                    "{PositionSide}{NewLine4}" +
+                    "@ {Price}{NewLine5}" +
+                    "{TimeFrame}{NewLine6}",
+                    time,
                     Environment.NewLine,
                     Environment.NewLine,
-                    candlestick.Symbol,
+                    candlesticks.First().Key.Symbol,
                     Environment.NewLine,
                     EnumConverter.GetString(positionSide).ToUpperInvariant(),
                     Environment.NewLine,
@@ -86,11 +123,11 @@ namespace TradingAssistant
                     TimeFrame = _timeFrame,
                     Direction = positionSide,
                     Side = signalOrderSide.Value,
-                    Symbol = candlestick.Symbol,
+                    Symbol = candlesticks.First().Key.Symbol,
                     EntryPrice = entryPrice,
                 });
 
-                //Console.Beep(frequency: 500, duration: 500);
+                Console.Beep(frequency: 500, duration: 500);
             }
         }
 
@@ -99,14 +136,7 @@ namespace TradingAssistant
             _unsubscriber?.Dispose();
         }
 
-        private OrderSide? GetSignalOrderSide(List<IBinanceKline> candles)
-        {
-            return _timeFrame is KlineInterval.OneMinute
-                ? GetRsiSignalsFrom1m(candles)
-                : GetRsiSignals(candles);
-        }
-
-        private static OrderSide? GetRsiSignalsFrom1m(List<IBinanceKline> candles)
+        private OrderSide? GetRsiSignal(CircularTimeSeries<CandlestickId, Candle>[] candlesticks)
         {
             var lengths = new[]
             {
@@ -116,103 +146,117 @@ namespace TradingAssistant
                 Length.TwoHundred
             };
 
-            var timeFrames = new[]
-            {
-                PeriodSize.OneMinute,
-                PeriodSize.FiveMinutes,
-                PeriodSize.FifteenMinutes,
-                PeriodSize.ThirtyMinutes,
-                PeriodSize.OneHour
-            };
+            var candlestick = candlesticks.First(candlestick => candlestick.Key.TimeFrame == _timeFrame);
+            var candles = candlestick.Snapshot();
+            var initialGap = new CandlestickGap([], candles[0].OpenTime);
+            var timeFrameSpan = TimeSpan.FromSeconds((double)candlestick.Key.TimeFrame);
+            var gap = candles.Aggregate(initialGap, CandlestickGap.UpdateGapFromCandle);
+            var hasMissingCandles = gap.Durations.Exists(duration => duration > timeFrameSpan);
 
-            foreach (var timeFrame in timeFrames)
+            if (hasMissingCandles)
             {
-                var rsis = lengths.Select(length => timeFrame is PeriodSize.OneMinute
-                    ? GetRsi(candles, length)
-                    : GetRsi(candles, length, timeFrame));
-                var rsi200PenultimateSignal = GetRsi200PenultimateSignal(rsis.Last());
-                var areFasterRsiPenultimateSignalsEqualToRsi200Signal = rsis.Take(3)
-                    .Select(GetRsiPenultimateSignal)
-                    .All(signal => signal == rsi200PenultimateSignal);
+                _logger.LogWarning("{Symbol} has missing {TimeFrame} candles",
+                    candlestick.Key.Symbol,
+                    EnumConverter.GetString(candlestick.Key.TimeFrame));
 
-                if (!areFasterRsiPenultimateSignalsEqualToRsi200Signal)
-                {
-                    return null;
-                }
+                return null;
             }
 
-            var rsisIn1m = lengths.Select(length => GetRsi(candles, length));
-            var rsi200PenultimateSignalIn1m = GetRsi200PenultimateSignal(rsisIn1m.Last());
-            var isAnyFasterRsiLastSignalEqualToRsi200SignalIn1m = rsisIn1m.Take(3)
-                .Select(GetRsiLastSignal)
-                .Any(signal => signal == rsi200PenultimateSignalIn1m);
+            var rsis = lengths.Select(length => GetRsi(candles, length)).ToArray();
 
-            if (!isAnyFasterRsiLastSignalEqualToRsi200SignalIn1m)
+            LogRsis(candlestick.Key, candles, lengths, rsis);
+
+            return GetRsisReversionSignal(rsis);
+        }
+
+        private static OrderSide? GetRsisReversionSignal(double[][] rsis)
+        {
+            var rsi200PenultimateSignal = rsis[^1] switch
+            {
+            [.., <= Rsi.OversoldFor200, _] => OrderSide.Buy,
+            [.., >= Rsi.OverboughtFor200, _] => OrderSide.Sell,
+
+                _ => default(OrderSide?),
+            };
+
+            if (rsi200PenultimateSignal is null)
             {
                 return null;
             }
 
-            return rsi200PenultimateSignalIn1m;
-
-            static OrderSide? GetRsi200PenultimateSignal(double[] rsi) => rsi switch
-            {
-                [.., <= Rsi.OversoldFor200, _] => OrderSide.Buy,
-                [.., >= Rsi.OverboughtFor200, _] => OrderSide.Sell,
-
-                _ => default(OrderSide?),
-            };
-
-            static OrderSide? GetRsiPenultimateSignal(double[] rsi) => rsi switch
-            {
+            var fasterRsiPenultimateSignals = rsis.Take(3)
+                .Select(rsi => rsi switch
+                {
                 [.., <= Rsi.Oversold, _] => OrderSide.Buy,
                 [.., >= Rsi.Overbought, _] => OrderSide.Sell,
 
-                _ => default(OrderSide?),
-            };
-
-            static OrderSide? GetRsiLastSignal(double[] rsi) => rsi switch
-            {
-                [.., <= Rsi.Oversold, > Rsi.Oversold] => OrderSide.Buy,
-                [.., >= Rsi.Overbought, < Rsi.Overbought] => OrderSide.Sell,
-
-                _ => default(OrderSide?),
-            };
-        }
-
-        private static OrderSide? GetRsiSignals(List<IBinanceKline> candles)
-        {
-            var lengths = new[] { Length.Five, Length.Eight, Length.Twenty, Length.TwoHundred };
-            var rsis = lengths.Select(length => GetRsi(candles, length));
-            var rsi200Signal = rsis.Last() switch
-            {
-                [.., <= Rsi.OversoldFor200, _] => OrderSide.Buy,
-                [.., >= Rsi.OverboughtFor200, _] => OrderSide.Sell,
-
-                _ => default(OrderSide?),
-            };
-
-            var areFasterRsiSignalsEqualToRsi200Signal = rsis.Take(3)
-                .Select(rsi => rsi switch
-                {
-                    [.., <= Rsi.Oversold, > Rsi.Oversold] => OrderSide.Buy,
-                    [.., >= Rsi.Overbought, < Rsi.Overbought] => OrderSide.Sell,
-
                     _ => default(OrderSide?),
-                })
-                .All(rsi => rsi == rsi200Signal);
+                });
 
-            return areFasterRsiSignalsEqualToRsi200Signal ? rsi200Signal : null;
+            if (fasterRsiPenultimateSignals.Any(signal => signal != rsi200PenultimateSignal))
+            {
+                return null;
+            }
+
+            var penultimate = Index.FromEnd(2);
+            var penultimateSignal = (rsis[0], rsis[1], rsis[2]) switch
+            {
+                var (rsi5, rsi8, rsi20) when rsi5[penultimate] <= rsi8[penultimate]
+                    && rsi8[penultimate] <= rsi20[penultimate] => OrderSide.Buy,
+                var (rsi5, rsi8, rsi20) when rsi5[penultimate] >= rsi8[penultimate]
+                    && rsi8[penultimate] >= rsi20[penultimate] => OrderSide.Sell,
+
+                _ => default(OrderSide?),
+            };
+
+            if (penultimateSignal != rsi200PenultimateSignal)
+            {
+                return null;
+            }
+
+            var last = Index.FromEnd(1);
+            var lastSignal = (rsis[0], rsis[1], rsis[2]) switch
+            {
+                var (rsi5, _, rsi20) when rsi5[last] > rsi20[last] => OrderSide.Buy,
+                var (rsi5, _, rsi20) when rsi5[last] < rsi20[last] => OrderSide.Sell,
+
+                _ => default(OrderSide?),
+            };
+
+            if (lastSignal != rsi200PenultimateSignal)
+            {
+                return null;
+            }
+
+            return rsi200PenultimateSignal;
         }
 
-        private static double[] GetRsi(List<IBinanceKline> candles, int length, PeriodSize? higherTimeFrame = null)
+        private void LogRsis(CandlestickId candlestickId, List<Candle> candles, int[] lengths, double[][] rsis)
+        {
+            if (candlestickId.Symbol is "BTCUSDT")
+            {
+                var values = rsis.Select((rsi, index) => $"RSI {lengths[index]}: {rsi[^1]:F2}")
+                    .Aggregate(new StringBuilder(), (builder, rsi) => builder.Append(rsi).AppendLine());
+
+                _logger.LogDebug("{Symbol} {TimeFrame}{NewLine1}" +
+                    "{OpenTime:yyyy-MM-dd HH:mm}{NewLine2}" +
+                    "{Rsis}",
+                    candlestickId.Symbol, EnumConverter.GetString(candlestickId.TimeFrame), Environment.NewLine,
+                    candles.ToArray()[^1].OpenTime.ToLocalTime(), Environment.NewLine,
+                    values.ToString());
+            }
+        }
+
+        private static double[] GetRsi(List<Candle> candles, int length, PeriodSize? higherTimeFrame = null)
         {
             var quotes = candles.Select(ToQuote).Validate();
 
-            var postWarmupPeriod = 102;
+            var postWarmupPeriod = length * 10;
 
             if (higherTimeFrame.HasValue)
             {
                 return quotes.Aggregate(higherTimeFrame.Value)
+                    .Validate()
                     .TakeLast(length + postWarmupPeriod)
                     .GetRsi(length)
                     .Select(rsi => rsi.Rsi.GetValueOrDefault())
@@ -225,7 +269,7 @@ namespace TradingAssistant
                 .ToArray();
         }
 
-        private static Quote ToQuote(IBinanceKline candle)
+        private static Quote ToQuote(Candle candle)
         {
             return new Quote
             {
@@ -234,7 +278,6 @@ namespace TradingAssistant
                 High = candle.HighPrice,
                 Low = candle.LowPrice,
                 Close = candle.ClosePrice,
-                Volume = candle.Volume,
             };
         }
     }

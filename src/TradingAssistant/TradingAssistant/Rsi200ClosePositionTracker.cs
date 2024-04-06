@@ -1,22 +1,34 @@
-﻿using Binance.Net.Interfaces;
+﻿using Binance.Net.Enums;
 using Binance.Net.Objects.Models.Futures.Socket;
+using CryptoExchange.Net.Converters.SystemTextJson;
+using FASTER.core;
 using Skender.Stock.Indicators;
 
 namespace TradingAssistant
 {
-    public class Rsi200ClosePositionTracker : IObserver<CircularTimeSeries<string, IBinanceKline>>
+    public class Rsi200ClosePositionTracker : IObserver<CandleId>
     {
+        private readonly FasterKV<CandleId, Candle> _cache;
+        private readonly KlineInterval _interval;
+        private readonly int _candlestickSize;
         private readonly BinanceFuturesStreamPosition _position;
         private readonly BinanceService _service;
         private IDisposable? _unsubscriber;
 
-        public Rsi200ClosePositionTracker(BinanceFuturesStreamPosition position, BinanceService service)
+        public Rsi200ClosePositionTracker(FasterKV<CandleId, Candle> cache,
+            KlineInterval interval,
+            int candlestickSize,
+            BinanceFuturesStreamPosition position,
+            BinanceService service)
         {
+            _cache = cache;
+            _interval = interval;
+            _candlestickSize = candlestickSize;
             _position = position;
             _service = service;
         }
 
-        public virtual void SubscribeTo(IObservable<CircularTimeSeries<string, IBinanceKline>> provider)
+        public virtual void SubscribeTo(IObservable<CandleId> provider)
         {
             if (provider is not null)
             {
@@ -33,16 +45,35 @@ namespace TradingAssistant
         {
         }
 
-        public virtual async void OnNext(CircularTimeSeries<string, IBinanceKline> candlestick)
+        public virtual async void OnNext(CandleId lastCandleId)
         {
-            if (candlestick.Symbol != _position.Symbol)
+            var candlestick = new SortedList<DateTime, Candle>();
+            var sessionBuilder = _cache.For(new SimpleFunctions<CandleId, Candle>());
+
+            using (var session = sessionBuilder.NewSession<SimpleFunctions<CandleId, Candle>>())
             {
-                return;
+                var lastCandleOpenTimeTotalSeconds = DateTimeConverter.ConvertToSeconds(lastCandleId.OpenTime) / (long)_interval;
+                var lastCandleTime = DateTimeConverter.ConvertFromSeconds((double)lastCandleOpenTimeTotalSeconds * (long)_interval);
+                var idsLeft = _candlestickSize - 1;
+
+                Enumerable.Repeat(lastCandleId.OpenTime, _candlestickSize)
+                    .Select(openTime => lastCandleTime.AddSeconds(-((int)_interval * idsLeft--)))
+                    .Select(openTime => new CandleId(lastCandleId.Symbol, _interval, openTime))
+                    .ToList()
+                    .ForEach(candleId =>
+                    {
+                        var candle = default(Candle);
+
+                        session.Read(ref candleId, ref candle);
+
+                        if (candleId.OpenTime == candle.OpenTime)
+                        {
+                            candlestick.Add(candleId.OpenTime, candle);
+                        }
+                    });
             }
 
-            var candles = candlestick.Snapshot();
-
-            if (IsRsi200GettingOutOfLimits(candles))
+            if (IsRsi200GettingOutOfLimits([.. candlestick.Values]))
             {
                 await _service.TryClosePositionAtMarketAsync(_position.Symbol, _position.Quantity);
             }
@@ -53,7 +84,7 @@ namespace TradingAssistant
             _unsubscriber?.Dispose();
         }
 
-        private bool IsRsi200GettingOutOfLimits(List<IBinanceKline> candles)
+        private bool IsRsi200GettingOutOfLimits(List<Candle> candles)
         {
             var rsi200 = candles.Select(ToQuote).GetRsi(Length.TwoHundred).ToArray();
             var penultimateRsi200 = rsi200[^2].Rsi!.Value;
@@ -67,7 +98,6 @@ namespace TradingAssistant
                 && (lastRsi200 < Rsi.Oversold)
                 && (penultimateRsi200 > lastRsi200);
             var isLosingShort = lastPrice > _position.EntryPrice
-                && (lastRsi200 > Rsi.Overbought)
                 && (penultimateRsi200 < lastRsi200);
 
             return _position.Quantity.AsOrderSide() switch
@@ -82,7 +112,7 @@ namespace TradingAssistant
             };
         }
 
-        private static Quote ToQuote(IBinanceKline candle)
+        private static Quote ToQuote(Candle candle)
         {
             return new Quote
             {
@@ -91,7 +121,6 @@ namespace TradingAssistant
                 High = candle.HighPrice,
                 Low = candle.LowPrice,
                 Close = candle.ClosePrice,
-                Volume = candle.Volume,
             };
         }
     }

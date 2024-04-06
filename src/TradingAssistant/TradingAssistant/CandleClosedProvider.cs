@@ -1,12 +1,10 @@
-﻿using Binance.Net.Interfaces;
-
-namespace TradingAssistant
+﻿namespace TradingAssistant
 {
-    public class CandleClosedProvider : IObservable<CircularTimeSeries<string, IBinanceKline>>
+    public class CandleClosedProvider : IObservable<CandleId>
     {
-        private readonly List<IObserver<CircularTimeSeries<string, IBinanceKline>>> _observers = [];
+        private readonly List<IObserver<CandleId>> _observers = [];
 
-        public IDisposable Subscribe(IObserver<CircularTimeSeries<string, IBinanceKline>> observer)
+        public IDisposable Subscribe(IObserver<CandleId> observer)
         {
             if (!_observers.Contains(observer))
             {
@@ -16,32 +14,22 @@ namespace TradingAssistant
             return new Unsubscriber(_observers, observer);
         }
 
-        private class Unsubscriber : IDisposable
+        private class Unsubscriber(List<IObserver<CandleId>> observers, IObserver<CandleId> observer) : IDisposable
         {
-            private readonly List<IObserver<CircularTimeSeries<string, IBinanceKline>>> _observers;
-            private readonly IObserver<CircularTimeSeries<string, IBinanceKline>> _observer;
-
-            public Unsubscriber(List<IObserver<CircularTimeSeries<string, IBinanceKline>>> observers,
-                IObserver<CircularTimeSeries<string, IBinanceKline>> observer)
-            {
-                _observers = observers;
-                _observer = observer;
-            }
-
             public void Dispose()
             {
-                if (_observer != null && _observers.Contains(_observer))
+                if (observer != null && observers.Contains(observer))
                 {
-                    _observers.Remove(_observer);
+                    observers.Remove(observer);
                 }
             }
         }
 
-        public void Update(CircularTimeSeries<string, IBinanceKline> candlestick)
+        public void Update(CandleId candleId)
         {
             foreach (var observer in _observers)
             {
-                observer.OnNext(candlestick);
+                observer.OnNext(candleId);
             }
         }
 
