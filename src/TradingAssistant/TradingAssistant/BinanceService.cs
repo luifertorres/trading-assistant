@@ -522,7 +522,13 @@ namespace TradingAssistant
 
             foreach (var timeFrame in timeFrames)
             {
-            var subscribeToKlineUpdatesResult = await _socket.UsdFuturesApi.SubscribeToKlineUpdatesAsync(_symbols.Keys,
+                var firstSymbolGroup = _symbols.Keys.Take(_symbols.Count / 2);
+                var secondSymbolGroup = _symbols.Keys.Skip(_symbols.Count / 2);
+                var symbolGroups = new[] { firstSymbolGroup, secondSymbolGroup };
+
+                foreach (var symbols in symbolGroups)
+                {
+                    var subscribeToKlineUpdatesResult = await _socket.UsdFuturesApi.SubscribeToKlineUpdatesAsync(symbols,
                     timeFrame,
                 @event =>
                 {
@@ -561,6 +567,7 @@ namespace TradingAssistant
 
                 return;
             }
+                }
 
                 _logger.LogInformation("Subscribe to {TimeFrame} candlesticks updates succeeded",
                     EnumConverter.GetString(timeFrame));
