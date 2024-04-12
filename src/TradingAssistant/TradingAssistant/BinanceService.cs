@@ -10,6 +10,7 @@ using CryptoExchange.Net.Converters.SystemTextJson;
 using CryptoExchange.Net.Objects;
 using CryptoExchange.Net.Objects.Sockets;
 using FASTER.core;
+using MediatR;
 
 namespace TradingAssistant
 {
@@ -27,6 +28,7 @@ namespace TradingAssistant
         private readonly FasterKV<CandleId, Candle> _cache;
         private readonly IBinanceRestClient _rest;
         private readonly IBinanceSocketClient _socket;
+        private readonly IPublisher _publisher;
         private readonly List<Action<DataEvent<BinanceFuturesStreamConfigUpdate>>> _leverageUpdateSubscriptions = [];
         private readonly List<Action<DataEvent<BinanceFuturesStreamMarginUpdate>>> _marginUpdateSubscriptions = [];
         private readonly List<Action<DataEvent<BinanceFuturesStreamAccountUpdate>>> _accountUpdateSubscriptions = [];
@@ -35,7 +37,6 @@ namespace TradingAssistant
         private readonly List<Action<DataEvent<BinanceStrategyUpdate>>> _strategyUpdateSubscriptions = [];
         private readonly List<Action<DataEvent<BinanceGridUpdate>>> _gridUpdateSubscriptions = [];
         private readonly List<Action<DataEvent<BinanceConditionOrderTriggerRejectUpdate>>> _conditionalOrderTriggerRejectUpdateSubscriptions = [];
-        private readonly CandleClosedProvider _candleClosedProvider = new();
         private readonly ConcurrentDictionary<string, BinanceFuturesUsdtSymbol> _symbols = [];
         private readonly ConcurrentDictionary<string, int> _leverages = [];
         private readonly ConcurrentDictionary<string, UpdateSubscription> _priceSubscriptions = [];
@@ -47,13 +48,15 @@ namespace TradingAssistant
             IConfiguration configuration,
             FasterKV<CandleId, Candle> cache,
             IBinanceRestClient rest,
-            IBinanceSocketClient socket)
+            IBinanceSocketClient socket,
+            IPublisher publisher)
         {
             _logger = logger;
             _configuration = configuration;
             _cache = cache;
             _rest = rest;
             _socket = socket;
+            _publisher = publisher;
 
             _ = ConfigureServiceAsync();
         }
@@ -369,11 +372,6 @@ namespace TradingAssistant
             _conditionalOrderTriggerRejectUpdateSubscriptions.Add(action);
         }
 
-        public IObservable<CandleId> GetCandleClosedEvent()
-        {
-            return _candleClosedProvider;
-        }
-
         public bool TryGetLeverage(string symbol, out int leverage)
         {
             if (!_leverages.TryGetValue(symbol, out leverage))
@@ -554,7 +552,7 @@ namespace TradingAssistant
 
                         if (kline.Final && (kline.Interval == _interval))
                         {
-                            _candleClosedProvider.Update(candleId);
+                                _publisher.Publish(new CandleClosedNotification(candleId));
                     }
                 },
                 cancellationToken);

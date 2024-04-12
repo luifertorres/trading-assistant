@@ -6,11 +6,13 @@ namespace TradingAssistant
 {
     public class PositionWriterWorker : BackgroundService
     {
+        private readonly ILogger<PositionWriterWorker> _logger;
         private readonly IServiceScopeFactory _factory;
         private readonly BinanceService _service;
 
-        public PositionWriterWorker(IServiceScopeFactory factory, BinanceService service)
+        public PositionWriterWorker(ILogger<PositionWriterWorker> logger, IServiceScopeFactory factory, BinanceService service)
         {
+            _logger = logger;
             _factory = factory;
             _service = service;
         }
@@ -26,12 +28,22 @@ namespace TradingAssistant
         {
             foreach (var position in @event.Data.UpdateData.Positions)
             {
+                var delaySeconds = DateTimeOffset.UtcNow.Subtract(@event.Data.EventTime).TotalSeconds;
+
                 if (position.EntryPrice != 0 && position.Quantity != 0)
                 {
+                    _logger.LogInformation("Saving {Symbol} position {DelaySeconds:F1} seconds later",
+                        position.Symbol,
+                        delaySeconds);
+
                     await SavePosition(position, cancellationToken);
                 }
                 else
                 {
+                    _logger.LogInformation("Deleting {Symbol} position {DelaySeconds:F1} seconds later",
+                        position.Symbol,
+                        delaySeconds);
+
                     await DeletePosition(position, cancellationToken);
                 }
             }

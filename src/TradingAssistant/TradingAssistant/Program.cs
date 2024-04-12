@@ -60,9 +60,9 @@ namespace TradingAssistant
                     });
 
                     services.AddSingleton<BinanceService>();
-                    services.AddSingleton<Rsi200SignalGenerator>();
+                    services.AddSingleton<TradingSignalQueueService>();
 
-                    services.AddHostedService<SignalsWorker>();
+                    services.AddHostedService<TradingSignalWorker>();
                     services.AddHostedService<PositionWriterWorker>();
                     services.AddHostedService<StopLossManager>();
                     services.AddHostedService<BreakEvenWorker>();

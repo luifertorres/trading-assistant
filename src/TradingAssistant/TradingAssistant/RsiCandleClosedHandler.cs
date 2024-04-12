@@ -7,16 +7,15 @@ using Skender.Stock.Indicators;
 
 namespace TradingAssistant
 {
-    public class Rsi200SignalGenerator : IObserver<CandleId>
+    public class RsiCandleClosedHandler : INotificationHandler<CandleClosedNotification>
     {
-        private readonly ILogger<Rsi200SignalGenerator> _logger;
+        private readonly ILogger<RsiCandleClosedHandler> _logger;
         private readonly IPublisher _publisher;
         private readonly FasterKV<CandleId, Candle> _cache;
         private readonly KlineInterval _timeFrame;
         private readonly int _candlestickSize;
-        private IDisposable? _unsubscriber;
 
-        public Rsi200SignalGenerator(ILogger<Rsi200SignalGenerator> logger,
+        public RsiCandleClosedHandler(ILogger<RsiCandleClosedHandler> logger,
             IConfiguration configuration,
             IPublisher publisher,
             FasterKV<CandleId, Candle> cache)
@@ -28,25 +27,9 @@ namespace TradingAssistant
             _candlestickSize = configuration.GetValue<int>("Binance:Service:CandlestickSize");
         }
 
-        public virtual void SubscribeTo(IObservable<CandleId> provider)
+        public Task Handle(CandleClosedNotification notification, CancellationToken cancellationToken)
         {
-            if (provider is not null)
-            {
-                _unsubscriber = provider.Subscribe(this);
-            }
-        }
-
-        public virtual void OnCompleted()
-        {
-            Unsubscribe();
-        }
-
-        public virtual void OnError(Exception error)
-        {
-        }
-
-        public virtual async void OnNext(CandleId lastCandleId)
-        {
+            var lastCandleId = notification.CandleId;
             var sessionBuilder = _cache.For(new SimpleFunctions<CandleId, Candle>());
             var intervals = new[] { _timeFrame };
 
@@ -80,7 +63,7 @@ namespace TradingAssistant
 
             if (candlesticks.Any(candlestick => candlestick.Value.Snapshot().Count < _candlestickSize))
             {
-                return;
+                return Task.CompletedTask;
             }
 
             var preferredTimeFrameCandles = candlesticks
@@ -117,23 +100,16 @@ namespace TradingAssistant
                     EnumConverter.GetString(_timeFrame),
                     Environment.NewLine);
 
-                await _publisher.Publish(new EmaReversionSignal
-                {
-                    Time = time,
-                    TimeFrame = _timeFrame,
-                    Direction = positionSide,
-                    Side = signalOrderSide.Value,
-                    Symbol = candlesticks.First().Key.Symbol,
-                    EntryPrice = entryPrice,
-                });
-
-                Console.Beep(frequency: 500, duration: 500);
+                _publisher.Publish(new TradingSignalNotification(candlesticks.First().Key.Symbol,
+                        _timeFrame,
+                        time,
+                        positionSide,
+                        signalOrderSide.Value,
+                        entryPrice),
+                    cancellationToken);
             }
-        }
 
-        public virtual void Unsubscribe()
-        {
-            _unsubscriber?.Dispose();
+            return Task.CompletedTask;
         }
 
         private OrderSide? GetRsiSignal(CircularTimeSeries<CandlestickId, Candle>[] candlesticks)
