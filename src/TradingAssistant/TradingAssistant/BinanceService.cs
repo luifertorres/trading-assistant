@@ -531,6 +531,9 @@ namespace TradingAssistant
                 @event =>
                 {
                         var kline = @event.Data.Data;
+
+                            if (kline.Final && (kline.Interval == _interval))
+                            {
                     var symbol = @event.Data.Symbol;
 
                         using var session = sessionBuilder.NewSession<SimpleFunctions<CandleId, Candle>>();
@@ -550,8 +553,6 @@ namespace TradingAssistant
 
                         session.Upsert(ref candleId, ref candle);
 
-                        if (kline.Final && (kline.Interval == _interval))
-                        {
                                 _publisher.Publish(new CandleClosedNotification(candleId));
                     }
                 },
