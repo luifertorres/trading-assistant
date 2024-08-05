@@ -91,7 +91,7 @@ namespace TradingAssistant
             _logger.LogInformation("Binance Service configured");
         }
 
-        private static decimal ApplyMarketQuantityFilter(decimal quantity,
+        public decimal ApplyMarketQuantityFilter(decimal quantity,
             decimal price,
             BinanceSymbolMinNotionalFilter? minNotionalFilter,
             BinanceSymbolMarketLotSizeFilter? marketLotSizeFilter)
