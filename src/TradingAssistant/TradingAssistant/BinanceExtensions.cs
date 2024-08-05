@@ -18,5 +18,10 @@ namespace TradingAssistant
         {
             return side == OrderSide.Buy ? PositionSide.Long : PositionSide.Short;
         }
+
+        internal static decimal WithSide(this decimal quantity, OrderSide side)
+        {
+            return side is OrderSide.Buy ? quantity : -quantity;
+        }
     }
 }
