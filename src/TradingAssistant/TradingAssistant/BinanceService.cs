@@ -740,7 +740,8 @@ namespace TradingAssistant
             OrderSide orderSide,
             FuturesOrderType orderType,
             decimal quantity,
-            decimal? entryPrice = default, CancellationToken cancellationToken = default)
+            decimal? entryPrice = default,
+            CancellationToken cancellationToken = default)
         {
             if (orderType != FuturesOrderType.Market && orderType != FuturesOrderType.Limit)
             {
