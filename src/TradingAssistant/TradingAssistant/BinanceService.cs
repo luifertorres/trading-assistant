@@ -649,8 +649,6 @@ namespace TradingAssistant
             {
                 _logger.LogDebug("Cancel all orders failed. {Error}", cancelAllOrdersResult.Error);
             }
-
-            return;
         }
 
         public async Task<bool> TryCancelStopLossAsync(string symbol, CancellationToken cancellationToken = default)
