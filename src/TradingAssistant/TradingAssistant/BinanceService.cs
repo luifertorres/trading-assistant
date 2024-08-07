@@ -247,7 +247,7 @@ namespace TradingAssistant
                 return false;
             }
 
-            var highestTradedVolumeSymbols = last24hTickers.Where(ticker => ticker.QuoteVolume > 100_000_000)
+            var highestTradedVolumeSymbols = last24hTickers.Where(ticker => ticker.QuoteVolume > 000_000_000)
                 .Select(ticker => ticker.Symbol);
 
             var symbols = exchangeInfo.Symbols.Where(symbol => symbol.Status is SymbolStatus.Trading)
