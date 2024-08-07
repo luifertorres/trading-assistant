@@ -252,7 +252,7 @@ namespace TradingAssistant
 
             var symbols = exchangeInfo.Symbols.Where(symbol => symbol.Status is SymbolStatus.Trading)
                 .Where(symbol => symbol.BaseAsset is not "USDC")
-                .Where(symbol => symbol.QuoteAsset is "USDT")
+                .Where(symbol => symbol.QuoteAsset is "USDT" or "USDC")
                 .Where(symbol => symbol.ContractType == ContractType.Perpetual)
                 .IntersectBy(highestTradedVolumeSymbols, symbol => symbol.Name);
 
