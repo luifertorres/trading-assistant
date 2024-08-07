@@ -314,10 +314,15 @@ namespace TradingAssistant
 
         private void HandleLeverageUpdate(DataEvent<BinanceFuturesStreamConfigUpdate> configUpdate)
         {
-            var symbol = configUpdate.Data.LeverageUpdateData!.Symbol;
-            var leverage = configUpdate.Data.LeverageUpdateData.Leverage;
+            var data = configUpdate.Data;
+
+            if (data.ConfigUpdateData is not { MultiAssetMode: true })
+            {
+                var symbol = data.LeverageUpdateData!.Symbol;
+                var leverage = data.LeverageUpdateData.Leverage;
 
             _leverages.AddOrUpdate(symbol!, leverage, (_, _) => leverage);
+        }
         }
 
         private bool TryGetSymbolInformation(string symbol, out BinanceFuturesUsdtSymbol? symbolInformation)
