@@ -325,7 +325,7 @@ namespace TradingAssistant
         }
         }
 
-        private bool TryGetSymbolInformation(string symbol, out BinanceFuturesUsdtSymbol? symbolInformation)
+        public bool TryGetSymbolInformation(string symbol, out BinanceFuturesUsdtSymbol? symbolInformation)
         {
             if (!_symbols.TryGetValue(symbol, out symbolInformation))
             {
