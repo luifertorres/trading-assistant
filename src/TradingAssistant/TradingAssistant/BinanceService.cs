@@ -525,9 +525,7 @@ namespace TradingAssistant
 
             foreach (var timeFrame in timeFrames)
             {
-                var firstSymbolGroup = _symbols.Keys.Take(_symbols.Count / 2);
-                var secondSymbolGroup = _symbols.Keys.Skip(_symbols.Count / 2);
-                var symbolGroups = new[] { firstSymbolGroup, secondSymbolGroup };
+                var symbolGroups = _symbols.Keys.Chunk((_symbols.Count / 2) + 1);
 
                 foreach (var symbols in symbolGroups)
                 {
