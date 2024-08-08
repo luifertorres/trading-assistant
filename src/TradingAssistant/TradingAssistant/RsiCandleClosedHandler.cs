@@ -70,8 +70,7 @@ namespace TradingAssistant
                 .First(candlestick => candlestick.Key.TimeFrame == _timeFrame).Value
                 .Snapshot();
             var time = preferredTimeFrameCandles[_candlestickSize - 1].CloseTime
-                .AddSeconds(1)
-                .ToLocalTime();
+                .AddSeconds(1);
             var entryPrice = preferredTimeFrameCandles[_candlestickSize - 1].ClosePrice;
             var orderedCandlesticks = candlesticks.OrderBy(candlestick => candlestick.Key.TimeFrame)
                 .Select(candlestick => candlestick.Value)
@@ -88,7 +87,7 @@ namespace TradingAssistant
                     "{PositionSide}{NewLine4}" +
                     "@ {Price}{NewLine5}" +
                     "{TimeFrame}{NewLine6}",
-                    time,
+                    time.ToLocalTime(),
                     Environment.NewLine,
                     Environment.NewLine,
                     candlesticks.First().Key.Symbol,
