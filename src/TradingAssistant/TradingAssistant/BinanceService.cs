@@ -321,8 +321,8 @@ namespace TradingAssistant
                 var symbol = data.LeverageUpdateData!.Symbol;
                 var leverage = data.LeverageUpdateData.Leverage;
 
-            _leverages.AddOrUpdate(symbol!, leverage, (_, _) => leverage);
-        }
+                _leverages.AddOrUpdate(symbol!, leverage, (_, _) => leverage);
+            }
         }
 
         public bool TryGetSymbolInformation(string symbol, out BinanceFuturesUsdtSymbol? symbolInformation)
@@ -533,17 +533,17 @@ namespace TradingAssistant
                     timeFrame,
                 @event =>
                 {
-                        var kline = @event.Data.Data;
+                    var kline = @event.Data.Data;
 
-                            if (kline.Final && (kline.Interval == _interval))
-                            {
-                    var symbol = @event.Data.Symbol;
+                    if (kline.Final && (kline.Interval == _interval))
+                    {
+                        var symbol = @event.Data.Symbol;
 
                         using var session = sessionBuilder.NewSession<SimpleFunctions<CandleId, Candle>>();
 
                         var candleId = new CandleId(symbol, kline.Interval, kline.OpenTime);
                         var candle = new Candle
-                    {
+                        {
                             Symbol = symbol,
                             Interval = kline.Interval,
                             OpenTime = kline.OpenTime,
@@ -556,58 +556,58 @@ namespace TradingAssistant
 
                         session.Upsert(ref candleId, ref candle);
 
-                                _publisher.Publish(new CandleClosedNotification(candleId));
+                        _publisher.Publish(new CandleClosedNotification(candleId));
                     }
                 },
                 cancellationToken);
 
-                if (!subscribeToKlineUpdatesResult.GetResultOrError(out var _, out var subscribeToKlineUpdatesError))
-            {
-                    _logger.LogWarning("Subscribe to {TimeFrame} candlesticks failed. {Error}",
-                        EnumConverter.GetString(timeFrame),
-                        subscribeToKlineUpdatesError);
+                    if (!subscribeToKlineUpdatesResult.GetResultOrError(out var _, out var subscribeToKlineUpdatesError))
+                    {
+                        _logger.LogWarning("Subscribe to {TimeFrame} candlesticks failed. {Error}",
+                            EnumConverter.GetString(timeFrame),
+                            subscribeToKlineUpdatesError);
 
-                return;
-            }
+                        return;
+                    }
                 }
 
                 _logger.LogInformation("Subscribe to {TimeFrame} candlesticks updates succeeded",
                     EnumConverter.GetString(timeFrame));
 
-            await Parallel.ForEachAsync(_symbols, cancellationToken, async (symbol, token) =>
-            {
-                    var totalKlines = new List<IBinanceKline>();
-                var endTime = default(DateTime?);
-                var requiredRequests = (int)Math.Ceiling(_candlestickSize / (double)MaxCandlesPerRequest);
-
-                for (var requestCount = 0; requestCount < requiredRequests; requestCount++)
+                await Parallel.ForEachAsync(_symbols, cancellationToken, async (symbol, token) =>
                 {
-                    var exchangeData = _rest.UsdFuturesApi.ExchangeData;
-                    var getKlinesResult = await exchangeData.GetKlinesAsync(symbol.Key,
-                            timeFrame,
-                        endTime: endTime,
-                        limit: candlesPerRequest,
-                        ct: token);
+                    var totalKlines = new List<IBinanceKline>();
+                    var endTime = default(DateTime?);
+                    var requiredRequests = (int)Math.Ceiling(_candlestickSize / (double)MaxCandlesPerRequest);
 
-                    if (!getKlinesResult.GetResultOrError(out var klines, out var getKlinesError))
+                    for (var requestCount = 0; requestCount < requiredRequests; requestCount++)
                     {
-                            _logger.LogWarning("Get {Symbol} {TimeFrame} candlestick failed. {Error}",
-                                symbol.Key,
-                                EnumConverter.GetString(timeFrame),
-                                getKlinesError);
+                        var exchangeData = _rest.UsdFuturesApi.ExchangeData;
+                        var getKlinesResult = await exchangeData.GetKlinesAsync(symbol.Key,
+                                timeFrame,
+                            endTime: endTime,
+                            limit: candlesPerRequest,
+                            ct: token);
 
-                        return;
-                    }
+                        if (!getKlinesResult.GetResultOrError(out var klines, out var getKlinesError))
+                        {
+                            _logger.LogWarning("Get {Symbol} {TimeFrame} candlestick failed. {Error}",
+                            symbol.Key,
+                            EnumConverter.GetString(timeFrame),
+                            getKlinesError);
+
+                            return;
+                        }
 
                         totalKlines.AddRange(klines);
 
-                    endTime = klines.FirstOrDefault()?.OpenTime;
+                        endTime = klines.FirstOrDefault()?.OpenTime;
 
-                    if (klines.Count() < MaxCandlesPerRequest)
-                    {
-                        break;
+                        if (klines.Count() < MaxCandlesPerRequest)
+                        {
+                            break;
+                        }
                     }
-                }
 
                     using (var session = sessionBuilder.NewSession<SimpleFunctions<CandleId, Candle>>())
                     {
@@ -627,14 +627,14 @@ namespace TradingAssistant
                             };
 
                             session.Upsert(ref candleId, ref candle);
-                }
+                        }
                     }
 
                     _logger.LogInformation("Get {Count} {Symbol} {Interval} candles succeeded",
-                        _candlestickSize,
-                    symbol.Key,
-                        EnumConverter.GetString(timeFrame));
-            });
+                    _candlestickSize,
+                symbol.Key,
+                    EnumConverter.GetString(timeFrame));
+                });
             }
 
             _logger.LogInformation("Get candlesticks succeeded");
