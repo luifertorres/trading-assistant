@@ -17,7 +17,7 @@
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.7" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
-    <PackageReference Include="Microsoft.FASTER.Core" Version="2.6.3" />
+    <PackageReference Include="Microsoft.FASTER.Core" Version="2.6.5" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.6" />
     <PackageReference Include="Skender.Stock.Indicators" Version="2.5.0" />
     <PackageReference Include="X.Extensions.Logging.Telegram" Version="1.0.6.1" />
