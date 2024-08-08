@@ -1,6 +1,5 @@
 ﻿using Binance.Net.Objects.Models.Futures.Socket;
 using CryptoExchange.Net.Objects.Sockets;
-using Microsoft.EntityFrameworkCore;
 
 namespace TradingAssistant
 {
@@ -19,12 +18,12 @@ namespace TradingAssistant
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _service.SubscribeToAccountUpdates(@event => HandleAccountUpdate(@event, stoppingToken));
+            _service.SubscribeToAccountUpdates(HandleAccountUpdate);
 
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
 
-        private async void HandleAccountUpdate(DataEvent<BinanceFuturesStreamAccountUpdate> @event, CancellationToken cancellationToken = default)
+        private void HandleAccountUpdate(DataEvent<BinanceFuturesStreamAccountUpdate> @event)
         {
             foreach (var position in @event.Data.UpdateData.Positions)
             {
@@ -36,7 +35,7 @@ namespace TradingAssistant
                         position.Symbol,
                         delaySeconds);
 
-                    await SavePosition(position, cancellationToken);
+                    SavePosition(position);
                 }
                 else
                 {
@@ -44,12 +43,12 @@ namespace TradingAssistant
                         position.Symbol,
                         delaySeconds);
 
-                    await DeletePosition(position, cancellationToken);
+                    DeletePosition(position);
                 }
             }
         }
 
-        private async ValueTask SavePosition(BinanceFuturesStreamPosition position, CancellationToken cancellationToken = default)
+        private void SavePosition(BinanceFuturesStreamPosition position)
         {
             if (!_service.TryGetLeverage(position.Symbol, out var leverage))
             {
@@ -58,8 +57,7 @@ namespace TradingAssistant
 
             using var database = _factory.CreateScope().ServiceProvider.GetRequiredService<TradingContext>();
 
-            var openPosition = await database.OpenPositions.FirstOrDefaultAsync(p => p.Symbol == position.Symbol,
-                cancellationToken);
+            var openPosition = database.OpenPositions.FirstOrDefault(p => p.Symbol == position.Symbol);
 
             var breakEvenPrice = TakeProfitPrice.Calculate(position.EntryPrice,
                 position.Quantity,
@@ -68,7 +66,7 @@ namespace TradingAssistant
 
             if (openPosition is null)
             {
-                await database.OpenPositions.AddAsync(new()
+                database.OpenPositions.Add(new()
                 {
                     Symbol = position.Symbol,
                     Leverage = leverage,
@@ -77,8 +75,7 @@ namespace TradingAssistant
                     Quantity = position.Quantity,
                     BreakEvenPrice = breakEvenPrice,
                     UpdateTime = DateTimeOffset.UtcNow,
-                },
-                cancellationToken);
+                });
             }
             else
             {
@@ -88,21 +85,20 @@ namespace TradingAssistant
                 openPosition.UpdateTime = DateTimeOffset.UtcNow;
             }
 
-            await database.SaveChangesAsync(cancellationToken);
+            database.SaveChanges();
         }
 
-        private async Task DeletePosition(BinanceFuturesStreamPosition position, CancellationToken cancellationToken)
+        private void DeletePosition(BinanceFuturesStreamPosition position)
         {
             using var database = _factory.CreateScope().ServiceProvider.GetRequiredService<TradingContext>();
 
-            var openPosition = await database.OpenPositions.FirstOrDefaultAsync(p => p.Symbol == position.Symbol,
-                cancellationToken);
+            var openPosition = database.OpenPositions.FirstOrDefault(p => p.Symbol == position.Symbol);
 
             if (openPosition is not null)
             {
                 database.OpenPositions.Remove(openPosition);
 
-                await database.SaveChangesAsync(cancellationToken);
+                database.SaveChanges();
             }
         }
     }
