@@ -36,32 +36,32 @@ namespace TradingAssistant
         {
             foreach (var position in @event.Data.UpdateData.Positions)
             {
-                if (position.EntryPrice != 0 && position.Quantity != 0)
-                {
-                    var candleClosedEvent = _service.GetCandleClosedEvent();
+                //if (position.EntryPrice != 0 && position.Quantity != 0)
+                //{
+                //    var candleClosedEvent = _service.GetCandleClosedEvent();
 
-                    if (_closePositionTrackers.TryRemove(position.Symbol, out var closePositionTracker))
-                    {
-                        closePositionTracker.Unsubscribe();
-                    }
+                //    if (_closePositionTrackers.TryRemove(position.Symbol, out var closePositionTracker))
+                //    {
+                //        closePositionTracker.Unsubscribe();
+                //    }
 
-                    closePositionTracker = new Rsi200ClosePositionTracker(_cache,
-                        _interval,
-                        _candlestickSize,
-                        position,
-                        _service);
+                //    closePositionTracker = new Rsi200ClosePositionTracker(_cache,
+                //        _interval,
+                //        _candlestickSize,
+                //        position,
+                //        _service);
 
-                    closePositionTracker.SubscribeTo(candleClosedEvent);
+                //    closePositionTracker.SubscribeTo(candleClosedEvent);
 
-                    _closePositionTrackers.TryAdd(position.Symbol, closePositionTracker);
-                }
-                else
-                {
-                    if (_closePositionTrackers.TryRemove(position.Symbol, out var takeProfit))
-                    {
-                        takeProfit.Unsubscribe();
-                    }
-                }
+                //    _closePositionTrackers.TryAdd(position.Symbol, closePositionTracker);
+                //}
+                //else
+                //{
+                //    if (_closePositionTrackers.TryRemove(position.Symbol, out var takeProfit))
+                //    {
+                //        takeProfit.Unsubscribe();
+                //    }
+                //}
             }
         }
     }

@@ -1,57 +1,88 @@
-﻿using Binance.Net.Objects.Models.Futures.Socket;
+﻿using Binance.Net.Enums;
+using Binance.Net.Objects.Models.Futures.Socket;
 using CryptoExchange.Net.Objects.Sockets;
 
 namespace TradingAssistant
 {
     public class TakeProfitManager : BackgroundService
     {
-        private readonly BinanceService _binanceService;
+        private readonly BinanceService _binance;
         private readonly IConfiguration _configuration;
+        private readonly IServiceScopeFactory _factory;
 
-        public TakeProfitManager(IConfiguration configuration, BinanceService binanceService)
+        public TakeProfitManager(IConfiguration configuration, IServiceScopeFactory factory, BinanceService binance)
         {
             _configuration = configuration;
-            _binanceService = binanceService;
+            _factory = factory;
+            _binance = binance;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _binanceService.SubscribeToAccountUpdates(@event => HandleAccountUpdate(@event, stoppingToken));
+            _binance.SubscribeToAccountUpdates(HandleAccountUpdate);
+            //_binance.SubscribeToOrderUpdates(HandleOrderUpdate);
 
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
 
-        private async void HandleAccountUpdate(DataEvent<BinanceFuturesStreamAccountUpdate> @event, CancellationToken cancellationToken = default)
+        private void HandleAccountUpdate(DataEvent<BinanceFuturesStreamAccountUpdate> @event)
         {
             foreach (var position in @event.Data.UpdateData.Positions)
             {
-                if (position.EntryPrice != 0 && position.Quantity != 0)
+                if (position.EntryPrice == 0 || position.Quantity == 0)
                 {
-                    await UpdateTakeProfitAsync(position, cancellationToken);
-                }
-                else
-                {
-                    await _binanceService.CancelAllOrdersAsync(position.Symbol, cancellationToken);
+                    _ = _binance.CancelAllOrdersAsync(position.Symbol);
                 }
             }
         }
 
-        private async Task UpdateTakeProfitAsync(BinanceFuturesStreamPosition position, CancellationToken cancellationToken = default)
+        private void HandleOrderUpdate(DataEvent<BinanceFuturesStreamOrderUpdate> @event)
+        {
+            var order = @event.Data.UpdateData;
+
+            if (order.ClientOrderId.Contains(order.Symbol, StringComparison.InvariantCultureIgnoreCase))
+            {
+                return;
+            }
+
+            if (order.ExecutionType is not ExecutionType.Trade)
+            {
+                return;
+            }
+
+            if (order.IsReduce)
+            {
+                return;
+            }
+
+            using var database = _factory.CreateScope().ServiceProvider.GetRequiredService<TradingContext>();
+
+            var position = database.OpenPositions.FirstOrDefault(p => p.Symbol == order.Symbol);
+
+            if (position is null || order.Side == position.EntrySide)
+            {
+                _ = UpdateTakeProfitAsync(order);
+            }
+        }
+
+        private async Task UpdateTakeProfitAsync(BinanceFuturesStreamOrderUpdateData order, CancellationToken cancellationToken = default)
         {
             var roi = _configuration.GetValue<decimal>("Binance:RiskManagement:TakeProfitRoi");
-            var isTakeProfitPlaced = await _binanceService.TryPlaceTakeProfitAsync(position.Symbol,
-                position.EntryPrice,
-                position.Quantity,
+            var isTakeProfitPlaced = await _binance.TryPlaceTakeProfitAsync(order.Symbol,
+                order.AveragePrice,
+                order.Quantity,
                 roi,
+                includeFees: true,
                 cancellationToken);
 
             if (!isTakeProfitPlaced)
             {
-                await _binanceService.TryCancelTakeProfitAsync(position.Symbol, cancellationToken);
-                await _binanceService.TryPlaceTakeProfitAsync(position.Symbol,
-                    position.EntryPrice,
-                    position.Quantity,
+                await _binance.TryCancelTakeProfitAsync(order.Symbol, cancellationToken);
+                await _binance.TryPlaceTakeProfitAsync(order.Symbol,
+                    order.AveragePrice,
+                    order.Quantity,
                     roi,
+                    includeFees: true,
                     cancellationToken);
             }
         }
