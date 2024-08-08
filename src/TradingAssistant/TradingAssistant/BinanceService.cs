@@ -778,8 +778,9 @@ namespace TradingAssistant
 
         public async Task<bool> TryPlaceStopLossAsync(string symbol,
             decimal entryPrice,
-            decimal quantity,
+            decimal positionQuantity,
             decimal roi,
+            bool includeFees = false,
             CancellationToken cancellationToken = default)
         {
             EnsureStopLossRoiIsValid(roi);
@@ -791,12 +792,12 @@ namespace TradingAssistant
                 return false;
             }
 
-            var stopLossPrice = StopLossPrice.Calculate(entryPrice, quantity, roi, leverage, includeFees: true);
+            var stopLossPrice = StopLossPrice.Calculate(entryPrice, positionQuantity, roi, leverage, includeFees);
 
             TryGetSymbolInformation(symbol, out var symbolInformation);
 
             var placeOrderResult = await trading.PlaceOrderAsync(symbol,
-                quantity.AsOrderSide().Reverse(),
+                positionQuantity.AsOrderSide().Reverse(),
                 FuturesOrderType.StopMarket,
                 quantity: null,
                 stopPrice: ApplyPriceFilter(stopLossPrice, symbolInformation?.PriceFilter),
