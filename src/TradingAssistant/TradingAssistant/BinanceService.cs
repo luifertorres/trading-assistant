@@ -881,8 +881,9 @@ namespace TradingAssistant
 
         public async Task<bool> TryPlaceTakeProfitAsync(string symbol,
             decimal entryPrice,
-            decimal quantity,
+            decimal positionQuantity,
             decimal roi,
+            bool includeFees = false,
             CancellationToken cancellationToken = default)
         {
             var trading = _rest.UsdFuturesApi.Trading;
@@ -892,12 +893,12 @@ namespace TradingAssistant
                 return false;
             }
 
-            var takeProfitPrice = TakeProfitPrice.Calculate(entryPrice, quantity, roi, leverage, includeFees: true);
+            var takeProfitPrice = TakeProfitPrice.Calculate(entryPrice, positionQuantity, roi, leverage, includeFees);
 
             TryGetSymbolInformation(symbol, out var symbolInformation);
 
             var placeOrderResult = await trading.PlaceOrderAsync(symbol,
-                quantity.AsOrderSide().Reverse(),
+                positionQuantity.AsOrderSide().Reverse(),
                 FuturesOrderType.TakeProfitMarket,
                 quantity: null,
                 stopPrice: ApplyPriceFilter(takeProfitPrice, symbolInformation?.PriceFilter),
