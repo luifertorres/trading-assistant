@@ -8,7 +8,9 @@ namespace TradingAssistant
         private readonly TradingSignalQueueService _service;
         private readonly ISender _sender;
 
-        public TradingSignalWorker(ILogger<TradingSignalWorker> logger, TradingSignalQueueService service, ISender sender)
+        public TradingSignalWorker(ILogger<TradingSignalWorker> logger,
+            TradingSignalQueueService service,
+            ISender sender)
         {
             _logger = logger;
             _service = service;
