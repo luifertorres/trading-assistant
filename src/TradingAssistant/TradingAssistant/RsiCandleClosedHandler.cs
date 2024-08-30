@@ -69,8 +69,7 @@ namespace TradingAssistant
             var preferredTimeFrameCandles = candlesticks
                 .First(candlestick => candlestick.Key.TimeFrame == _timeFrame).Value
                 .Snapshot();
-            var time = preferredTimeFrameCandles[_candlestickSize - 1].CloseTime
-                .AddSeconds(1);
+            var time = preferredTimeFrameCandles[_candlestickSize - 1].OpenTime;
             var entryPrice = preferredTimeFrameCandles[_candlestickSize - 1].ClosePrice;
             var orderedCandlesticks = candlesticks.OrderBy(candlestick => candlestick.Key.TimeFrame)
                 .Select(candlestick => candlestick.Value)
