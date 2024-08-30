@@ -253,6 +253,7 @@ namespace TradingAssistant
             var symbols = exchangeInfo.Symbols.Where(symbol => symbol.Status is SymbolStatus.Trading)
                 .Where(symbol => symbol.BaseAsset is not "USDC")
                 .Where(symbol => symbol.QuoteAsset is "USDT" or "USDC")
+                .Where(symbol => symbol.Name is not "BTCUSDT" or "SOLUSDT")
                 .Where(symbol => symbol.ContractType == ContractType.Perpetual)
                 .IntersectBy(highestTradedVolumeSymbols, symbol => symbol.Name);
 
@@ -530,36 +531,36 @@ namespace TradingAssistant
                 foreach (var symbols in symbolGroups)
                 {
                     var subscribeToKlineUpdatesResult = await _socket.UsdFuturesApi.SubscribeToKlineUpdatesAsync(symbols,
-                    timeFrame,
-                @event =>
-                {
-                    var kline = @event.Data.Data;
-
-                    if (kline.Final && (kline.Interval == _interval))
-                    {
-                        var symbol = @event.Data.Symbol;
-
-                        using var session = sessionBuilder.NewSession<SimpleFunctions<CandleId, Candle>>();
-
-                        var candleId = new CandleId(symbol, kline.Interval, kline.OpenTime);
-                        var candle = new Candle
+                        timeFrame,
+                        @event =>
                         {
-                            Symbol = symbol,
-                            Interval = kline.Interval,
-                            OpenTime = kline.OpenTime,
-                            CloseTime = kline.CloseTime,
-                            OpenPrice = kline.OpenPrice,
-                            HighPrice = kline.HighPrice,
-                            LowPrice = kline.LowPrice,
-                            ClosePrice = kline.ClosePrice,
-                        };
+                            var kline = @event.Data.Data;
 
-                        session.Upsert(ref candleId, ref candle);
+                            if (kline.Final && (kline.Interval == _interval))
+                            {
+                                var symbol = @event.Data.Symbol;
 
-                        _publisher.Publish(new CandleClosedNotification(candleId));
-                    }
-                },
-                cancellationToken);
+                                using var session = sessionBuilder.NewSession<SimpleFunctions<CandleId, Candle>>();
+
+                                var candleId = new CandleId(symbol, kline.Interval, kline.OpenTime);
+                                var candle = new Candle
+                                {
+                                    Symbol = symbol,
+                                    Interval = kline.Interval,
+                                    OpenTime = kline.OpenTime,
+                                    CloseTime = kline.CloseTime,
+                                    OpenPrice = kline.OpenPrice,
+                                    HighPrice = kline.HighPrice,
+                                    LowPrice = kline.LowPrice,
+                                    ClosePrice = kline.ClosePrice,
+                                };
+
+                                session.Upsert(ref candleId, ref candle);
+
+                                _publisher.Publish(new CandleClosedNotification(candleId));
+                            }
+                        },
+                        cancellationToken);
 
                     if (!subscribeToKlineUpdatesResult.GetResultOrError(out var _, out var subscribeToKlineUpdatesError))
                     {
@@ -584,7 +585,7 @@ namespace TradingAssistant
                     {
                         var exchangeData = _rest.UsdFuturesApi.ExchangeData;
                         var getKlinesResult = await exchangeData.GetKlinesAsync(symbol.Key,
-                                timeFrame,
+                            timeFrame,
                             endTime: endTime,
                             limit: candlesPerRequest,
                             ct: token);
@@ -592,9 +593,9 @@ namespace TradingAssistant
                         if (!getKlinesResult.GetResultOrError(out var klines, out var getKlinesError))
                         {
                             _logger.LogWarning("Get {Symbol} {TimeFrame} candlestick failed. {Error}",
-                            symbol.Key,
-                            EnumConverter.GetString(timeFrame),
-                            getKlinesError);
+                                symbol.Key,
+                                EnumConverter.GetString(timeFrame),
+                                getKlinesError);
 
                             return;
                         }
@@ -631,9 +632,9 @@ namespace TradingAssistant
                     }
 
                     _logger.LogInformation("Get {Count} {Symbol} {Interval} candles succeeded",
-                    _candlestickSize,
-                symbol.Key,
-                    EnumConverter.GetString(timeFrame));
+                        _candlestickSize,
+                        symbol.Key,
+                        EnumConverter.GetString(timeFrame));
                 });
             }
 
