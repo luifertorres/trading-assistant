@@ -74,7 +74,7 @@ namespace TradingAssistant
             var orderedCandlesticks = candlesticks.OrderBy(candlestick => candlestick.Key.TimeFrame)
                 .Select(candlestick => candlestick.Value)
                 .ToArray();
-            var signalOrderSide = GetRsiSignal(orderedCandlesticks);
+            var signalOrderSide = GetEntrySignal(orderedCandlesticks);
 
             if (signalOrderSide is not null)
             {
@@ -110,13 +110,22 @@ namespace TradingAssistant
             return Task.CompletedTask;
         }
 
-        private OrderSide? GetRsiSignal(CircularTimeSeries<CandlestickId, Candle>[] candlesticks)
+        private OrderSide? GetEntrySignal(CircularTimeSeries<CandlestickId, Candle>[] candlesticks)
         {
-            var lengths = new[]
+            var smaLengths = new[]
             {
                 Length.Five,
-                Length.Eight,
+                Length.Ten,
                 Length.Twenty,
+                Length.Fifty,
+                Length.OneHundred,
+                Length.TwoHundred
+            };
+
+            var rsiLengths = new[]
+            {
+                Length.Fifty,
+                Length.OneHundred,
                 Length.TwoHundred
             };
 
@@ -136,73 +145,39 @@ namespace TradingAssistant
                 return null;
             }
 
-            var rsis = lengths.Select(length => GetRsi(candles, length)).ToArray();
+            var smas = smaLengths.Select(length => GetSma(candles, length)).ToArray();
+            var rsis = rsiLengths.Select(length => GetRsi(candles, length)).ToArray();
 
-            LogRsis(candlestick.Key, candles, lengths, rsis);
+            LogRsis(candlestick.Key, candles, rsiLengths, rsis);
 
-            return GetRsisReversionSignal(rsis);
+            return GetReversionSignal(smas, rsis);
         }
 
-        private static OrderSide? GetRsisReversionSignal(double[][] rsis)
+        private static OrderSide? GetReversionSignal(double[][] smas, double[][] rsis)
         {
-            var rsi200PenultimateSignal = rsis[^1] switch
-            {
-            [.., <= Rsi.OversoldFor200, _] => OrderSide.Buy,
-            [.., >= Rsi.OverboughtFor200, _] => OrderSide.Sell,
+            var fastRsi = rsis[0];
+            var slowRsis = rsis[1..];
+            var isFastRsiCrossingUp = slowRsis.All(rsi => fastRsi[^2] < rsi[^2])
+                && slowRsis.All(rsi => fastRsi[^1] > rsi[^1]);
+            var smasOrderedByAscending = smas.OrderBy(sma => sma[^1]);
+            var areSmasOrderedByAscending = smasOrderedByAscending.SequenceEqual(smas);
+            var smasOrderedByDescending = smas.OrderByDescending(sma => sma[^1]);
+            var areSmasOrderedByDescending = smasOrderedByDescending.SequenceEqual(smas);
 
-                _ => default(OrderSide?),
-            };
-
-            if (rsi200PenultimateSignal is null)
+            if (isFastRsiCrossingUp && (areSmasOrderedByAscending || areSmasOrderedByDescending))
             {
-                return null;
+                return OrderSide.Buy;
             }
 
-            var fasterRsiPenultimateSignals = rsis.Take(3)
-                .Select(rsi => rsi switch
-                {
-                [.., <= Rsi.Oversold, _] => OrderSide.Buy,
-                [.., >= Rsi.Overbought, _] => OrderSide.Sell,
+            var isFastRsiCrossingDown = slowRsis.All(rsi => fastRsi[^2] > rsi[^2])
+                && slowRsis.All(rsi => fastRsi[^1] < rsi[^1]);
 
-                    _ => default(OrderSide?),
-                });
-
-            if (fasterRsiPenultimateSignals.Any(signal => signal != rsi200PenultimateSignal))
+            if (isFastRsiCrossingDown && (areSmasOrderedByDescending || areSmasOrderedByAscending))
             {
-                return null;
+                return OrderSide.Sell;
             }
 
-            var penultimate = Index.FromEnd(2);
-            var penultimateSignal = (rsis[0], rsis[1], rsis[2]) switch
-            {
-                var (rsi5, rsi8, rsi20) when rsi5[penultimate] <= rsi8[penultimate]
-                    && rsi8[penultimate] <= rsi20[penultimate] => OrderSide.Buy,
-                var (rsi5, rsi8, rsi20) when rsi5[penultimate] >= rsi8[penultimate]
-                    && rsi8[penultimate] >= rsi20[penultimate] => OrderSide.Sell,
-
-                _ => default(OrderSide?),
-            };
-
-            if (penultimateSignal != rsi200PenultimateSignal)
-            {
-                return null;
-            }
-
-            var last = Index.FromEnd(1);
-            var lastSignal = (rsis[0], rsis[1], rsis[2]) switch
-            {
-                var (rsi5, _, rsi20) when rsi5[last] > rsi20[last] => OrderSide.Buy,
-                var (rsi5, _, rsi20) when rsi5[last] < rsi20[last] => OrderSide.Sell,
-
-                _ => default(OrderSide?),
-            };
-
-            if (lastSignal != rsi200PenultimateSignal)
-            {
-                return null;
-            }
-
-            return rsi200PenultimateSignal;
+            return null;
         }
 
         private void LogRsis(CandlestickId candlestickId, List<Candle> candles, int[] lengths, double[][] rsis)
@@ -219,6 +194,28 @@ namespace TradingAssistant
                     candles.ToArray()[^1].OpenTime.ToLocalTime(), Environment.NewLine,
                     values.ToString());
             }
+        }
+
+        private static double[] GetSma(List<Candle> candles, int length, PeriodSize? higherTimeFrame = null)
+        {
+            var quotes = candles.Select(ToQuote).Validate();
+
+            var postWarmupPeriod = length;
+
+            if (higherTimeFrame.HasValue)
+            {
+                return quotes.Aggregate(higherTimeFrame.Value)
+                    .Validate()
+                    .TakeLast(length + postWarmupPeriod)
+                    .GetSma(length)
+                    .Select(result => result.Sma.GetValueOrDefault())
+                    .ToArray();
+            }
+
+            return quotes.TakeLast(length + postWarmupPeriod)
+                .GetSma(length)
+                .Select(result => result.Sma.GetValueOrDefault())
+                .ToArray();
         }
 
         private static double[] GetRsi(List<Candle> candles, int length, PeriodSize? higherTimeFrame = null)
