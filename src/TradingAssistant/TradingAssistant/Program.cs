@@ -1,5 +1,4 @@
 ﻿using CryptoExchange.Net.Authentication;
-using CryptoExchange.Net.Objects;
 using FASTER.core;
 using X.Extensions.Logging.Telegram;
 
@@ -28,14 +27,6 @@ namespace TradingAssistant
                         var secret = context.Configuration["Binance:Futures:ApiSecret"]!;
 
                         restOptions.ApiCredentials = new ApiCredentials(key, secret);
-
-                        const int RateLimitPeriod = 1;
-                        const int Limit = 2400 / (60 / RateLimitPeriod);
-
-                        var perTimePeriod = TimeSpan.FromSeconds(RateLimitPeriod);
-                        var totalRateLimiter = new RateLimiter().AddTotalRateLimit(Limit, perTimePeriod);
-
-                        restOptions.UsdFuturesOptions.RateLimiters.Add(totalRateLimiter);
                     },
                     socketOptions =>
                     {
@@ -65,13 +56,16 @@ namespace TradingAssistant
                     services.AddHostedService<TradingSignalWorker>();
                     services.AddHostedService<PositionWriterWorker>();
                     services.AddHostedService<StopLossManager>();
-                    services.AddHostedService<BreakEvenWorker>();
-                    services.AddHostedService<TakeProfitManager>();
-                    services.AddHostedService<SteppedTrailingStopManager>();
-                    services.AddHostedService<TrailingStopManager>();
-                    services.AddHostedService<Rsi200ClosePositionWorker>();
+                    //services.AddHostedService<BreakEvenWorker>();
+                    //services.AddHostedService<TakeProfitManager>();
+                    //services.AddHostedService<SteppedTrailingStopManager>();
+                    //services.AddHostedService<TrailingStopManager>();
+                    //services.AddHostedService<Rsi200ClosePositionWorker>();
                 })
                 .Build();
+
+            host.Services.GetRequiredService<BinanceService>()
+                .TriggerLastCandleClosedNotifications();
 
             host.Run();
         }
