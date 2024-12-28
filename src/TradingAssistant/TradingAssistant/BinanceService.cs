@@ -326,9 +326,12 @@ namespace TradingAssistant
                 _leverages.TryAdd(bracket.Symbol, bracket.Brackets.Max(b => b.InitialLeverage));
             });
 
-            await Parallel.ForEachAsync(_leverages, cancellationToken, async (leverage, token) =>
+            await Parallel.ForEachAsync(_symbols, cancellationToken, async (symbol, token) =>
             {
-                await account.ChangeInitialLeverageAsync(leverage.Key, leverage.Value, ct: token);
+                if (_leverages.TryGetValue(symbol.Key, out var leverage))
+                {
+                    await account.ChangeInitialLeverageAsync(symbol.Key, leverage, ct: token);
+                }
             });
 
             _logger.LogInformation("Leverage configuration finished");
