@@ -90,6 +90,31 @@ namespace TradingAssistant
             _logger.LogInformation("Binance Service configured");
         }
 
+        public bool TryReduceMarketQuantity(decimal quantity,
+            decimal price,
+            BinanceSymbolMinNotionalFilter? minNotionalFilter,
+            BinanceSymbolMarketLotSizeFilter? marketLotSizeFilter,
+            out decimal reducedQuantity)
+        {
+            if (minNotionalFilter is null || marketLotSizeFilter is null)
+            {
+                reducedQuantity = quantity;
+
+                return false;
+            }
+
+            var expectedQuantity = quantity - marketLotSizeFilter.StepSize;
+
+            reducedQuantity = ApplyMarketQuantityFilter(expectedQuantity, price, minNotionalFilter, marketLotSizeFilter);
+
+            if (reducedQuantity > expectedQuantity)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
         public decimal ApplyMarketQuantityFilter(decimal quantity,
             decimal price,
             BinanceSymbolMinNotionalFilter? minNotionalFilter,
