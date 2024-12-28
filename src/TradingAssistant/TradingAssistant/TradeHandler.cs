@@ -8,8 +8,6 @@ namespace TradingAssistant
 {
     public class TradeHandler : IRequestHandler<TradeRequest, bool>
     {
-        private const string Usdt = "USDT";
-        private const string Usdc = "USDC";
         private readonly ILogger<TradeHandler> _logger;
         private readonly IConfiguration _configuration;
         private readonly IServiceScopeFactory _factory;
@@ -38,7 +36,7 @@ namespace TradingAssistant
         {
             var symbolToTrade = trade.Symbol;
 
-            if (!_binance.TryGetSymbolInformation(symbolToTrade, out var symbolToTradeInformation))
+            if (!_binance.TryGetSymbolInformation(symbolToTrade, out var information))
             {
                 return false;
             }
@@ -53,10 +51,10 @@ namespace TradingAssistant
             var bitcoin = GetCandlestick(lastCandleId with { Symbol = "BTCUSDT" });
             var withoutQuoteAsset = ..^4;
 
-            if (symbolToTrade[withoutQuoteAsset] is not "BTC" && candlestick.IsCorrelatedWith(bitcoin))
-            {
-                return false;
-            }
+            //if (symbolToTrade[withoutQuoteAsset] is not "BTC" && candlestick.IsCorrelatedWith(bitcoin))
+            //{
+            //    return false;
+            //}
 
             var account = await _binance.TryGetAccountInformationAsync(cancellationToken);
 
@@ -85,42 +83,51 @@ namespace TradingAssistant
 
             var referenceStopLossRoi = _configuration.GetValue<decimal>("Binance:RiskManagement:StopLossRoi");
             var lookbackPeriods = 10; // Math.Max(60 * 60 * 24 / (int)trade.TimeFrame, 1);
-            var desiredStopLossPrice = newPositionSide == OrderSide.Buy
+            var expectedStopLossPrice = newPositionSide == OrderSide.Buy
                 ? candlestick[^lookbackPeriods..].Min(candle => candle.LowPrice)
                 : candlestick[^lookbackPeriods..].Max(candle => candle.HighPrice);
             var entryPrice = trade.EntryPrice;
-            var desiredStopLossRoi = Math.Abs((desiredStopLossPrice / entryPrice) - 1) * 100 * leverage;
+            var expectedStopLossRoi = Math.Abs((expectedStopLossPrice / entryPrice) - 1) * 100 * leverage;
             var maximumTrailingStopRoi = 10 * leverage;
-            var actualStopLossRoi = Math.Min(desiredStopLossRoi, maximumTrailingStopRoi);
-            var accountMarginPercentage = _configuration.GetValue<decimal>("Binance:RiskManagement:AccountMarginPercentage");
-            var availableBalance = Math.Max(account.AvailableBalance, 40);
-            var stopLossBasedFactor = referenceStopLossRoi / actualStopLossRoi;
-            var desiredMargin = stopLossBasedFactor * accountMarginPercentage * availableBalance / 100;
-            var desiredNotional = desiredMargin * leverage;
-            var desiredPositionQuantity = desiredNotional / entryPrice;
-            var newPositionQuantity = _binance.ApplyMarketQuantityFilter(desiredPositionQuantity,
+            var actualStopLossRoi = Math.Min(expectedStopLossRoi, maximumTrailingStopRoi);
+            var marginPercentage = _configuration.GetValue<decimal>("Binance:RiskManagement:AccountMarginPercentage");
+            var availableBalance = account.AvailableBalance;
+            var stopLossRatio = referenceStopLossRoi / actualStopLossRoi;
+            var margin = stopLossRatio * marginPercentage * availableBalance / 100;
+            var notional = margin * leverage;
+            var expectedQuantity = notional / entryPrice;
+            var minNotionalFilter = information?.MinNotionalFilter;
+            var marketLotSizeFilter = information?.MarketLotSizeFilter;
+            var quantity = _binance.ApplyMarketQuantityFilter(expectedQuantity,
                 entryPrice,
-                symbolToTradeInformation?.MinNotionalFilter,
-                symbolToTradeInformation?.MarketLotSizeFilter);
+                minNotionalFilter,
+                marketLotSizeFilter);
 
-            if (newPositionQuantity > desiredPositionQuantity)
+            if (quantity > expectedQuantity)
             {
-                var newPositionQuantityBasedFactor = desiredPositionQuantity / newPositionQuantity;
+                _binance.TryReduceMarketQuantity(quantity,
+                    entryPrice,
+                    minNotionalFilter,
+                    marketLotSizeFilter,
+                    out var reducedQuantity);
 
-                actualStopLossRoi *= newPositionQuantityBasedFactor;
+                var quantityFactor = expectedQuantity / reducedQuantity;
+
+                actualStopLossRoi *= quantityFactor;
             }
 
-            if (symbolToTrade[withoutQuoteAsset] is "BTC" && (newPositionQuantity > 0.001m))
+            if (actualStopLossRoi < expectedStopLossRoi)
             {
-                const decimal BitcoinQuantityToReduce = 0.001m;
+                _logger.LogInformation(
+                    "Expected Stop Loss ROI: {ExpectedStopLossRoi:F0}{NewLine1}" +
+                    "Actual Stop Loss ROI: {ActualStopLossRoi}",
+                    expectedStopLossRoi, Environment.NewLine,
+                    actualStopLossRoi);
 
-                var newPositionQuantityBasedFactor = newPositionQuantity / (newPositionQuantity - BitcoinQuantityToReduce);
-
-                newPositionQuantity -= BitcoinQuantityToReduce;
-                actualStopLossRoi *= newPositionQuantityBasedFactor;
+                return false;
             }
 
-            actualStopLossRoi = Math.Min(desiredStopLossRoi, maximumTrailingStopRoi);
+            actualStopLossRoi = Math.Min(expectedStopLossRoi.Round(), maximumTrailingStopRoi);
 
             if (symbolToTrade[withoutQuoteAsset] is not "BTC")
             {
@@ -143,14 +150,14 @@ namespace TradingAssistant
             }
 
             _logger.LogInformation(
-                "Reference Stop Loss ROI: {ReferenceStopLossRoi:F0}{NewLine1}" +
-                "Actual Stop Loss ROI: {ActualStopLossRoi:F0}",
+                "Reference Stop Loss ROI: {ReferenceStopLossRoi}{NewLine1}" +
+                "Actual Stop Loss ROI: {ActualStopLossRoi}",
                 referenceStopLossRoi, Environment.NewLine,
                 actualStopLossRoi);
 
             var isStopLossPlaced = await _binance.TryPlaceStopLossAsync(symbolToTrade,
                 entryPrice,
-                newPositionQuantity.WithSide(newPositionSide),
+                quantity.WithSide(newPositionSide),
                 actualStopLossRoi,
                 cancellationToken: cancellationToken);
 
@@ -160,7 +167,7 @@ namespace TradingAssistant
 
                 isStopLossPlaced = await _binance.TryPlaceStopLossAsync(symbolToTrade,
                     entryPrice,
-                    newPositionQuantity.WithSide(newPositionSide),
+                    quantity.WithSide(newPositionSide),
                     actualStopLossRoi,
                     cancellationToken: cancellationToken);
             }
@@ -173,7 +180,7 @@ namespace TradingAssistant
             var isEntryOrderPlaced = await _binance.TryPlaceEntryOrderAsync(symbolToTrade,
                 newPositionSide,
                 FuturesOrderType.Market,
-                newPositionQuantity,
+                quantity,
                 entryPrice,
                 cancellationToken);
 
@@ -194,7 +201,7 @@ namespace TradingAssistant
 
                 var isTrailingStopPlaced = await _binance.TryPlaceTrailingStopAsync(symbolToTrade,
                     newPositionSide.Reverse(),
-                    newPositionQuantity.WithSide(newPositionSide),
+                    quantity.WithSide(newPositionSide),
                     callbackRate,
                     cancellationToken: cancellationToken);
 
@@ -203,7 +210,7 @@ namespace TradingAssistant
                     await _binance.TryCancelTrailingStopAsync(symbolToTrade, cancellationToken);
                     await _binance.TryPlaceTrailingStopAsync(symbolToTrade,
                         newPositionSide.Reverse(),
-                        newPositionQuantity.WithSide(newPositionSide),
+                        quantity.WithSide(newPositionSide),
                         callbackRate,
                         cancellationToken: cancellationToken);
                 }
@@ -218,7 +225,7 @@ namespace TradingAssistant
 
                 var isTakeProfitPlaced = await _binance.TryPlaceTakeProfitAsync(symbolToTrade,
                     entryPrice,
-                    newPositionQuantity.WithSide(newPositionSide),
+                    quantity.WithSide(newPositionSide),
                     actualTakeProfitRoi,
                     includeFees: true,
                     cancellationToken: cancellationToken);
@@ -228,7 +235,7 @@ namespace TradingAssistant
                     await _binance.TryCancelTakeProfitAsync(symbolToTrade, cancellationToken);
                     await _binance.TryPlaceTakeProfitAsync(symbolToTrade,
                         entryPrice,
-                        newPositionQuantity.WithSide(newPositionSide),
+                        quantity.WithSide(newPositionSide),
                         actualTakeProfitRoi,
                         includeFees: true,
                         cancellationToken: cancellationToken);
