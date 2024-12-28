@@ -1,6 +1,6 @@
 ﻿namespace TradingAssistant
 {
-    internal static class DoubleExtensions
+    internal static class NumberExtensions
     {
         public static readonly Index Penultimate = ^2;
         public static readonly Index Last = ^1;
@@ -81,6 +81,11 @@
         internal static bool AreOrderedFromFastToSlow(this IEnumerable<double> values)
         {
             return values.OrderDescending().SequenceEqual(values);
+        }
+
+        internal static int Round(this decimal value)
+        {
+            return (int)Math.Round(value, MidpointRounding.ToPositiveInfinity);
         }
     }
 }
