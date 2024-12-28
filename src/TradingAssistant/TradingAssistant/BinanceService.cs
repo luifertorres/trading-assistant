@@ -532,7 +532,7 @@ namespace TradingAssistant
 
             foreach (var timeFrame in timeFrames)
             {
-                var symbolGroups = _symbols.Keys.Chunk((_symbols.Count / 2) + 1);
+                var symbolGroups = _symbols.Keys.Chunk(size: Environment.ProcessorCount);
 
                 foreach (var symbols in symbolGroups)
                 {
@@ -581,8 +581,17 @@ namespace TradingAssistant
                 _logger.LogInformation("Subscribe to {TimeFrame} candlesticks updates succeeded",
                     EnumConverter.GetString(timeFrame));
 
-                await Parallel.ForEachAsync(_symbols, cancellationToken, async (symbol, token) =>
+                var parallelOptions = new ParallelOptions
                 {
+                    MaxDegreeOfParallelism = Environment.ProcessorCount
+                };
+
+                foreach (var symbols in symbolGroups)
+                {
+                    await Parallel.ForEachAsync(symbols,
+                        parallelOptions,
+                        async (symbol, token) =>
+                        {
                     var totalKlines = new List<IBinanceKline>();
                     var utcDateTime = GetCurrentUtcTime();
                     var endTime = (DateTime?)utcDateTime.AddSeconds(-(int)_interval);
@@ -591,7 +600,7 @@ namespace TradingAssistant
                     for (var requestCount = 0; requestCount < requiredRequests; requestCount++)
                     {
                         var exchangeData = _rest.UsdFuturesApi.ExchangeData;
-                        var getKlinesResult = await exchangeData.GetKlinesAsync(symbol.Key,
+                                var getKlinesResult = await exchangeData.GetKlinesAsync(symbol,
                             timeFrame,
                             endTime: endTime,
                             limit: candlesPerRequest,
@@ -600,7 +609,7 @@ namespace TradingAssistant
                         if (!getKlinesResult.GetResultOrError(out var klines, out var getKlinesError))
                         {
                             _logger.LogWarning("Get {Symbol} {TimeFrame} candlestick failed. {Error}",
-                                symbol.Key,
+                                        symbol,
                                 EnumConverter.GetString(timeFrame),
                                 getKlinesError);
 
@@ -617,14 +626,16 @@ namespace TradingAssistant
                         }
                     }
 
-                    using (var session = sessionBuilder.NewSession<SimpleFunctions<CandleId, Candle>>())
+                            //if (totalKlines.Count >= _candlestickSize)
                     {
+                                using var session = sessionBuilder.NewSession<SimpleFunctions<CandleId, Candle>>();
+
                         foreach (var kline in totalKlines)
                         {
-                            var candleId = new CandleId(symbol.Key, timeFrame, kline.OpenTime);
+                                    var candleId = new CandleId(symbol, timeFrame, kline.OpenTime);
                             var candle = new Candle
                             {
-                                Symbol = symbol.Key,
+                                        Symbol = symbol,
                                 Interval = timeFrame,
                                 OpenTime = kline.OpenTime,
                                 CloseTime = kline.CloseTime,
@@ -640,9 +651,10 @@ namespace TradingAssistant
 
                     _logger.LogInformation("Get {Count} {Symbol} {Interval} candles succeeded",
                         Math.Min(totalKlines.Count, _candlestickSize),
-                        symbol.Key,
+                                symbol,
                         EnumConverter.GetString(timeFrame));
                 });
+            }
             }
 
             _logger.LogInformation("Get candlesticks succeeded");
@@ -668,8 +680,8 @@ namespace TradingAssistant
 
         private static DateTime GetCurrentUtcTime()
         {
-            //var localTime = new TimeOnly(12, 45, 01);
-            //var localDate = new DateOnly(2024, 12, 12);
+            //var localTime = new TimeOnly(13, 22, 01);
+            //var localDate = new DateOnly(2024, 12, 24);
             //var localDateTime = new DateTime(localDate, localTime, DateTimeKind.Local);
             //var utcDateTime = localDateTime.ToUniversalTime();
             var utcDateTime = DateTime.UtcNow;
