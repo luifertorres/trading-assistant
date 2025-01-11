@@ -196,62 +196,59 @@ namespace TradingAssistant
             }
 
             var smas = smaLengths.Select(length => GetSma(candlestick, length)).ToArray();
-            var smasHigherTimeFrame = smaLengths.Select(length => GetSma(candlestick, length, PeriodSize.FifteenMinutes)).ToArray();
             var rsis = rsiLengths.Select(length => GetRsi(candlestick, length)).ToArray();
-            var rsisHigherTimeFrame = rsiLengths.Select(length => GetRsi(candlestick, length, PeriodSize.FifteenMinutes)).ToArray();
+            var smasHigherTimeFrame = smaLengths.Select(length => GetSma(candlestick, length, PeriodSize.FourHours)).ToArray();
 
             LogRsis(candlestick, rsiLengths, rsis);
 
-            return /*GetTrendSignal(smas, rsis) ??*/ GetReversionSignal(smas, smasHigherTimeFrame, rsis, rsisHigherTimeFrame);
+            return GetTrendSignal(smas, rsis, smasHigherTimeFrame) ?? GetReversionSignal(smas, rsis, smasHigherTimeFrame);
         }
 
-        private OrderSide? GetTrendSignal(double[][] smas, double[][] rsis)
+        private OrderSide? GetTrendSignal(double[][] smas, double[][] rsis, double[][] smasHigherTimeFrame)
         {
-            var fastRsis = rsis.Take(2);
-            var fastSmas = smas.Take(2);
-            var middleSmas = smas.Skip(fastSmas.Count()).Take(2);
-            var slowSmas = smas.Skip(fastSmas.Count()).Skip(middleSmas.Count()).TakeLast(1);
+            smas = smas.Skip(1).ToArray();
 
-            if (fastSmas.Any(sma => sma.Length < 2))
+            var fastSmasHigherTimeFrame = smasHigherTimeFrame.Take(4);
+            var fastSmas = smas.Take(2);
+            var slowSmas = smas.Skip(fastSmas.Count());
+
+            var fastRsis = rsis.Take(2);
+
+            if (fastSmas.Any(sma => sma.Length < 1))
             {
                 return null;
             }
 
-            var penultimateFastSmas = fastSmas.Select(sma => sma[Penultimate]);
+            var areFastSmasHigherTimeFrameOrderedFromFastToSlow = fastSmasHigherTimeFrame.PickLatestValues().AreOrderedFromFastToSlow();
             var areSlowSmasUptrending = slowSmas.AreUptrending();
-            var wereRsisOrderedFromSlowToFast = rsis.WereOrderedFromSlowToFast(_rsiPatternLookbackPeriods);
-            var areFastRsisOrderedFromFastToSlow = fastRsis.PickLatestValues().AreOrderedFromFastToSlow();
-            var areRsisStartingToGoUpward = wereRsisOrderedFromSlowToFast && areFastRsisOrderedFromFastToSlow;
-            var arePenultimateFastSmasOrderedFromFastToSlow = penultimateFastSmas.AreOrderedFromFastToSlow();
-            var areFastSmasOrderedFromFastToSlow = fastSmas.PickLatestValues().AreOrderedFromFastToSlow();
-            var areFastSmasCrossingUp = !arePenultimateFastSmasOrderedFromFastToSlow && areFastSmasOrderedFromFastToSlow;
-            var areMiddleSmasOrderedFromSlowToFast = middleSmas.PickLatestValues().AreOrderedFromSlowToFast();
             var areSlowSmasOrderedFromFastToSlow = slowSmas.PickLatestValues().AreOrderedFromFastToSlow();
+            var areFastSmasOrderedFromSlowToFast = fastSmas.PickLatestValues().AreOrderedFromSlowToFast();
+            var wereRsisOrderedFromSlowToFast = rsis.WereOrderedFromSlowToFast(lookbackPeriods: 2);
+            var areFastRsisGoingUp = fastRsis.PickLatestValues().AreOrderedFromFastToSlow();
 
-            if (areSlowSmasUptrending
-                && areFastSmasCrossingUp
-                && areMiddleSmasOrderedFromSlowToFast
+            if (areFastSmasHigherTimeFrameOrderedFromFastToSlow
+                && areSlowSmasUptrending
                 && areSlowSmasOrderedFromFastToSlow
-                && areRsisStartingToGoUpward)
+                && areFastSmasOrderedFromSlowToFast
+                && wereRsisOrderedFromSlowToFast
+                && areFastRsisGoingUp)
             {
                 return OrderSide.Buy;
             }
 
+            var areFastSmasHigherTimeFrameOrderedFromSlowToFast = fastSmasHigherTimeFrame.PickLatestValues().AreOrderedFromSlowToFast();
             var areSlowSmasDowntrending = slowSmas.AreDowntrending();
-            var wereRsisOrderedFromFastToSlow = rsis.WereOrderedFromFastToSlow(_rsiPatternLookbackPeriods);
-            var areFastRsisOrderedFromSlowToFast = fastRsis.PickLatestValues().AreOrderedFromSlowToFast();
-            var areRsisStartingToGoDownward = wereRsisOrderedFromFastToSlow && areFastRsisOrderedFromSlowToFast;
-            var arePenultimateFastSmasOrderedFromSlowToFast = penultimateFastSmas.AreOrderedFromSlowToFast();
-            var areFastSmasOrderedFromSlowToFast = fastSmas.PickLatestValues().AreOrderedFromSlowToFast();
-            var areFastSmasCrossingDown = !arePenultimateFastSmasOrderedFromSlowToFast && areFastSmasOrderedFromSlowToFast;
-            var areMiddleSmasOrderedFromFastToSlow = middleSmas.PickLatestValues().AreOrderedFromFastToSlow();
             var areSlowSmasOrderedFromSlowToFast = slowSmas.PickLatestValues().AreOrderedFromSlowToFast();
+            var areFastSmasOrderedFromFastToSlow = fastSmas.PickLatestValues().AreOrderedFromFastToSlow();
+            var wereRsisOrderedFromFastToSlow = rsis.WereOrderedFromFastToSlow(lookbackPeriods: 2);
+            var areFastRsisGoingDown = fastRsis.PickLatestValues().AreOrderedFromSlowToFast();
 
-            if (areSlowSmasDowntrending
-                && areFastSmasCrossingDown
-                && areMiddleSmasOrderedFromFastToSlow
+            if (areFastSmasHigherTimeFrameOrderedFromSlowToFast
+                && areSlowSmasDowntrending
                 && areSlowSmasOrderedFromSlowToFast
-                && areRsisStartingToGoDownward)
+                && areFastSmasOrderedFromFastToSlow
+                && wereRsisOrderedFromFastToSlow
+                && areFastRsisGoingDown)
             {
                 return OrderSide.Sell;
             }
@@ -259,65 +256,50 @@ namespace TradingAssistant
             return null;
         }
 
-        private OrderSide? GetReversionSignal(double[][] smas, double[][] smasHigherTimeFrame, double[][] rsis, double[][] rsisHigherTimeFrame)
+        private OrderSide? GetReversionSignal(double[][] smas, double[][] rsis, double[][] smasHigherTimeFrame)
         {
-            var fastSmas = smas.Take(2);
+            var fastSmasHigherTimeFrame = smasHigherTimeFrame.Take(4);
+            var fastSmas = smas.Take(1);
             var slowSmas = smas.Skip(fastSmas.Count());
 
-            var fastSmasHigherTimeFrame = smasHigherTimeFrame.Take(2);
-            var slowSmasHigherTimeFrame = smasHigherTimeFrame.Skip(fastSmasHigherTimeFrame.Count());
+            var fastRsis = rsis.Take(3);
+            var slowRsis = rsis.Skip(fastRsis.Count());
 
-            if (fastSmas.Any(sma => sma.Length < 1) || fastSmasHigherTimeFrame.Any(sma => sma.Length < 1))
+            if (fastSmas.Any(sma => sma.Length < 1))
             {
                 return null;
             }
 
+            var areFastSmasHigherTimeFrameOrderedFromSlowToFast = fastSmasHigherTimeFrame.PickLatestValues().AreOrderedFromSlowToFast();
             var areSlowSmasDowntrending = slowSmas.TakeLast(1).AreDowntrending();
-            var wereSmasOrderedFromSlowToFast = smas.WereOrderedFromSlowToFast(_rsiPatternLookbackPeriods);
-            var areFastSmasOrderedFromFastToSlow = fastSmas.PickLatestValues().AreOrderedFromFastToSlow();
             var areSlowSmasOrderedFromSlowToFast = slowSmas.PickLatestValues().AreOrderedFromSlowToFast();
-            var wereRsisOrderedFromSlowToFast = rsis.WereOrderedFromSlowToFast(_rsiPatternLookbackPeriods);
-            var areRsisOrderedFromFastToSlow = rsis.PickLatestValues().AreOrderedFromFastToSlow();
-            var areSlowSmasHigherTimeFrameDowntrending = slowSmasHigherTimeFrame.TakeLast(1).AreDowntrending();
-            var wereSmasHigherTimeFrameOrderedFromSlowToFast = smasHigherTimeFrame.WereOrderedFromSlowToFast(_rsiPatternLookbackPeriods);
-            var areSmasHigherTimeFrameOrderedFromSlowToFast = smasHigherTimeFrame.PickLatestValues().AreOrderedFromSlowToFast();
-            var wereRsisHigherTimeFrameOrderedFromSlowToFast = rsisHigherTimeFrame.WereOrderedFromSlowToFast(_rsiPatternLookbackPeriods);
+            var wereSlowRsisOrderedFromSlowToFast = slowRsis.WereOrderedFromSlowToFast(lookbackPeriods: 2);
+            var wereFastRsisGoingDown = fastRsis.Select(rsi => rsi[^2]).All(rsi => rsi <= slowRsis.First()[^2]);
+            var areFastRsisGoingUp = fastRsis.PickLatestValues().All(rsi => rsi >= slowRsis.PickLatestValues().First());
 
-            if (areSlowSmasDowntrending
-                && wereSmasOrderedFromSlowToFast
-                && areFastSmasOrderedFromFastToSlow
+            if (areFastSmasHigherTimeFrameOrderedFromSlowToFast
+                && areSlowSmasDowntrending
                 && areSlowSmasOrderedFromSlowToFast
-                && wereRsisOrderedFromSlowToFast
-                && areRsisOrderedFromFastToSlow
-                && areSlowSmasHigherTimeFrameDowntrending
-                && wereSmasHigherTimeFrameOrderedFromSlowToFast
-                && areSmasHigherTimeFrameOrderedFromSlowToFast
-                && wereRsisHigherTimeFrameOrderedFromSlowToFast)
+                && wereSlowRsisOrderedFromSlowToFast
+                && wereFastRsisGoingDown
+                && areFastRsisGoingUp)
             {
                 return OrderSide.Buy;
             }
 
+            var areFastSmasHigherTimeFrameOrderedFromFastToSlow = fastSmasHigherTimeFrame.PickLatestValues().AreOrderedFromFastToSlow();
             var areSlowSmasUptrending = slowSmas.TakeLast(1).AreUptrending();
-            var wereSmasOrderedFromFastToSlow = smas.WereOrderedFromFastToSlow(_rsiPatternLookbackPeriods);
-            var areFastSmasOrderedFromSlowToFast = fastSmas.PickLatestValues().AreOrderedFromSlowToFast();
             var areSlowSmasOrderedFromFastToSlow = slowSmas.PickLatestValues().AreOrderedFromFastToSlow();
-            var wereRsisOrderedFromFastToSlow = rsis.WereOrderedFromFastToSlow(_rsiPatternLookbackPeriods);
-            var areRsisOrderedFromSlowToFast = rsis.PickLatestValues().AreOrderedFromSlowToFast();
-            var areSlowSmasHigherTimeFrameUptrending = slowSmasHigherTimeFrame.TakeLast(1).AreUptrending();
-            var wereSmasHigherTimeFrameOrderedFromFastToSlow = smasHigherTimeFrame.WereOrderedFromFastToSlow(_rsiPatternLookbackPeriods);
-            var areSmasHigherTimeFrameOrderedFromFastToSlow = smasHigherTimeFrame.PickLatestValues().AreOrderedFromFastToSlow();
-            var wereRsisHigherTimeFrameOrderedFromFastToSlow = rsisHigherTimeFrame.WereOrderedFromFastToSlow(_rsiPatternLookbackPeriods);
+            var wereSlowRsisOrderedFromFastToSlow = slowRsis.WereOrderedFromFastToSlow(lookbackPeriods: 2);
+            var wereFastRsisGoingUp = fastRsis.Select(rsi => rsi[^2]).All(rsi => rsi >= slowRsis.First()[^2]);
+            var areFastRsisGoingDown = fastRsis.PickLatestValues().All(rsi => rsi <= slowRsis.PickLatestValues().First());
 
-            if (areSlowSmasUptrending
-                && wereSmasOrderedFromFastToSlow
-                && areFastSmasOrderedFromSlowToFast
+            if (areFastSmasHigherTimeFrameOrderedFromFastToSlow
+                && areSlowSmasUptrending
                 && areSlowSmasOrderedFromFastToSlow
-                && wereRsisOrderedFromFastToSlow
-                && areRsisOrderedFromSlowToFast
-                && areSlowSmasHigherTimeFrameUptrending
-                && wereSmasHigherTimeFrameOrderedFromFastToSlow
-                && areSmasHigherTimeFrameOrderedFromFastToSlow
-                && wereRsisHigherTimeFrameOrderedFromFastToSlow)
+                && wereSlowRsisOrderedFromFastToSlow
+                && wereFastRsisGoingUp
+                && areFastRsisGoingDown)
             {
                 return OrderSide.Sell;
             }
@@ -370,7 +352,7 @@ namespace TradingAssistant
         {
             var quotes = candlestick.Select(candle => candle.ToQuote()).Validate();
 
-            var warmupPeriod = length;
+            var warmupPeriod = 10 * length;
 
             if (higherTimeFrame.HasValue)
             {
