@@ -618,7 +618,7 @@ namespace TradingAssistant
 
                         totalKlines.AddRange(klines);
 
-                        endTime = klines.FirstOrDefault()?.OpenTime;
+                                endTime = klines.FirstOrDefault()?.OpenTime.AddSeconds(-(int)_interval);
 
                         if (klines.Count() < MaxCandlesPerRequest)
                         {
