@@ -226,7 +226,7 @@ namespace TradingAssistant
                 }
             }, cancellationToken);
 
-            var usdFuturesApi = _socket.UsdFuturesApi;
+            var usdFuturesApi = _socket.UsdFuturesApi.Account;
             var updateSubscription = await usdFuturesApi.SubscribeToUserDataUpdatesAsync(_listenKey,
                 onLeverageUpdate: @event => _leverageUpdateSubscriptions.ForEach(s => s(@event)),
                 onMarginUpdate: @event => _marginUpdateSubscriptions.ForEach(s => s(@event)),
@@ -492,10 +492,10 @@ namespace TradingAssistant
             Action<decimal> action,
             CancellationToken cancellationToken = default)
         {
-            var subscribeToPriceResult = await _socket.UsdFuturesApi.SubscribeToKlineUpdatesAsync(symbol,
+            var subscribeToPriceResult = await _socket.UsdFuturesApi.ExchangeData.SubscribeToKlineUpdatesAsync(symbol,
                 interval: KlineInterval.OneMinute,
                 onMessage: @event => action(@event.Data.Data.ClosePrice),
-                cancellationToken);
+                ct: cancellationToken);
 
             if (!subscribeToPriceResult.GetResultOrError(out var newPriceSubscription, out var subscribeToPriceError))
             {
@@ -536,7 +536,7 @@ namespace TradingAssistant
 
                 foreach (var symbols in symbolGroups)
                 {
-                    var subscribeToKlineUpdatesResult = await _socket.UsdFuturesApi.SubscribeToKlineUpdatesAsync(symbols,
+                    var subscribeToKlineUpdatesResult = await _socket.UsdFuturesApi.ExchangeData.SubscribeToKlineUpdatesAsync(symbols,
                         timeFrame,
                         @event =>
                         {
@@ -566,7 +566,7 @@ namespace TradingAssistant
                                 _publisher.Publish(new CandleClosedNotification(candleId));
                             }
                         },
-                        cancellationToken);
+                        ct: cancellationToken);
 
                     if (!subscribeToKlineUpdatesResult.GetResultOrError(out var _, out var subscribeToKlineUpdatesError))
                     {
