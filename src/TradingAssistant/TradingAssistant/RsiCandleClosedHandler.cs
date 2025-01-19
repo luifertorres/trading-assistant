@@ -59,7 +59,14 @@ namespace TradingAssistant
                     lastCandleId.Symbol[withoutQuoteAsset], bitcoin[Last].Symbol[withoutQuoteAsset]);
             }
 
-            var signalOrderSide = GetEntrySignal(candlestick);
+            if (candlestick.HasMissingCandles())
+            {
+                return;
+            }
+
+            SendIndicatorsToStrategies(candlestick);
+
+            var signalOrderSide = default(OrderSide?);
 
             if (signalOrderSide.HasValue)
             {
@@ -152,21 +159,21 @@ namespace TradingAssistant
                     .Select(openTime => new CandleId(symbol, timeFrame, openTime))
                     .ToList()
                     .ForEach(candleId =>
-                    {
-                        var candle = default(Candle);
-                        var status = session.Read(ref candleId, ref candle);
+                {
+                    var candle = default(Candle);
+                    var status = session.Read(ref candleId, ref candle);
 
-                        if (status.Found)
-                        {
-                            candlestick.Add(candleId.OpenTime, candle);
-                        }
-                    });
+                    if (status.Found)
+                    {
+                        candlestick.Add(candleId.OpenTime, candle);
+                    }
+                });
             }
 
             return candlestick.Snapshot();
         }
 
-        private OrderSide? GetEntrySignal(List<Candle> candlestick)
+        private void SendIndicatorsToStrategies(List<Candle> candlestick)
         {
             var smaLengths = new[]
             {
@@ -190,121 +197,15 @@ namespace TradingAssistant
                 //Length.ThreeHundredThirtyThree,
             };
 
-            if (candlestick.HasMissingCandles())
-            {
-                return null;
-            }
-
             var smas = smaLengths.Select(length => GetSma(candlestick, length)).ToArray();
             var rsis = rsiLengths.Select(length => GetRsi(candlestick, length)).ToArray();
             var smasHigherTimeFrame = smaLengths.Select(length => GetSma(candlestick, length, PeriodSize.FourHours)).ToArray();
 
             LogRsis(candlestick, rsiLengths, rsis);
 
-            return GetTrendSignal(smas, rsis, smasHigherTimeFrame) ?? GetReversionSignal(smas, rsis, smasHigherTimeFrame);
-        }
+            var smasAndRsisCalculatedEvent = new SmasAndRsisCalculatedEvent(candlestick[Last], smasHigherTimeFrame, smas, rsis);
 
-        private OrderSide? GetTrendSignal(double[][] smas, double[][] rsis, double[][] smasHigherTimeFrame)
-        {
-            smas = smas.Skip(1).ToArray();
-
-            var fastSmasHigherTimeFrame = smasHigherTimeFrame.Take(4);
-            var fastSmas = smas.Take(2);
-            var slowSmas = smas.Skip(fastSmas.Count());
-
-            var fastRsis = rsis.Take(2);
-
-            if (fastSmas.Any(sma => sma.Length < 1))
-            {
-                return null;
-            }
-
-            var areFastSmasHigherTimeFrameOrderedFromFastToSlow = fastSmasHigherTimeFrame.PickLatestValues().AreOrderedFromFastToSlow();
-            var areSlowSmasUptrending = slowSmas.AreUptrending();
-            var areSlowSmasOrderedFromFastToSlow = slowSmas.PickLatestValues().AreOrderedFromFastToSlow();
-            var areFastSmasOrderedFromSlowToFast = fastSmas.PickLatestValues().AreOrderedFromSlowToFast();
-            var wereRsisOrderedFromSlowToFast = rsis.WereOrderedFromSlowToFast(lookbackPeriods: 2);
-            var areFastRsisGoingUp = fastRsis.PickLatestValues().AreOrderedFromFastToSlow();
-
-            if (areFastSmasHigherTimeFrameOrderedFromFastToSlow
-                && areSlowSmasUptrending
-                && areSlowSmasOrderedFromFastToSlow
-                && areFastSmasOrderedFromSlowToFast
-                && wereRsisOrderedFromSlowToFast
-                && areFastRsisGoingUp)
-            {
-                return OrderSide.Buy;
-            }
-
-            var areFastSmasHigherTimeFrameOrderedFromSlowToFast = fastSmasHigherTimeFrame.PickLatestValues().AreOrderedFromSlowToFast();
-            var areSlowSmasDowntrending = slowSmas.AreDowntrending();
-            var areSlowSmasOrderedFromSlowToFast = slowSmas.PickLatestValues().AreOrderedFromSlowToFast();
-            var areFastSmasOrderedFromFastToSlow = fastSmas.PickLatestValues().AreOrderedFromFastToSlow();
-            var wereRsisOrderedFromFastToSlow = rsis.WereOrderedFromFastToSlow(lookbackPeriods: 2);
-            var areFastRsisGoingDown = fastRsis.PickLatestValues().AreOrderedFromSlowToFast();
-
-            if (areFastSmasHigherTimeFrameOrderedFromSlowToFast
-                && areSlowSmasDowntrending
-                && areSlowSmasOrderedFromSlowToFast
-                && areFastSmasOrderedFromFastToSlow
-                && wereRsisOrderedFromFastToSlow
-                && areFastRsisGoingDown)
-            {
-                return OrderSide.Sell;
-            }
-
-            return null;
-        }
-
-        private OrderSide? GetReversionSignal(double[][] smas, double[][] rsis, double[][] smasHigherTimeFrame)
-        {
-            var fastSmasHigherTimeFrame = smasHigherTimeFrame.Take(4);
-            var fastSmas = smas.Take(1);
-            var slowSmas = smas.Skip(fastSmas.Count());
-
-            var fastRsis = rsis.Take(3);
-            var slowRsis = rsis.Skip(fastRsis.Count());
-
-            if (fastSmas.Any(sma => sma.Length < 1))
-            {
-                return null;
-            }
-
-            var areFastSmasHigherTimeFrameOrderedFromSlowToFast = fastSmasHigherTimeFrame.PickLatestValues().AreOrderedFromSlowToFast();
-            var areSlowSmasDowntrending = slowSmas.TakeLast(1).AreDowntrending();
-            var areSlowSmasOrderedFromSlowToFast = slowSmas.PickLatestValues().AreOrderedFromSlowToFast();
-            var wereSlowRsisOrderedFromSlowToFast = slowRsis.WereOrderedFromSlowToFast(lookbackPeriods: 2);
-            var wereFastRsisGoingDown = fastRsis.Select(rsi => rsi[^2]).All(rsi => rsi <= slowRsis.First()[^2]);
-            var areFastRsisGoingUp = fastRsis.PickLatestValues().All(rsi => rsi >= slowRsis.PickLatestValues().First());
-
-            if (areFastSmasHigherTimeFrameOrderedFromSlowToFast
-                && areSlowSmasDowntrending
-                && areSlowSmasOrderedFromSlowToFast
-                && wereSlowRsisOrderedFromSlowToFast
-                && wereFastRsisGoingDown
-                && areFastRsisGoingUp)
-            {
-                return OrderSide.Buy;
-            }
-
-            var areFastSmasHigherTimeFrameOrderedFromFastToSlow = fastSmasHigherTimeFrame.PickLatestValues().AreOrderedFromFastToSlow();
-            var areSlowSmasUptrending = slowSmas.TakeLast(1).AreUptrending();
-            var areSlowSmasOrderedFromFastToSlow = slowSmas.PickLatestValues().AreOrderedFromFastToSlow();
-            var wereSlowRsisOrderedFromFastToSlow = slowRsis.WereOrderedFromFastToSlow(lookbackPeriods: 2);
-            var wereFastRsisGoingUp = fastRsis.Select(rsi => rsi[^2]).All(rsi => rsi >= slowRsis.First()[^2]);
-            var areFastRsisGoingDown = fastRsis.PickLatestValues().All(rsi => rsi <= slowRsis.PickLatestValues().First());
-
-            if (areFastSmasHigherTimeFrameOrderedFromFastToSlow
-                && areSlowSmasUptrending
-                && areSlowSmasOrderedFromFastToSlow
-                && wereSlowRsisOrderedFromFastToSlow
-                && wereFastRsisGoingUp
-                && areFastRsisGoingDown)
-            {
-                return OrderSide.Sell;
-            }
-
-            return null;
+            _publisher.Publish(smasAndRsisCalculatedEvent);
         }
 
         private void LogRsis(List<Candle> candlestick, int[] lengths, double[][] rsis)
@@ -342,7 +243,7 @@ namespace TradingAssistant
                     .ToArray();
             }
 
-            return quotes.TakeLast(length + warmupPeriod)
+            return quotes.TakeLast(warmupPeriod + length)
                 .GetSma(length)
                 .Select(result => result.Sma.GetValueOrDefault())
                 .ToArray();
@@ -364,7 +265,7 @@ namespace TradingAssistant
                     .ToArray();
             }
 
-            return quotes.TakeLast(length + warmupPeriod)
+            return quotes.TakeLast(warmupPeriod + length)
                 .GetRsi(length)
                 .Select(rsi => rsi.Rsi.GetValueOrDefault())
                 .ToArray();
