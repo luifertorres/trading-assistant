@@ -16,6 +16,11 @@
             return series.All(data => data.Length >= 2) && series.All(data => data[Last] < data[Penultimate]);
         }
 
+        internal static IEnumerable<double> PickPenultimateValues(this IEnumerable<double[]> series)
+        {
+            return series.Select(value => value[Penultimate]);
+        }
+
         internal static IEnumerable<double> PickLatestValues(this IEnumerable<double[]> series)
         {
             return series.Select(value => value[Last]);
