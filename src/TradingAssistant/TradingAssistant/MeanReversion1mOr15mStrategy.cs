@@ -3,11 +3,11 @@ using MediatR;
 
 namespace TradingAssistant
 {
-    internal class MeanReversion15mStrategy(IPublisher publisher) : INotificationHandler<SmasAndRsisCalculatedEvent>
+    internal class MeanReversion1mOr15mStrategy(IPublisher publisher) : INotificationHandler<SmasAndRsisCalculatedEvent>
     {
         public Task Handle(SmasAndRsisCalculatedEvent notification, CancellationToken cancellationToken)
         {
-            if (notification.LastCandle.Interval != KlineInterval.FifteenMinutes)
+            if (notification.LastCandle.Interval is not (KlineInterval.OneMinute or KlineInterval.FifteenMinutes))
             {
                 return Task.CompletedTask;
             }
