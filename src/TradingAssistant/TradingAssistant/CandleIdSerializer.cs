@@ -5,19 +5,20 @@ namespace TradingAssistant
 {
     internal class CandleIdSerializer : BinaryObjectSerializer<CandleId>
     {
-        public override void Serialize(ref CandleId obj)
+        public override void Serialize(ref CandleId candleId)
         {
-            writer.Write(obj.Symbol);
-            writer.Write((int)obj.TimeFrame);
-            writer.Write(obj.OpenTime.ToBinary());
+            writer.Write(candleId.Symbol);
+            writer.Write((int)candleId.TimeFrame);
+            writer.Write(candleId.OpenTime.ToBinary());
         }
 
-        public override void Deserialize(out CandleId obj)
+        public override void Deserialize(out CandleId candleId)
         {
             var symbol = reader.ReadString();
             var timeFrame = (KlineInterval)reader.ReadInt32();
             var openTime = DateTime.FromBinary(reader.ReadInt64());
-            obj = new CandleId(symbol, timeFrame, openTime);
+
+            candleId = new CandleId(symbol, timeFrame, openTime);
         }
     }
 }
