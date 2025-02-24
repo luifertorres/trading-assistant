@@ -19,8 +19,7 @@ namespace TradingAssistant
                 return true;
             }
 
-            var timeFrame = (int)candlestickA[Last].Interval;
-            var lookbackPeriods = Length.TwoHundred;// Math.Max(60 * 60 * 24 / timeFrame, 1);
+            var lookbackPeriods = Length.TwoHundred;
             var correlation = GetCorrelation(candlestickA, candlestickB, lookbackPeriods);
 
             return correlation.Length == 0 || Math.Abs(correlation[Last]) > 0.1;
