@@ -47,7 +47,7 @@ namespace TradingAssistant
                         {
                             LogDevice = log,
                             ObjectLogDevice = objlog,
-                            MutableFraction = 0.1,
+                            MutableFraction = 0.01,
                             ConcurrencyControlMode = ConcurrencyControlMode.None,
                             KeySerializer = () => new CandleIdSerializer(),
                             ValueSerializer = () => new CandleSerializer(),
