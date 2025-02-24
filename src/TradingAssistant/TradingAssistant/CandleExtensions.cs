@@ -61,7 +61,8 @@ namespace TradingAssistant
                 return quotesA.Aggregate(higherTimeFrame.Value)
                     .Validate()
                     .TakeLast(requiredLength)
-                    .GetCorrelation(quotesB, length)
+                    .UseAmplitude()
+                    .GetCorrelation(quotesB.UseAmplitude(), length)
                     .Select(result => result.Correlation.GetValueOrDefault())
                     .ToArray();
             }
@@ -69,7 +70,8 @@ namespace TradingAssistant
             quotesB = quotesB.TakeLast(requiredLength);
 
             return quotesA.TakeLast(requiredLength)
-                .GetCorrelation(quotesB, length)
+                .UseAmplitude()
+                .GetCorrelation(quotesB.UseAmplitude(), length)
                 .Select(result => result.Correlation.GetValueOrDefault())
                 .ToArray();
         }
