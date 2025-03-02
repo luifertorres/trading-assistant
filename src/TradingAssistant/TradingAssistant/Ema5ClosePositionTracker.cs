@@ -91,8 +91,8 @@ namespace TradingAssistant
                 .Last().Ema!.Value;
 
             return positionSide is OrderSide.Buy
-                ? candles.Last().ClosePrice >= (decimal)ema5
-                : candles.Last().ClosePrice <= (decimal)ema5;
+                ? candles.Last().HighPrice >= (decimal)ema5
+                : candles.Last().LowPrice <= (decimal)ema5;
         }
 
         private static Quote ToQuote(Candle candle)
