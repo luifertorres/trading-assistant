@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using Binance.Net.Enums;
 using Binance.Net.Objects.Models.Futures.Socket;
 using CryptoExchange.Net.Objects.Sockets;
 using Microsoft.EntityFrameworkCore;
@@ -68,7 +69,17 @@ namespace TradingAssistant
                     }
 
                     await _binance.TrySubscribeToPriceAsync(position.Symbol,
-                        action: updateTakeProfitTask.UpdatePrice,
+                        action: candle =>
+                        {
+                            if (position.Quantity.AsOrderSide() == OrderSide.Buy)
+                            {
+                                updateTakeProfitTask.UpdatePrice(candle.HighPrice);
+                            }
+                            else
+                            {
+                                updateTakeProfitTask.UpdatePrice(candle.LowPrice);
+                            }
+                        },
                         cancellationToken);
                 }
                 else

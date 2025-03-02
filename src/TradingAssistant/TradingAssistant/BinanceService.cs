@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using Binance.Net.Enums;
 using Binance.Net.Interfaces;
 using Binance.Net.Interfaces.Clients;
@@ -489,12 +489,12 @@ namespace TradingAssistant
         }
 
         public async Task<bool> TrySubscribeToPriceAsync(string symbol,
-            Action<decimal> action,
+            Action<IBinanceKline> action,
             CancellationToken cancellationToken = default)
         {
             var subscribeToPriceResult = await _socket.UsdFuturesApi.ExchangeData.SubscribeToKlineUpdatesAsync(symbol,
                 interval: KlineInterval.OneMinute,
-                onMessage: @event => action(@event.Data.Data.ClosePrice),
+                onMessage: @event => action(@event.Data.Data),
                 ct: cancellationToken);
 
             if (!subscribeToPriceResult.GetResultOrError(out var newPriceSubscription, out var subscribeToPriceError))
