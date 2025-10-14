@@ -1,6 +1,6 @@
 ﻿using CryptoExchange.Net.Authentication;
 using FASTER.core;
-using X.Extensions.Logging.Telegram;
+using X.Extensions.Logging.Telegram.Extensions;
 
 namespace TradingAssistant
 {
@@ -27,8 +27,9 @@ namespace TradingAssistant
                         var secret = context.Configuration["Binance:Futures:ApiSecret"]!;
 
                         restOptions.ApiCredentials = new ApiCredentials(key, secret);
-                    },
-                    socketOptions =>
+                    });
+
+                    services.AddBinance(socketOptions =>
                     {
                         var key = context.Configuration["Binance:Futures:ApiKey"]!;
                         var secret = context.Configuration["Binance:Futures:ApiSecret"]!;
