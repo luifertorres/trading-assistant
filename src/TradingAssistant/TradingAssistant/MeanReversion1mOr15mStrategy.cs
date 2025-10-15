@@ -1,6 +1,7 @@
 ﻿using Binance.Net.Enums;
 using MediatR;
 using TradingAssistant.Application;
+using TradingAssistant.Infrastructure;
 
 namespace TradingAssistant
 {

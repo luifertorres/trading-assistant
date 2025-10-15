@@ -4,6 +4,7 @@ using CryptoExchange.Net.Converters.SystemTextJson;
 using FASTER.core;
 using MediatR;
 using TradingAssistant.Infrastructure;
+using TradingAssistant.Infrastructure;
 
 namespace TradingAssistant
 {

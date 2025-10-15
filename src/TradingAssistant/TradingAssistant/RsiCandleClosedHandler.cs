@@ -4,6 +4,7 @@ using CryptoExchange.Net.Converters.SystemTextJson;
 using FASTER.core;
 using MediatR;
 using TradingAssistant.Application;
+using TradingAssistant.Infrastructure;
 using Skender.Stock.Indicators;
 
 namespace TradingAssistant
