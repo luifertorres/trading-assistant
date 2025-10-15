@@ -1,4 +1,4 @@
-﻿namespace TradingAssistant
+namespace TradingAssistant
 {
     [Serializable]
     public class BinanceServiceNotConfiguredException : Exception
@@ -16,3 +16,5 @@
         }
     }
 }
+
+

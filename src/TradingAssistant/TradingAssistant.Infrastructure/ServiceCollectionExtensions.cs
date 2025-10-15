@@ -4,6 +4,7 @@ using TradingAssistant.Application;
 using FASTER.core;
 using Microsoft.Extensions.Logging;
 using TradingAssistant.Infrastructure.Faster;
+using TradingAssistant;
 
 namespace TradingAssistant.Infrastructure;
 

@@ -35,7 +35,6 @@ namespace TradingAssistant
                         socketOptions.ApiCredentials = new ApiCredentials(key, secret);
                     });
 
-                    services.AddSingleton<BinanceService>();
                     services.AddInfrastructure(context.Configuration);
 
                     services.AddHostedService<TradingSignalWorker>();

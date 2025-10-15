@@ -9,6 +9,7 @@ using Binance.Net.Objects.Models.Spot;
 using CryptoExchange.Net.Converters.SystemTextJson;
 using CryptoExchange.Net.Objects.Sockets;
 using FASTER.core;
+using TradingAssistant.Infrastructure;
 using MediatR;
 using TradingAssistant.Application;
 
