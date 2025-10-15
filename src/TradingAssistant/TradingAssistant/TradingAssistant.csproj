@@ -29,5 +29,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TradingAssistant.Domain\TradingAssistant.Domain.csproj" />
+    <ProjectReference Include="..\TradingAssistant.Application\TradingAssistant.Application.csproj" />
   </ItemGroup>
 </Project>

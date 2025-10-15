@@ -3,6 +3,7 @@ using Binance.Net.Enums;
 using CryptoExchange.Net.Converters.SystemTextJson;
 using FASTER.core;
 using MediatR;
+using TradingAssistant.Application;
 using Skender.Stock.Indicators;
 
 namespace TradingAssistant

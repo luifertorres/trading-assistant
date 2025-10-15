@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using TradingAssistant.Application;
 
 namespace TradingAssistant
 {
