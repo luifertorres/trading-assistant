@@ -5,6 +5,7 @@ using FASTER.core;
 using Microsoft.Extensions.Logging;
 using TradingAssistant.Infrastructure.Faster;
 using TradingAssistant;
+using TradingAssistant.Infrastructure.Binance;
 
 namespace TradingAssistant.Infrastructure;
 
@@ -33,6 +34,8 @@ public static class ServiceCollectionExtensions
             return new FasterKV<CandleId, Candle>(settings);
         });
         services.AddSingleton<ICandleRepository, FasterCandleRepository>();
+        services.AddSingleton<BinanceService>();
+        services.AddSingleton<IExchangeService, BinanceExchangeService>();
         services.AddSingleton<ITradingSignalQueue, TradingSignalQueue>();
         return services;
     }

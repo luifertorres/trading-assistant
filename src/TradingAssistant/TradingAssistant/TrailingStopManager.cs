@@ -1,5 +1,6 @@
 ﻿using Binance.Net.Objects.Models.Futures.Socket;
 using CryptoExchange.Net.Objects.Sockets;
+using TradingAssistant.Application;
 using TradingAssistant.Infrastructure;
 
 namespace TradingAssistant
@@ -7,17 +8,17 @@ namespace TradingAssistant
     public class TrailingStopManager : BackgroundService
     {
         private readonly IConfiguration _configuration;
-        private readonly BinanceService _binanceService;
+        private readonly IExchangeService _exchange;
 
-        public TrailingStopManager(IConfiguration configuration, BinanceService binanceService)
+        public TrailingStopManager(IConfiguration configuration, IExchangeService exchange)
         {
             _configuration = configuration;
-            _binanceService = binanceService;
+            _exchange = exchange;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _binanceService.SubscribeToAccountUpdates(@event => HandleAccountUpdate(@event, stoppingToken));
+            _exchange.SubscribeToAccountUpdates(@event => HandleAccountUpdate(@event, stoppingToken));
 
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
@@ -28,7 +29,7 @@ namespace TradingAssistant
             {
                 if (position.EntryPrice != 0 && position.Quantity != 0)
                 {
-                    if (!_binanceService.TryGetLeverage(position.Symbol, out var leverage))
+                    if (!_exchange.TryGetLeverage(position.Symbol, out var leverage))
                     {
                         continue;
                     }
@@ -37,7 +38,7 @@ namespace TradingAssistant
                 }
                 else
                 {
-                    await _binanceService.CancelAllOrdersAsync(position.Symbol, cancellationToken);
+                    await _exchange.CancelAllOrdersAsync(position.Symbol, cancellationToken);
                 }
             }
         }
@@ -47,7 +48,7 @@ namespace TradingAssistant
             var roi = _configuration.GetValue<decimal>("Binance:RiskManagement:TrailingStopRoi");
             var distance = roi / leverage;
 
-            var isTrailingStopPlaced = await _binanceService.TryPlaceTrailingStopAsync(position.Symbol,
+            var isTrailingStopPlaced = await _exchange.TryPlaceTrailingStopAsync(position.Symbol,
                 position.Quantity.AsOrderSide().Reverse(),
                 position.Quantity,
                 callbackRate: distance,
@@ -55,8 +56,8 @@ namespace TradingAssistant
 
             if (!isTrailingStopPlaced)
             {
-                await _binanceService.TryCancelTrailingStopAsync(position.Symbol, cancellationToken);
-                await _binanceService.TryPlaceTrailingStopAsync(position.Symbol,
+                await _exchange.TryCancelTrailingStopAsync(position.Symbol, cancellationToken);
+                await _exchange.TryPlaceTrailingStopAsync(position.Symbol,
                     position.Quantity.AsOrderSide().Reverse(),
                     position.Quantity,
                     callbackRate: distance,

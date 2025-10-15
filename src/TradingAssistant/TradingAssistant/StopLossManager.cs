@@ -1,6 +1,7 @@
 ﻿using Binance.Net.Enums;
 using Binance.Net.Objects.Models.Futures.Socket;
 using CryptoExchange.Net.Objects.Sockets;
+using TradingAssistant.Application;
 using TradingAssistant.Infrastructure;
 
 namespace TradingAssistant
@@ -9,18 +10,18 @@ namespace TradingAssistant
     {
         private readonly IConfiguration _configuration;
         private readonly IServiceScopeFactory _factory;
-        private readonly BinanceService _binance;
+        private readonly IExchangeService _exchange;
 
-        public StopLossManager(IConfiguration configuration, IServiceScopeFactory factory, BinanceService binance)
+        public StopLossManager(IConfiguration configuration, IServiceScopeFactory factory, IExchangeService exchange)
         {
             _configuration = configuration;
             _factory = factory;
-            _binance = binance;
+            _exchange = exchange;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _binance.SubscribeToAccountUpdates(HandleAccountUpdate);
+            _exchange.SubscribeToAccountUpdates(HandleAccountUpdate);
             //_binance.SubscribeToOrderUpdates(HandleOrderUpdate);
 
             await Task.Delay(Timeout.Infinite, stoppingToken);
@@ -32,7 +33,7 @@ namespace TradingAssistant
             {
                 if (position.EntryPrice == 0 || position.Quantity == 0)
                 {
-                    _ = _binance.CancelAllOrdersAsync(position.Symbol);
+                    _ = _exchange.CancelAllOrdersAsync(position.Symbol);
                 }
             }
         }
@@ -69,7 +70,7 @@ namespace TradingAssistant
         private async Task UpdateStopLossAsync(BinanceFuturesStreamOrderUpdateData order, CancellationToken cancellationToken = default)
         {
             var roi = _configuration.GetValue<decimal>("Binance:RiskManagement:StopLossRoi");
-            var isStopLossPlaced = await _binance.TryPlaceStopLossAsync(order.Symbol,
+            var isStopLossPlaced = await _exchange.TryPlaceStopLossAsync(order.Symbol,
                 order.AveragePrice,
                 order.Quantity,
                 roi,
@@ -78,8 +79,8 @@ namespace TradingAssistant
 
             if (!isStopLossPlaced)
             {
-                await _binance.TryCancelStopLossAsync(order.Symbol, cancellationToken);
-                await _binance.TryPlaceStopLossAsync(order.Symbol,
+                await _exchange.TryCancelStopLossAsync(order.Symbol, cancellationToken);
+                await _exchange.TryPlaceStopLossAsync(order.Symbol,
                     order.AveragePrice,
                     order.Quantity,
                     roi,
