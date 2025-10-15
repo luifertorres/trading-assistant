@@ -1,6 +1,6 @@
-﻿namespace TradingAssistant
+namespace TradingAssistant
 {
-    internal static class TakeProfitPrice
+    public static class StopLossPrice
     {
         public static decimal Calculate(decimal entryPrice,
             decimal quantity,
@@ -18,15 +18,17 @@
         {
             var sign = decimal.Sign(quantity);
             var notional = entryPrice * Math.Abs(quantity);
-            var profit = notional * offset / 100;
-            var takeProfitPrice = (notional + (sign * profit)) / Math.Abs(quantity);
+            var loss = notional * offset / 100;
+            var stopLossPrice = (notional - (sign * loss)) / Math.Abs(quantity);
             var entryCommissionCost = notional * 0.05m / 100;
             var entryCommissionPriceDistance = entryCommissionCost / quantity;
-            var takeProfitPriceBeforeEntryCommission = takeProfitPrice + entryCommissionPriceDistance;
-            var profitBeforeExitCommission = 1 - (sign * 0.05m / 100);
-            var takeProfitPriceBeforeTotalFees = takeProfitPriceBeforeEntryCommission / profitBeforeExitCommission;
+            var stopLossPriceBeforeEntryCommission = stopLossPrice + entryCommissionPriceDistance;
+            var lossBeforeFees = 1 - sign * 0.05m / 100;
+            var stopLossPriceBeforeTotalFees = stopLossPriceBeforeEntryCommission / lossBeforeFees;
 
-            return includeFees ? takeProfitPriceBeforeTotalFees : takeProfitPrice;
+            return includeFees ? stopLossPriceBeforeTotalFees : stopLossPrice;
         }
     }
 }
+
+

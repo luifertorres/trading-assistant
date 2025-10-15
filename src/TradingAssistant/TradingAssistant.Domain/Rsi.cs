@@ -1,6 +1,6 @@
-﻿namespace TradingAssistant
+namespace TradingAssistant
 {
-    internal static class Rsi
+    public static class Rsi
     {
         public const double Overbought = 70;
         public const double OverboughtFor200 = 55;
@@ -9,3 +9,5 @@
         public const double Oversold = 30;
     }
 }
+
+

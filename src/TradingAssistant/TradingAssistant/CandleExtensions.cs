@@ -30,7 +30,12 @@ namespace TradingAssistant
             var firstCandle = candlestick[0];
             var initialGap = new CandlestickGap([], firstCandle.OpenTime);
             var timeFrameSpan = TimeSpan.FromSeconds((double)candlestick[Last].Interval);
-            var gap = candlestick.Aggregate(initialGap, CandlestickGap.UpdateGapFromCandle);
+            var gap = candlestick.Aggregate(initialGap, (gap, candle) =>
+            {
+                var durationBetweenCandles = (candle.OpenTime - gap.PreviousTime).Duration();
+                gap.Durations.Add(durationBetweenCandles);
+                return new CandlestickGap(gap.Durations, candle.OpenTime);
+            });
             var hasMissingCandles = gap.Durations.Exists(duration => duration > timeFrameSpan);
 
             return hasMissingCandles;

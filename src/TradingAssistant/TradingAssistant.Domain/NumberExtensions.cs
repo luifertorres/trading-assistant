@@ -1,32 +1,32 @@
-﻿namespace TradingAssistant
+namespace TradingAssistant
 {
-    internal static class NumberExtensions
+    public static class NumberExtensions
     {
         public static readonly Index Penultimate = ^2;
         public static readonly Index Last = ^1;
         private const int MinimumLookbackPeriods = 2;
 
-        internal static bool AreUptrending(this IEnumerable<double[]> series)
+        public static bool AreUptrending(this IEnumerable<double[]> series)
         {
             return series.All(data => data.Length >= 2) && series.All(data => data[Last] > data[Penultimate]);
         }
 
-        internal static bool AreDowntrending(this IEnumerable<double[]> series)
+        public static bool AreDowntrending(this IEnumerable<double[]> series)
         {
             return series.All(data => data.Length >= 2) && series.All(data => data[Last] < data[Penultimate]);
         }
 
-        internal static IEnumerable<double> PickPenultimateValues(this IEnumerable<double[]> series)
+        public static IEnumerable<double> PickPenultimateValues(this IEnumerable<double[]> series)
         {
             return series.Select(value => value[Penultimate]);
         }
 
-        internal static IEnumerable<double> PickLatestValues(this IEnumerable<double[]> series)
+        public static IEnumerable<double> PickLatestValues(this IEnumerable<double[]> series)
         {
             return series.Select(value => value[Last]);
         }
 
-        internal static bool WereOrderedFromSlowToFast(this IEnumerable<double[]> series, int lookbackPeriods)
+        public static bool WereOrderedFromSlowToFast(this IEnumerable<double[]> series, int lookbackPeriods)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan(lookbackPeriods, MinimumLookbackPeriods);
 
@@ -52,7 +52,7 @@
             return false;
         }
 
-        internal static bool WereOrderedFromFastToSlow(this IEnumerable<double[]> series, int lookbackPeriods)
+        public static bool WereOrderedFromFastToSlow(this IEnumerable<double[]> series, int lookbackPeriods)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan(lookbackPeriods, MinimumLookbackPeriods);
 
@@ -78,19 +78,21 @@
             return false;
         }
 
-        internal static bool AreOrderedFromSlowToFast(this IEnumerable<double> values)
+        public static bool AreOrderedFromSlowToFast(this IEnumerable<double> values)
         {
             return values.Order().SequenceEqual(values);
         }
 
-        internal static bool AreOrderedFromFastToSlow(this IEnumerable<double> values)
+        public static bool AreOrderedFromFastToSlow(this IEnumerable<double> values)
         {
             return values.OrderDescending().SequenceEqual(values);
         }
 
-        internal static int Round(this decimal value)
+        public static int Round(this decimal value)
         {
             return (int)Math.Round(value, MidpointRounding.ToPositiveInfinity);
         }
     }
 }
+
+

@@ -1,5 +1,3 @@
-﻿using System.Collections.Immutable;
-
 namespace TradingAssistant
 {
     public class CircularTimeSeries<TKey, TValue>(TKey key, int maxSize)
@@ -60,3 +58,5 @@ namespace TradingAssistant
         }
     }
 }
+
+

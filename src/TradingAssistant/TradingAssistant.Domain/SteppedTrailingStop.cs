@@ -1,4 +1,4 @@
-﻿namespace TradingAssistant
+namespace TradingAssistant
 {
     public class SteppedTrailingStop
     {

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dotnet-TradingAssistant.Worker-ca8baa01-7b7d-4a7c-9c5e-c348e2a8a0c6</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MediatR" Version="13.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TradingAssistant.Application\TradingAssistant.Application.csproj" />
+    <ProjectReference Include="..\TradingAssistant.Infrastructure\TradingAssistant.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>
