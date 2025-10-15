@@ -10,6 +10,7 @@ using CryptoExchange.Net.Converters.SystemTextJson;
 using CryptoExchange.Net.Objects.Sockets;
 using FASTER.core;
 using MediatR;
+using TradingAssistant.Application;
 
 namespace TradingAssistant
 {
