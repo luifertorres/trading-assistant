@@ -1,5 +1,4 @@
 ﻿using CryptoExchange.Net.Authentication;
-using FASTER.core;
 using TradingAssistant.Application;
 using TradingAssistant.Infrastructure;
 using X.Extensions.Logging.Telegram.Extensions;
@@ -34,26 +33,6 @@ namespace TradingAssistant
                         var secret = context.Configuration["Binance:Futures:ApiSecret"]!;
 
                         socketOptions.ApiCredentials = new ApiCredentials(key, secret);
-                    });
-
-                    services.AddDbContext<TradingContext>();
-                    services.AddSingleton(provider =>
-                    {
-                        var log = Devices.CreateLogDevice($"c:/temp/hlog.log");
-                        var objlog = Devices.CreateLogDevice("c:/temp/hlog.obj.log");
-                        var fasterLogger = provider.GetRequiredService<ILogger<FasterKV<CandleId, Candle>>>();
-
-                        var settings = new FasterKVSettings<CandleId, Candle>("c:/temp", logger: fasterLogger)
-                        {
-                            LogDevice = log,
-                            ObjectLogDevice = objlog,
-                            MutableFraction = 0.01,
-                            ConcurrencyControlMode = ConcurrencyControlMode.None,
-                            KeySerializer = () => new CandleIdSerializer(),
-                            ValueSerializer = () => new CandleSerializer(),
-                        };
-
-                        return new FasterKV<CandleId, Candle>(settings);
                     });
 
                     services.AddSingleton<BinanceService>();

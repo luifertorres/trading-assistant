@@ -1,7 +1,7 @@
-﻿using Binance.Net.Enums;
+using Binance.Net.Enums;
 using FASTER.core;
 
-namespace TradingAssistant
+namespace TradingAssistant.Infrastructure.Faster
 {
     internal class CandleSerializer : BinaryObjectSerializer<Candle>
     {
