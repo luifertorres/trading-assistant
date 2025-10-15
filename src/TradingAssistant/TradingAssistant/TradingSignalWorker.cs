@@ -1,17 +1,18 @@
 ﻿using System.Runtime.InteropServices;
 using MediatR;
+using TradingAssistant.Application;
 
 namespace TradingAssistant
 {
     public class TradingSignalWorker : BackgroundService
     {
         private readonly ILogger<TradingSignalWorker> _logger;
-        private readonly TradingSignalQueueService _service;
+        private readonly ITradingSignalQueue _service;
         private readonly ISender _sender;
         private bool _hasReceivedSignalRecently = true;
 
         public TradingSignalWorker(ILogger<TradingSignalWorker> logger,
-            TradingSignalQueueService service,
+            ITradingSignalQueue service,
             ISender sender)
         {
             _logger = logger;

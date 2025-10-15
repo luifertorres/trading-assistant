@@ -6,9 +6,9 @@ namespace TradingAssistant
     public class TradingSignalHandler : INotificationHandler<TradingSignalNotification>
     {
         private readonly ILogger<TradingSignalHandler> _logger;
-        private readonly TradingSignalQueueService _service;
+        private readonly ITradingSignalQueue _service;
 
-        public TradingSignalHandler(ILogger<TradingSignalHandler> logger, TradingSignalQueueService service)
+        public TradingSignalHandler(ILogger<TradingSignalHandler> logger, ITradingSignalQueue service)
         {
             _logger = logger;
             _service = service;

@@ -1,16 +1,15 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using TradingAssistant.Application;
 
-namespace TradingAssistant
+namespace TradingAssistant.Infrastructure
 {
-    public class TradingSignalQueueService
+    public class TradingSignalQueue : ITradingSignalQueue
     {
         private readonly ConcurrentQueue<TradingSignalNotification> _signals = [];
 
         public void Enqueue(TradingSignalNotification signal)
         {
             ArgumentNullException.ThrowIfNull(signal);
-
             _signals.Enqueue(signal);
         }
 

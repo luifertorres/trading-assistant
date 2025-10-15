@@ -1,5 +1,7 @@
 ﻿using CryptoExchange.Net.Authentication;
 using FASTER.core;
+using TradingAssistant.Application;
+using TradingAssistant.Infrastructure;
 using X.Extensions.Logging.Telegram.Extensions;
 
 namespace TradingAssistant
@@ -16,10 +18,7 @@ namespace TradingAssistant
                         .AddConsole();
                 }).ConfigureServices((context, services) =>
                 {
-                    services.AddMediatR(configuration =>
-                    {
-                        configuration.RegisterServicesFromAssembly(typeof(Program).Assembly);
-                    });
+                    services.AddApplication();
 
                     services.AddBinance(restOptions =>
                     {
@@ -58,7 +57,7 @@ namespace TradingAssistant
                     });
 
                     services.AddSingleton<BinanceService>();
-                    services.AddSingleton<TradingSignalQueueService>();
+                    services.AddInfrastructure(context.Configuration);
 
                     services.AddHostedService<TradingSignalWorker>();
                     services.AddHostedService<PositionWriterWorker>();
