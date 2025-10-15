@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace TradingAssistant.Migrations
+namespace TradingAssistant.Infrastructure.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration
