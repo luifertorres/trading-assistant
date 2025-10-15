@@ -9,6 +9,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         // TODO: register DbContext, repositories, Binance exchange service
+        services.AddDbContext<TradingContext>();
         services.AddSingleton<ITradingSignalQueue, TradingSignalQueue>();
         return services;
     }

@@ -3,6 +3,7 @@ using Binance.Net.Objects.Models.Futures;
 using CryptoExchange.Net.Converters.SystemTextJson;
 using FASTER.core;
 using MediatR;
+using TradingAssistant.Infrastructure;
 
 namespace TradingAssistant
 {
