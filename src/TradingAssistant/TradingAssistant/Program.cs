@@ -18,7 +18,7 @@ namespace TradingAssistant
                 }).ConfigureServices((context, services) =>
                 {
                     services.AddApplication();
-
+                    
                     services.AddBinance(restOptions =>
                     {
                         var key = context.Configuration["Binance:Futures:ApiKey"]!;
@@ -50,7 +50,7 @@ namespace TradingAssistant
 
             host.Services.GetRequiredService<BinanceService>()
                 .TriggerLastCandleClosedNotifications();
-
+            
             host.Run();
         }
     }

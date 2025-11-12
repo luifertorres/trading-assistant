@@ -3,6 +3,7 @@ using MediatR;
 using TradingAssistant.Application;
 using TradingAssistant.Infrastructure;
 
+#if DISABLED_STRATEGIES
 namespace TradingAssistant
 {
     internal class MeanReversion1mOr15mStrategy(IPublisher publisher) : INotificationHandler<SmasAndRsisCalculatedEvent>
@@ -84,3 +85,4 @@ namespace TradingAssistant
         }
     }
 }
+#endif
