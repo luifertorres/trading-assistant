@@ -56,7 +56,7 @@ namespace TradingAssistant
 
             if (symbolToTrade[withoutQuoteAsset] is not "BTC" && candlestick.IsCorrelatedWith(bitcoin))
             {
-                return false;
+                //return false;
             }
 
             var account = await _binance.TryGetAccountInformationAsync(cancellationToken);

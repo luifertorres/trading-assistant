@@ -2,6 +2,7 @@ using Binance.Net.Enums;
 using MediatR;
 using TradingAssistant.Application;
 
+#if DISABLED_STRATEGIES
 namespace TradingAssistant
 {
 	internal class Rsi5Below10On4hStrategy(IPublisher publisher) : INotificationHandler<SmasAndRsisCalculatedEvent>
@@ -42,5 +43,4 @@ namespace TradingAssistant
 		}
 	}
 }
-
-
+#endif
