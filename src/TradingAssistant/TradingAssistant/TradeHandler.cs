@@ -86,6 +86,12 @@ namespace TradingAssistant
 
             var referenceStopLossRoi = _configuration.GetValue<decimal>("Binance:RiskManagement:StopLossRoi");
             var lookbackPeriods = Math.Max(60 * 60 * 24 / (int)trade.TimeFrame, 2);
+
+            if (candlestick.Count < lookbackPeriods)
+            {
+                return false;
+            }
+
             var lookbackCandlestick = candlestick[^lookbackPeriods..];
             var last24HoursLowestPriceCandle = lookbackCandlestick.MinBy(candle => candle.LowPrice);
             var last24HoursHighestPriceCandle = lookbackCandlestick.MaxBy(candle => candle.HighPrice);
