@@ -40,6 +40,7 @@ namespace TradingAssistant
                     services.AddHostedService<TradingSignalWorker>();
                     services.AddHostedService<PositionWriterWorker>();
                     services.AddHostedService<StopLossManager>();
+                    services.AddHostedService<Rsi5RealtimeIndicatorWorker>();
                     //services.AddHostedService<BreakEvenWorker>();
                     //services.AddHostedService<TakeProfitManager>();
                     //services.AddHostedService<SteppedTrailingStopManager>();
