@@ -8,5 +8,8 @@ namespace TradingAssistant
         DateTime Time,
         PositionSide Direction,
         OrderSide Side,
-        decimal EntryPrice) : IRequest<bool>;
+        decimal EntryPrice,
+        decimal? MarginPercentage = null,
+        bool IsPyramidingAllowed = false,
+        bool IsStopLossDisabled = false) : IRequest<bool>;
 }

@@ -66,7 +66,8 @@ public class Rsi5RealtimeIndicatorWorker : BackgroundService
                 var tracker = new Rsi5RealtimeIndicatorTracker(symbol,
                     _interval,
                     _publisher,
-                    stoppingToken);
+                    stoppingToken,
+                    [50.0, 90.0]);
 
                 if (_trackers.TryAdd(symbol, tracker))
                 {

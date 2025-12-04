@@ -20,22 +20,32 @@ internal sealed class Rsi5RealtimeIndicatorTracker
     private readonly KlineInterval _interval;
     private readonly IPublisher _publisher;
     private readonly CancellationToken _stoppingToken;
-    private readonly double _threshold;
+    private readonly double[] _thresholds;
     private readonly List<Quote> _quotes = new();
     private readonly object _syncRoot = new();
     private DateTime? _lastSignalOpenTime;
+    private double _lastTriggeredThreshold;
+
+    public Rsi5RealtimeIndicatorTracker(string symbol,
+        KlineInterval interval,
+        IPublisher publisher,
+        CancellationToken stoppingToken,
+        double[] thresholds)
+    {
+        _symbol = symbol;
+        _interval = interval;
+        _publisher = publisher;
+        _stoppingToken = stoppingToken;
+        _thresholds = [.. thresholds.OrderBy(t => t)];
+    }
 
     public Rsi5RealtimeIndicatorTracker(string symbol,
         KlineInterval interval,
         IPublisher publisher,
         CancellationToken stoppingToken,
         double threshold = 90.0)
+        : this(symbol, interval, publisher, stoppingToken, [threshold])
     {
-        _symbol = symbol;
-        _interval = interval;
-        _publisher = publisher;
-        _stoppingToken = stoppingToken;
-        _threshold = threshold;
     }
 
     public void OnNext(IBinanceKline kline)
@@ -53,6 +63,7 @@ internal sealed class Rsi5RealtimeIndicatorTracker
         double? latestRsi;
         DateTime openTime;
         decimal lastPrice;
+        double metThreshold;
 
         lock (_syncRoot)
         {
@@ -68,7 +79,7 @@ internal sealed class Rsi5RealtimeIndicatorTracker
                 .GetRsi(Period)
                 .LastOrDefault()?.Rsi;
 
-            if (!rsi.HasValue || rsi.Value < _threshold)
+            if (!rsi.HasValue)
             {
                 return;
             }
@@ -76,12 +87,21 @@ internal sealed class Rsi5RealtimeIndicatorTracker
             openTime = kline.OpenTime;
             lastPrice = kline.ClosePrice;
 
-            if (_lastSignalOpenTime.HasValue && _lastSignalOpenTime.Value == openTime)
+            if (_lastSignalOpenTime.HasValue && _lastSignalOpenTime.Value != openTime)
+            {
+                _lastTriggeredThreshold = 0;
+            }
+
+            _lastSignalOpenTime = openTime;
+
+            metThreshold = _thresholds.Where(t => rsi.Value >= t).DefaultIfEmpty(double.NaN).Max();
+
+            if (double.IsNaN(metThreshold) || metThreshold <= _lastTriggeredThreshold)
             {
                 return;
             }
 
-            _lastSignalOpenTime = openTime;
+            _lastTriggeredThreshold = metThreshold;
             latestRsi = rsi.Value;
         }
 
@@ -92,7 +112,7 @@ internal sealed class Rsi5RealtimeIndicatorTracker
             ApplicationIndicatorType.Rsi,
             Period,
             latestRsi.Value,
-            _threshold,
+            metThreshold,
             IndicatorComparison.GreaterThanOrEqual,
             IndicatorEventSource.RealTime);
 
@@ -128,5 +148,3 @@ internal sealed class Rsi5RealtimeIndicatorTracker
         }
     }
 }
-
-

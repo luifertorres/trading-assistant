@@ -70,14 +70,14 @@ namespace TradingAssistant
             var newPositionSide = trade.Side;
             var sameBaseAssetSameSideOpenPositions = sameBaseAssetOpenPositions.Where(p => p.Quantity.AsOrderSide() == newPositionSide);
 
-            if (sameBaseAssetSameSideOpenPositions.Any())
+            if (!trade.IsPyramidingAllowed && sameBaseAssetSameSideOpenPositions.Any())
             {
                 return false;
             }
 
             var sameSymbolOpenPositions = openPositions.Where(p => p.Symbol == symbolToTrade);
 
-            if (sameSymbolOpenPositions.Any())
+            if (!trade.IsPyramidingAllowed && sameSymbolOpenPositions.Any())
             {
                 return false;
             }
@@ -104,10 +104,20 @@ namespace TradingAssistant
             var actualStopLossRoi = new[] { expectedStopLossRoi, referenceStopLossRoi, maximumTrailingStopRoi }.Min();
             var marginPercentage = _configuration.GetValue<decimal>("Binance:RiskManagement:AccountMarginPercentage");
             var availableBalance = Math.Max(account.AvailableBalance, 40);
-            var stopLossRatio = referenceStopLossRoi / actualStopLossRoi;
-            var margin = stopLossRatio * marginPercentage * availableBalance / 100;
-            var notional = margin * leverage;
-            var expectedQuantity = notional / entryPrice;
+            decimal expectedQuantity;
+
+            if (trade.MarginPercentage.HasValue)
+            {
+                var notional = account.AvailableBalance * trade.MarginPercentage.Value;
+                expectedQuantity = notional / entryPrice;
+            }
+            else
+            {
+                var stopLossRatio = referenceStopLossRoi / actualStopLossRoi;
+                var margin = stopLossRatio * marginPercentage * availableBalance / 100;
+                var notional = margin * leverage;
+                expectedQuantity = notional / entryPrice;
+            }
             var minNotionalFilter = information?.MinNotionalFilter;
             var marketLotSizeFilter = information?.MarketLotSizeFilter;
             var quantity = _binance.ApplyMarketQuantityFilter(expectedQuantity,
@@ -167,21 +177,26 @@ namespace TradingAssistant
                 referenceStopLossRoi, Environment.NewLine,
                 actualStopLossRoi);
 
-            var isStopLossPlaced = await _binance.TryPlaceStopLossAsync(symbolToTrade,
-                entryPrice,
-                quantity.WithSide(newPositionSide),
-                actualStopLossRoi,
-                cancellationToken: cancellationToken);
+            var isStopLossPlaced = true;
 
-            if (!isStopLossPlaced)
+            if (!trade.IsStopLossDisabled)
             {
-                await _binance.TryCancelStopLossAsync(symbolToTrade, cancellationToken);
-
                 isStopLossPlaced = await _binance.TryPlaceStopLossAsync(symbolToTrade,
                     entryPrice,
                     quantity.WithSide(newPositionSide),
                     actualStopLossRoi,
                     cancellationToken: cancellationToken);
+
+                if (!isStopLossPlaced)
+                {
+                    await _binance.TryCancelStopLossAsync(symbolToTrade, cancellationToken);
+
+                    isStopLossPlaced = await _binance.TryPlaceStopLossAsync(symbolToTrade,
+                        entryPrice,
+                        quantity.WithSide(newPositionSide),
+                        actualStopLossRoi,
+                        cancellationToken: cancellationToken);
+                }
             }
 
             if (!isStopLossPlaced)
