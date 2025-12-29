@@ -1,7 +1,6 @@
-using FASTER.core;
+﻿using FASTER.core;
 using Microsoft.Extensions.Logging;
 using TradingAssistant.Application;
-using TradingAssistant.Infrastructure.Faster;
 
 namespace TradingAssistant.Infrastructure.Faster;
 
@@ -23,20 +22,28 @@ public class FasterCandleRepository : ICandleRepository
 
         using var session = sessionBuilder.NewSession<SimpleFunctions<CandleId, Candle>>();
 
-        var timeFrameInSeconds = (long)lastCandleId.TimeFrame;
+        var timeFrameInSeconds = lastCandleId.TimeFrame.ToSeconds();
+        // Ensure we are working with clean seconds to avoid millisecond drift issues if any
         var lastOpenTime = lastCandleId.OpenTime;
-        var lastSlot = DateTimeOffset.FromUnixTimeSeconds(DateTimeOffset.FromUnixTimeMilliseconds(lastOpenTime.Ticks / TimeSpan.TicksPerMillisecond).ToUnixTimeSeconds()).UtcDateTime;
-        var remaining = count - 1;
 
-        foreach (var openTime in Enumerable.Repeat(lastOpenTime, count)
-                     .Select(_ => lastSlot.AddSeconds(-(timeFrameInSeconds * remaining--))))
+        // We want candles from (Current - (count-1)) to Current
+        for (var i = count - 1; i >= 0; i--)
         {
+            var offsetSeconds = i * timeFrameInSeconds;
+            var openTime = lastOpenTime.AddSeconds(-offsetSeconds);
+
             var key = new CandleId(lastCandleId.Symbol, lastCandleId.TimeFrame, openTime);
             var value = default(Candle);
             var status = session.Read(ref key, ref value);
+
             if (status.Found)
             {
                 result.Add(value);
+            }
+            else
+            {
+                // Optional: Log missing candle if needed for debugging, but might be noisy
+                // _logger.LogTrace("Candle not found: {Symbol} {Time}", key.Symbol, key.OpenTime);
             }
         }
 
@@ -54,5 +61,3 @@ public class FasterCandleRepository : ICandleRepository
         }
     }
 }
-
-

@@ -11,5 +11,7 @@ namespace TradingAssistant
         decimal EntryPrice,
         decimal? MarginPercentage = null,
         bool IsPyramidingAllowed = false,
-        bool IsStopLossDisabled = false) : IRequest<bool>;
+        bool IsStopLossDisabled = false,
+        decimal? StopLossPrice = null,
+        decimal? TakeProfitPrice = null) : IRequest<bool>;
 }

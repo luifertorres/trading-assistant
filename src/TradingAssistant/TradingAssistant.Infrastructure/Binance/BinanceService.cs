@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Binance.Net.Enums;
 using Binance.Net.Interfaces;
 using Binance.Net.Interfaces.Clients;
@@ -10,9 +10,9 @@ using CryptoExchange.Net.Converters.SystemTextJson;
 using CryptoExchange.Net.Objects.Sockets;
 using FASTER.core;
 using MediatR;
-using TradingAssistant.Application;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using TradingAssistant.Application;
 
 namespace TradingAssistant
 {
