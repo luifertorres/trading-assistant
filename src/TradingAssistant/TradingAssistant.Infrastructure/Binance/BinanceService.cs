@@ -364,17 +364,42 @@ namespace TradingAssistant
                 _leverages.TryAdd(bracket.Symbol, bracket.Brackets.Max(b => b.InitialLeverage));
             });
 
+            var getPositionsResult = await account.GetPositionInformationAsync(ct: cancellationToken);
+
+            if (!getPositionsResult.GetResultOrError(out var positions, out var getPositionsError))
+            {
+                _logger.LogError("Get position information for leverage check failed. {Error}", getPositionsError);
+
+                return false;
+            }
+
+            var currentLeverages = positions.ToDictionary(p => p.Symbol, p => p.Leverage);
+
+            var symbolsToChange = _symbols.Keys
+                .Where(symbol => _leverages.TryGetValue(symbol, out var targetLeverage)
+                    && currentLeverages.TryGetValue(symbol, out var currentLeverage)
+                    && currentLeverage != targetLeverage)
+                .ToList();
+
+            _logger.LogInformation("{CorrectCount} symbols already have correct leverage, {ChangeCount} need change",
+                _symbols.Count - symbolsToChange.Count, symbolsToChange.Count);
+
+            if (symbolsToChange.Count == 0)
+            {
+                return true;
+            }
+
             var parallelOptions = new ParallelOptions
             {
                 MaxDegreeOfParallelism = Environment.ProcessorCount,
                 CancellationToken = cancellationToken
             };
 
-            await Parallel.ForEachAsync(_symbols, parallelOptions, async (symbol, token) =>
+            await Parallel.ForEachAsync(symbolsToChange, parallelOptions, async (symbol, token) =>
             {
-                if (_leverages.TryGetValue(symbol.Key, out var leverage))
+                if (_leverages.TryGetValue(symbol, out var leverage))
                 {
-                    await account.ChangeInitialLeverageAsync(symbol.Key, leverage, ct: token);
+                    await account.ChangeInitialLeverageAsync(symbol, leverage, ct: token);
                 }
             });
 
