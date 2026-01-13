@@ -298,9 +298,46 @@ namespace TradingAssistant
         {
             var account = _rest.UsdFuturesApi.Account;
 
-            await Parallel.ForEachAsync(_symbols, cancellationToken, async (symbol, token) =>
+            var getPositionsResult = await account.GetPositionInformationAsync(ct: cancellationToken);
+
+            if (!getPositionsResult.GetResultOrError(out var positions, out var getPositionsError))
             {
-                await account.ChangeMarginTypeAsync(symbol.Key, FuturesMarginType.Cross, ct: token);
+                _logger.LogError("Get position information for margin type check failed. {Error}", getPositionsError);
+
+                return false;
+            }
+
+            var symbolsWithCrossMargin = positions
+                .Where(p => p.MarginType == FuturesMarginType.Cross)
+                .Select(p => p.Symbol)
+                .ToHashSet();
+
+            var symbolsToChange = _symbols.Keys
+                .Where(symbol => !symbolsWithCrossMargin.Contains(symbol))
+                .ToList();
+
+            _logger.LogInformation("{CrossCount} symbols already have Cross margin, {ChangeCount} need change",
+                _symbols.Count - symbolsToChange.Count, symbolsToChange.Count);
+
+            if (symbolsToChange.Count == 0)
+            {
+                return true;
+            }
+
+            var parallelOptions = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount,
+                CancellationToken = cancellationToken
+            };
+
+            await Parallel.ForEachAsync(symbolsToChange, parallelOptions, async (symbol, token) =>
+            {
+                var result = await account.ChangeMarginTypeAsync(symbol, FuturesMarginType.Cross, ct: token);
+
+                if (!result.Success)
+                {
+                    _logger.LogWarning("Change margin type for {Symbol} failed. {Error}", symbol, result.Error);
+                }
             });
 
             _logger.LogInformation("Margin type configuration finished");
@@ -327,7 +364,13 @@ namespace TradingAssistant
                 _leverages.TryAdd(bracket.Symbol, bracket.Brackets.Max(b => b.InitialLeverage));
             });
 
-            await Parallel.ForEachAsync(_symbols, cancellationToken, async (symbol, token) =>
+            var parallelOptions = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount,
+                CancellationToken = cancellationToken
+            };
+
+            await Parallel.ForEachAsync(_symbols, parallelOptions, async (symbol, token) =>
             {
                 if (_leverages.TryGetValue(symbol.Key, out var leverage))
                 {
