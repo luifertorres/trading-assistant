@@ -1,4 +1,4 @@
-﻿using CryptoExchange.Net.Authentication;
+using CryptoExchange.Net.Authentication;
 using TradingAssistant.Application;
 using TradingAssistant.Infrastructure;
 using X.Extensions.Logging.Telegram.Extensions;
@@ -19,20 +19,13 @@ namespace TradingAssistant
                 {
                     services.AddApplication();
                     services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
-                    services.AddBinance(restOptions =>
+                    services.AddBinance(options =>
                     {
                         var key = context.Configuration["Binance:Futures:ApiKey"]!;
                         var secret = context.Configuration["Binance:Futures:ApiSecret"]!;
 
-                        restOptions.ApiCredentials = new ApiCredentials(key, secret);
-                    });
-
-                    services.AddBinance(socketOptions =>
-                    {
-                        var key = context.Configuration["Binance:Futures:ApiKey"]!;
-                        var secret = context.Configuration["Binance:Futures:ApiSecret"]!;
-
-                        socketOptions.ApiCredentials = new ApiCredentials(key, secret);
+                        options.ApiCredentials = new ApiCredentials(key, secret);
+                        options.Rest.RequestTimeout = Timeout.InfiniteTimeSpan;
                     });
 
                     services.AddInfrastructure(context.Configuration);
