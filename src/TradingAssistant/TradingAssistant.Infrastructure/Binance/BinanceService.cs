@@ -326,7 +326,7 @@ namespace TradingAssistant
 
             var parallelOptions = new ParallelOptions
             {
-                MaxDegreeOfParallelism = Environment.ProcessorCount,
+                MaxDegreeOfParallelism = 1,
                 CancellationToken = cancellationToken
             };
 
@@ -391,7 +391,7 @@ namespace TradingAssistant
 
             var parallelOptions = new ParallelOptions
             {
-                MaxDegreeOfParallelism = Environment.ProcessorCount,
+                MaxDegreeOfParallelism = 1,
                 CancellationToken = cancellationToken
             };
 
@@ -652,75 +652,77 @@ namespace TradingAssistant
 
                 var parallelOptions = new ParallelOptions
                 {
-                    MaxDegreeOfParallelism = Environment.ProcessorCount
+                    MaxDegreeOfParallelism = 1,
+                    CancellationToken = cancellationToken
                 };
 
-                foreach (var symbols in symbolGroups)
+                var totalSymbols = _symbols.Count;
+                var processedCount = 0;
+
+                await Parallel.ForEachAsync(_symbols.Keys, parallelOptions, async (symbol, token) =>
                 {
-                    await Parallel.ForEachAsync(symbols,
-                        parallelOptions,
-                        async (symbol, token) =>
+                    var currentCount = Interlocked.Increment(ref processedCount);
+                    var totalKlines = new List<IBinanceKline>();
+                    var utcDateTime = GetCurrentUtcTime();
+                    var endTime = (DateTime?)utcDateTime.AddSeconds(-(int)_interval);
+                    var requiredRequests = (int)Math.Ceiling(_candlestickSize / (double)MaxCandlesPerRequest);
+
+                    for (var requestCount = 0; requestCount < requiredRequests; requestCount++)
+                    {
+                        var exchangeData = _rest.UsdFuturesApi.ExchangeData;
+                        var getKlinesResult = await exchangeData.GetKlinesAsync(symbol,
+                            timeFrame,
+                            endTime: endTime,
+                            limit: candlesPerRequest,
+                            ct: token);
+
+                        if (!getKlinesResult.GetResultOrError(out var klines, out var getKlinesError))
                         {
-                            var totalKlines = new List<IBinanceKline>();
-                            var utcDateTime = GetCurrentUtcTime();
-                            var endTime = (DateTime?)utcDateTime.AddSeconds(-(int)_interval);
-                            var requiredRequests = (int)Math.Ceiling(_candlestickSize / (double)MaxCandlesPerRequest);
-
-                            for (var requestCount = 0; requestCount < requiredRequests; requestCount++)
-                            {
-                                var exchangeData = _rest.UsdFuturesApi.ExchangeData;
-                                var getKlinesResult = await exchangeData.GetKlinesAsync(symbol,
-                                    timeFrame,
-                                    endTime: endTime,
-                                    limit: candlesPerRequest,
-                                    ct: token);
-
-                                if (!getKlinesResult.GetResultOrError(out var klines, out var getKlinesError))
-                                {
-                                    _logger.LogWarning("Get {Symbol} {TimeFrame} candlestick failed. {Error}",
-                                        symbol,
-                                        EnumConverter.GetString(timeFrame),
-                                        getKlinesError);
-
-                                    return;
-                                }
-
-                                totalKlines.AddRange(klines);
-
-                                endTime = klines.FirstOrDefault()?.OpenTime.AddSeconds(-(int)_interval);
-
-                                if (klines.Count() < MaxCandlesPerRequest)
-                                {
-                                    break;
-                                }
-                            }
-
-                            using var session = sessionBuilder.NewSession<SimpleFunctions<CandleId, Candle>>();
-
-                            foreach (var kline in totalKlines)
-                            {
-                                var candleId = new CandleId(symbol, timeFrame, kline.OpenTime);
-                                var candle = new Candle
-                                {
-                                    Symbol = symbol,
-                                    Interval = timeFrame,
-                                    OpenTime = kline.OpenTime,
-                                    CloseTime = kline.CloseTime,
-                                    OpenPrice = kline.OpenPrice,
-                                    HighPrice = kline.HighPrice,
-                                    LowPrice = kline.LowPrice,
-                                    ClosePrice = kline.ClosePrice,
-                                };
-
-                                session.Upsert(ref candleId, ref candle);
-                            }
-
-                            _logger.LogInformation("Get {Count} {Symbol} {Interval} candles succeeded",
-                                Math.Min(totalKlines.Count, _candlestickSize),
+                            _logger.LogWarning("Get {Symbol} {TimeFrame} candlestick failed. {Error}",
                                 symbol,
-                                EnumConverter.GetString(timeFrame));
-                        });
-                }
+                                EnumConverter.GetString(timeFrame),
+                                getKlinesError);
+
+                            return;
+                        }
+
+                        totalKlines.AddRange(klines);
+
+                        endTime = klines.FirstOrDefault()?.OpenTime.AddSeconds(-(int)_interval);
+
+                        if (klines.Count() < MaxCandlesPerRequest)
+                        {
+                            break;
+                        }
+                    }
+
+                    using var session = sessionBuilder.NewSession<SimpleFunctions<CandleId, Candle>>();
+
+                    foreach (var kline in totalKlines)
+                    {
+                        var candleId = new CandleId(symbol, timeFrame, kline.OpenTime);
+                        var candle = new Candle
+                        {
+                            Symbol = symbol,
+                            Interval = timeFrame,
+                            OpenTime = kline.OpenTime,
+                            CloseTime = kline.CloseTime,
+                            OpenPrice = kline.OpenPrice,
+                            HighPrice = kline.HighPrice,
+                            LowPrice = kline.LowPrice,
+                            ClosePrice = kline.ClosePrice,
+                        };
+
+                        session.Upsert(ref candleId, ref candle);
+                    }
+
+                    _logger.LogInformation("[{Current}/{Total}] Get {Count} {Symbol} {Interval} candles succeeded",
+                        currentCount,
+                        totalSymbols,
+                        Math.Min(totalKlines.Count, _candlestickSize),
+                        symbol,
+                        EnumConverter.GetString(timeFrame));
+                });
             }
 
             _logger.LogInformation("Get candlesticks succeeded");
