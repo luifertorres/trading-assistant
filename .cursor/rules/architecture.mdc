@@ -1,0 +1,44 @@
+---
+description: Clean Architecture rules for the trading-assistant solution
+globs: src/TradingAssistant/**/*.cs
+alwaysApply: false
+---
+
+# Clean Architecture Rules
+
+## Layer Dependency Rule
+
+The dependency direction is strictly **inward**:
+
+```
+Host → Infrastructure → Application → Domain
+```
+
+### What this means in practice
+
+- **Domain** (`TradingAssistant.Domain`): Must NOT reference any other project. Must NOT reference infrastructure NuGet packages (EF Core, Binance.Net, FASTER, HTTP clients).
+- **Application** (`TradingAssistant.Application`): May reference Domain only. Must NOT reference Infrastructure or Host. Only allowed NuGet: MediatR, DI abstractions.
+- **Infrastructure** (`TradingAssistant.Infrastructure`): May reference Application and Domain. Must NOT reference Host. All infrastructure NuGet packages live here.
+- **Host** (`TradingAssistant`): May reference Application and Infrastructure. This is the composition root.
+
+## Adding New Features
+
+When adding a cross-cutting feature:
+
+1. **Domain types first** — entities, value objects, domain events in `TradingAssistant.Domain`.
+2. **Application interfaces** — abstractions in `TradingAssistant.Application` (e.g., `IMyService`).
+3. **Infrastructure implementation** — concrete classes in `TradingAssistant.Infrastructure`.
+4. **Host registration** — wire up DI in `Program.cs` or `ServiceCollectionExtensions`.
+
+## DI Registration Pattern
+
+- `AddApplication()` in Application's `ServiceCollectionExtensions` — registers MediatR.
+- `AddInfrastructure(IConfiguration)` in Infrastructure's `ServiceCollectionExtensions` — registers all infra services.
+- `AddBinance(Action<BinanceRestOptions>)` in Infrastructure — registers Binance-specific services.
+- Host's `Program.cs` calls all three and adds `HostedService<T>` registrations.
+
+## File Organization
+
+- Group by feature/concern, not by type (prefer `Binance/BinanceService.cs` over `Services/BinanceService.cs`).
+- One public type per file (matching filename).
+- Use subdirectories for cohesive groups in Infrastructure (e.g., `Binance/`, `Faster/`).

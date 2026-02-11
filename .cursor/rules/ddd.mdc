@@ -1,0 +1,93 @@
+---
+description: Domain-Driven Design conventions for the trading domain
+globs: src/TradingAssistant/TradingAssistant.Domain/**/*.cs, src/TradingAssistant/TradingAssistant.Application/**/*.cs
+alwaysApply: false
+---
+
+# DDD Conventions
+
+## Rich Domain Model
+
+Entities must encapsulate **behavior and invariants**, not just hold data.
+
+### Good (behavior in entity)
+
+```csharp
+public class OpenPosition
+{
+    public void ApplyTrailingStop(decimal currentPrice, decimal trailingPercent)
+    {
+        var newStop = StopLossPrice.Calculate(currentPrice, trailingPercent);
+        if (newStop > StopLoss)
+            StopLoss = newStop;
+    }
+}
+```
+
+### Bad (anemic model — logic outside entity)
+
+```csharp
+// Don't do this — logic should live in the entity
+if (newStop > position.StopLoss)
+    position.StopLoss = newStop;
+```
+
+## Value Objects
+
+- Use `readonly record struct` for small, frequently allocated types on the hot path:
+
+```csharp
+public readonly record struct CandleId(string Symbol, KlineInterval TimeFrame, DateTime OpenTime);
+```
+
+- Use `record` for larger or reference-type VOs:
+
+```csharp
+public record CandlestickGap(decimal UpperBound, decimal LowerBound);
+```
+
+- Value Objects are **always immutable**. No mutable fields or properties.
+- Include validation in the constructor. Throw `ArgumentException` for invalid state.
+
+## Domain Constants
+
+Group related constants in static classes:
+
+```csharp
+public static class Rsi
+{
+    public const int Overbought = 70;
+    public const int Oversold = 30;
+}
+```
+
+## Ubiquitous Language
+
+Use trading domain terms consistently:
+
+| Term | Meaning |
+|------|---------|
+| Candle | OHLCV candlestick data point |
+| Signal | Entry, Exit, or Rebuy trading signal |
+| Position | An active trade with entry price and size |
+| TimeFrame | Candle interval (1m, 5m, 15m, 1h, 1d) |
+| Drawdown | Peak-to-trough equity decline |
+| Fill | An executed order |
+
+## Broker Agnosticism
+
+The Domain must **never** depend on broker-specific types. When the `Binance.Net` dependency is removed:
+
+- Replace `KlineInterval` → own `TimeFrame` enum.
+- Replace `OrderSide` → own `Side` enum.
+- Replace any Binance DTO → own domain VO or entity.
+
+Infrastructure adapters handle the translation (Anti-Corruption Layer pattern).
+
+## Domain Events (future)
+
+When implementing event-driven architecture, domain events go in `TradingAssistant.Domain.Events`:
+
+```csharp
+public record CandleClosed(string Symbol, TimeFrame TimeFrame, Candle Candle) : IDomainEvent;
+```

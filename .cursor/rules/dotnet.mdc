@@ -1,0 +1,69 @@
+---
+description: .NET 10 and C# 13 coding conventions
+globs: "**/*.cs"
+alwaysApply: false
+---
+
+# .NET 10 / C# 13 Conventions
+
+## General
+
+- Target framework: `net10.0` for all projects.
+- Use file-scoped namespaces (`namespace Foo;` not `namespace Foo { }`).
+- Use primary constructors where they improve readability.
+- Prefer `var` for local variables when the type is obvious from the right-hand side.
+- Use `sealed` for classes that are not designed for inheritance (especially Infrastructure implementations).
+
+## Naming
+
+| Element | Convention | Example |
+|---------|------------|---------|
+| Public members | PascalCase | `OpenTime`, `GetCandles()` |
+| Private fields | `_camelCase` | `_logger`, `_exchangeService` |
+| Parameters | camelCase | `symbol`, `cancellationToken` |
+| Constants | PascalCase | `Overbought`, `DefaultLength` |
+| Interfaces | `I` prefix | `IExchangeService` |
+| Async methods | `Async` suffix | `GetCandlesAsync()` |
+
+## Async Patterns
+
+- Always accept `CancellationToken` in async method signatures.
+- Always pass `CancellationToken` down to called async methods.
+- Use `ValueTask<T>` for methods that frequently complete synchronously.
+- Use `ConfigureAwait(false)` in library code (Domain, Application, Infrastructure).
+
+## Dependency Injection
+
+- Register via extension methods on `IServiceCollection` (one per project).
+- Use constructor injection exclusively. No service locator pattern.
+- Prefer `AddSingleton` for stateless services, `AddScoped` for per-request, `AddTransient` for lightweight/stateful.
+- Use `IOptions<T>` / `IOptionsMonitor<T>` for configuration binding.
+
+## MediatR
+
+- Notifications for events (fire-and-forget, multiple handlers): `INotification`.
+- Requests for commands/queries (single handler, returns result): `IRequest<T>`.
+- Handler classes: `sealed class`, one handler per file.
+- Name notifications as past-tense events: `CandleClosedNotification`, `SmasAndRsisCalculatedEvent`.
+
+## BackgroundServices
+
+- Inherit from `BackgroundService`.
+- Override `ExecuteAsync(CancellationToken)`.
+- Use `try/catch` around the main loop — a thrown exception kills the worker.
+- Log start/stop lifecycle events at `Information` level.
+- Respect the cancellation token for graceful shutdown.
+
+## Error Handling
+
+- Use domain-specific exceptions for business rule violations.
+- Let infrastructure exceptions propagate up (logged by the host).
+- Never catch `Exception` silently — always log.
+
+## Testing (when adding tests)
+
+- Use **xUnit** as the test framework.
+- Use **NSubstitute** for mocking.
+- Use **FluentAssertions** for assertions.
+- Name tests: `MethodName_Scenario_ExpectedResult`.
+- One test class per production class, in a mirror project structure.
