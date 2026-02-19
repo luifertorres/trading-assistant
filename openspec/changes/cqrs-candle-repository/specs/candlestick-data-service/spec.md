@@ -23,17 +23,23 @@ The Candlestick Data API SHALL expose command endpoints to start or resume, stop
 - **AND** restart resumes deterministically from persisted progress checkpoints
 
 ### Requirement: Candlestick Query API
-The Candlestick Data API SHALL expose query endpoints that return locally stored candlesticks filtered by symbol list and time range.
+The Candlestick Data API SHALL expose query endpoints that return locally stored candlesticks filtered by symbol list, timeframe, and time range.
 
-#### Scenario: Query by symbols and interval
-- **WHEN** a client requests candles for one or more symbols and a time range
+#### Scenario: Query by symbols, timeframe, and interval
+- **WHEN** a client requests candles for one or more symbols, a timeframe, and a time range
 - **THEN** the service returns candles ordered by open time in ascending order
 - **AND** the response includes completeness metadata (`isComplete`, `fromOpenTime`, `toOpenTime`, `missingRanges`) for the requested interval
 
-### Requirement: Realtime Closed-Candle Ingestion Ownership
-The Candlestick Data API SHALL own realtime ingestion of 1-minute closed candles from Binance Futures websocket streams.
+### Requirement: Realtime Closed-Candle Ingestion and Canonical Clock
+The Candlestick Data API SHALL own realtime ingestion of closed candles for multiple timeframes (1m, 5m, 15m, 1H, 1D, etc.) from Binance Futures websocket streams and SHALL act as the canonical clock for trading by publishing candle-closed events when candles are persisted.
 
-#### Scenario: Closed candle persisted and published
-- **WHEN** a 1-minute candle closes for a subscribed symbol
+#### Scenario: Closed candle persisted and candle-closed event published
+- **WHEN** a candle of a given timeframe closes for a subscribed symbol
 - **THEN** the candle is validated and persisted by the Candlestick Data API
-- **AND** downstream consumers can retrieve the updated series through Candlestick Data API query endpoints without direct websocket dependency
+- **AND** the API publishes a candle-closed event (symbol, timeframe, openTime) for downstream consumers to use as the trading clock signal
+- **AND** downstream consumers can retrieve the full candlestick series for that symbol and timeframe through query endpoints after the event
+
+#### Scenario: Multiple timeframes emitted
+- **WHEN** candles close for different timeframes (e.g., 1m, 5m, 1H, 1D)
+- **THEN** the API publishes distinct candle-closed events per timeframe
+- **AND** consumers can subscribe only to timeframes relevant to their strategies
