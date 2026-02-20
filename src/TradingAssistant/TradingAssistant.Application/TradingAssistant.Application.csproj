@@ -5,7 +5,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Binance.Net" Version="12.5.2" />
+    <PackageReference Include="Binance.Net" Version="12.6.0" />
     <PackageReference Include="MediatR" Version="14.0.0" />
   </ItemGroup>
 
