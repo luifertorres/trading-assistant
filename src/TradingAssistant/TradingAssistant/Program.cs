@@ -17,6 +17,9 @@ namespace TradingAssistant
                         .AddConsole();
                 }).ConfigureServices((context, services) =>
                 {
+                    var featureFlags = context.Configuration.GetSection("FeatureFlags").Get<FeatureFlags>() ?? new FeatureFlags();
+                    services.AddSingleton(featureFlags);
+
                     services.AddApplication();
                     services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
                     services.AddBinance(options =>
@@ -34,6 +37,13 @@ namespace TradingAssistant
                     services.AddHostedService<PositionWriterWorker>();
                     services.AddHostedService<StopLossManager>();
                     services.AddHostedService<Rsi5RealtimeIndicatorWorker>();
+
+                    if (featureFlags.UseCandlestickDataApi)
+                    {
+                        services.AddHostedService<CandlestickSyncStartupWorker>();
+                        services.AddHostedService<CandleEventSubscriptionWorker>();
+                    }
+
                     //services.AddHostedService<BreakEvenWorker>();
                     //services.AddHostedService<TakeProfitManager>();
                     //services.AddHostedService<SteppedTrailingStopManager>();

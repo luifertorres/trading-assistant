@@ -37,6 +37,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<BinanceService>();
         services.AddSingleton<IExchangeService, BinanceExchangeService>();
         services.AddSingleton<ITradingSignalQueue, TradingSignalQueue>();
+
+        var candlestickDataApiUrl = configuration["CandlestickDataApi:BaseUrl"] ?? "http://localhost:5100";
+        services.AddHttpClient<ICandlestickDataClient, CandlestickDataClient>(client =>
+        {
+            client.BaseAddress = new Uri(candlestickDataApiUrl);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
         return services;
     }
 }
