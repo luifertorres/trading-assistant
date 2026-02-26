@@ -26,7 +26,18 @@ public static class ServiceCollectionExtensions
             }
             else
             {
-                options.UseSqlite(connectionString ?? "Data Source=candlestick_data.db");
+                var sqliteConnectionString = connectionString;
+                var useDefaultPath = string.IsNullOrEmpty(sqliteConnectionString) ||
+                    string.Equals(sqliteConnectionString.Trim(), "Data Source=candlestick_data.db", StringComparison.OrdinalIgnoreCase);
+                if (useDefaultPath)
+                {
+                    var basePath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                    var dbDir = Path.Combine(basePath, "TradingAssistant");
+                    Directory.CreateDirectory(dbDir);
+                    var dbPath = Path.Combine(dbDir, "candlestick_data.db");
+                    sqliteConnectionString = $"Data Source={dbPath}";
+                }
+                options.UseSqlite(sqliteConnectionString);
             }
         });
 

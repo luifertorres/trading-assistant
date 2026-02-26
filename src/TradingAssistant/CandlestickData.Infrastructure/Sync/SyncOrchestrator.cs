@@ -1,4 +1,5 @@
 using CandlestickData.Application.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace CandlestickData.Infrastructure.Sync;
@@ -6,7 +7,7 @@ namespace CandlestickData.Infrastructure.Sync;
 public sealed class SyncOrchestrator(
     HistoricalSyncWorker historicalSyncWorker,
     RealtimeIngestionWorker realtimeIngestionWorker,
-    ISyncJobRepository syncJobRepository,
+    IServiceScopeFactory scopeFactory,
     ILogger<SyncOrchestrator> logger) : ISyncOrchestrator
 {
     private CancellationTokenSource? _cts;
@@ -40,6 +41,8 @@ public sealed class SyncOrchestrator(
             {
                 logger.LogError(ex, "Sync orchestrator encountered an error");
 
+                using var scope = scopeFactory.CreateScope();
+                var syncJobRepository = scope.ServiceProvider.GetRequiredService<ISyncJobRepository>();
                 var job = await syncJobRepository.GetLatestAsync(CancellationToken.None);
                 if (job is { IsRunning: true })
                 {

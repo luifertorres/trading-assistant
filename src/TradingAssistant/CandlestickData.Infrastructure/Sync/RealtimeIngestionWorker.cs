@@ -8,7 +8,6 @@ using Microsoft.Extensions.Logging;
 namespace CandlestickData.Infrastructure.Sync;
 
 public sealed class RealtimeIngestionWorker(
-    IExchangeDataSource exchangeDataSource,
     IServiceScopeFactory scopeFactory,
     SyncConfiguration syncConfig,
     ILogger<RealtimeIngestionWorker> logger)
@@ -17,6 +16,9 @@ public sealed class RealtimeIngestionWorker(
     {
         logger.LogInformation("Starting realtime candle ingestion for {SymbolCount} symbols",
             syncConfig.Symbols.Count);
+
+        using var scope = scopeFactory.CreateScope();
+        var exchangeDataSource = scope.ServiceProvider.GetRequiredService<IExchangeDataSource>();
 
         await exchangeDataSource.SubscribeToKlineUpdatesAsync(
             syncConfig.Symbols,

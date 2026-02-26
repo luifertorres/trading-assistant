@@ -7,7 +7,6 @@ namespace CandlestickData.Infrastructure.Sync;
 
 public sealed class HistoricalSyncWorker(
     IServiceScopeFactory scopeFactory,
-    IExchangeDataSource exchangeDataSource,
     SyncConfiguration syncConfig,
     ILogger<HistoricalSyncWorker> logger)
 {
@@ -37,6 +36,7 @@ public sealed class HistoricalSyncWorker(
         try
         {
             using var scope = scopeFactory.CreateScope();
+            var exchangeDataSource = scope.ServiceProvider.GetRequiredService<IExchangeDataSource>();
             var checkpointRepo = scope.ServiceProvider.GetRequiredService<ISyncCheckpointRepository>();
             var candlestickRepo = scope.ServiceProvider.GetRequiredService<ICandlestickRepository>();
 

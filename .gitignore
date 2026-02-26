@@ -112,6 +112,11 @@ ipch/
 *.VC.db
 *.VC.VC.opendb
 
+# SQLite / local databases
+*.db
+*.db-shm
+*.db-wal
+
 # Visual Studio profiler
 *.psess
 *.vsp

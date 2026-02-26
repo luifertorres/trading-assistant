@@ -7,8 +7,11 @@ public sealed class CandlestickDataContextFactory : IDesignTimeDbContextFactory<
 {
     public CandlestickDataContext CreateDbContext(string[] args)
     {
+        var basePath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var dbPath = Path.Combine(basePath, "TradingAssistant", "candlestick_data.db");
+
         var optionsBuilder = new DbContextOptionsBuilder<CandlestickDataContext>();
-        optionsBuilder.UseSqlite("Data Source=candlestick_data.db");
+        optionsBuilder.UseSqlite($"Data Source={dbPath}");
 
         return new CandlestickDataContext(optionsBuilder.Options);
     }
