@@ -2,7 +2,12 @@ namespace TradingAssistant.Application;
 
 public record CandlesResult(
     IReadOnlyList<CandleDto> Candles,
-    bool IsComplete);
+    bool IsComplete,
+    DateTime? FromOpenTime = null,
+    DateTime? ToOpenTime = null,
+    IReadOnlyList<MissingRangeDto>? MissingRanges = null);
+
+public record MissingRangeDto(DateTime From, DateTime To);
 
 public record CandleDto(
     string Symbol,

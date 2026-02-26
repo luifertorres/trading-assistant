@@ -18,4 +18,8 @@ public record SymbolIntegrityEntry(
     string Symbol,
     string TimeFrame,
     string Status,
-    string Reason);
+    string Reason,
+    DateTime? GapFromOpenTime = null,
+    DateTime? GapToOpenTime = null,
+    DateTime? LastVerifiedOpenTime = null,
+    DateTime? DetectedAt = null);
