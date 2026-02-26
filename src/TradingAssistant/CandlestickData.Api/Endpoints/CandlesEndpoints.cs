@@ -17,7 +17,8 @@ public static class CandlesEndpoints
         {
             var symbolList = symbols.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-            if (!Enum.TryParse<TimeFrame>(timeframe, ignoreCase: true, out var tf))
+            if (!TimeFrameExtensions.TryParseFromShortString(timeframe, out var tf) &&
+                !Enum.TryParse<TimeFrame>(timeframe, ignoreCase: true, out tf))
                 return Results.BadRequest($"Invalid timeframe: {timeframe}");
 
             var response = await sender.Send(new GetCandlesQuery(symbolList, tf, from, to));

@@ -24,7 +24,7 @@ builder.Services.AddBinance(options =>
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "Testing")
 {
     app.MapOpenApi();
 
@@ -40,3 +40,5 @@ app.MapEventsEndpoints();
 app.MapHealthEndpoints();
 
 app.Run();
+
+public partial class Program;

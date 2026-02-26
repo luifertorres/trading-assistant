@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CandlestickData.Infrastruct
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CandlestickData.Api", "CandlestickData.Api\CandlestickData.Api.csproj", "{9639EAC2-DFC4-4D5A-810B-1B2C202B7DE3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CandlestickData.Tests", "CandlestickData.Tests\CandlestickData.Tests.csproj", "{A768016B-6584-4727-BAF8-EAF1CAB7BCDA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -139,6 +141,18 @@ Global
 		{9639EAC2-DFC4-4D5A-810B-1B2C202B7DE3}.Release|x64.Build.0 = Release|Any CPU
 		{9639EAC2-DFC4-4D5A-810B-1B2C202B7DE3}.Release|x86.ActiveCfg = Release|Any CPU
 		{9639EAC2-DFC4-4D5A-810B-1B2C202B7DE3}.Release|x86.Build.0 = Release|Any CPU
+		{A768016B-6584-4727-BAF8-EAF1CAB7BCDA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A768016B-6584-4727-BAF8-EAF1CAB7BCDA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A768016B-6584-4727-BAF8-EAF1CAB7BCDA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A768016B-6584-4727-BAF8-EAF1CAB7BCDA}.Debug|x64.Build.0 = Debug|Any CPU
+		{A768016B-6584-4727-BAF8-EAF1CAB7BCDA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A768016B-6584-4727-BAF8-EAF1CAB7BCDA}.Debug|x86.Build.0 = Debug|Any CPU
+		{A768016B-6584-4727-BAF8-EAF1CAB7BCDA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A768016B-6584-4727-BAF8-EAF1CAB7BCDA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A768016B-6584-4727-BAF8-EAF1CAB7BCDA}.Release|x64.ActiveCfg = Release|Any CPU
+		{A768016B-6584-4727-BAF8-EAF1CAB7BCDA}.Release|x64.Build.0 = Release|Any CPU
+		{A768016B-6584-4727-BAF8-EAF1CAB7BCDA}.Release|x86.ActiveCfg = Release|Any CPU
+		{A768016B-6584-4727-BAF8-EAF1CAB7BCDA}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

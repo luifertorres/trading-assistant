@@ -41,4 +41,35 @@ public static class TimeFrameExtensions
         TimeFrame.OneMonth => "1M",
         _ => throw new ArgumentOutOfRangeException(nameof(timeFrame), timeFrame, null)
     };
+
+    public static bool TryParseFromShortString(string value, out TimeFrame timeFrame)
+    {
+        timeFrame = default;
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        var trimmed = value.Trim();
+        var (matched, tf) = trimmed switch
+        {
+            "1m" => (true, TimeFrame.OneMinute),
+            "3m" => (true, TimeFrame.ThreeMinutes),
+            "5m" => (true, TimeFrame.FiveMinutes),
+            "15m" => (true, TimeFrame.FifteenMinutes),
+            "30m" => (true, TimeFrame.ThirtyMinutes),
+            "1h" => (true, TimeFrame.OneHour),
+            "2h" => (true, TimeFrame.TwoHours),
+            "4h" => (true, TimeFrame.FourHours),
+            "6h" => (true, TimeFrame.SixHours),
+            "8h" => (true, TimeFrame.EightHours),
+            "12h" => (true, TimeFrame.TwelveHours),
+            "1d" => (true, TimeFrame.OneDay),
+            "3d" => (true, TimeFrame.ThreeDays),
+            "1w" => (true, TimeFrame.OneWeek),
+            "1M" => (true, TimeFrame.OneMonth),
+            _ => (false, default)
+        };
+
+        timeFrame = tf;
+        return matched;
+    }
 }
