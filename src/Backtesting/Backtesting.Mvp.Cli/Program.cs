@@ -1,15 +1,8 @@
 using Backtesting.Mvp;
 using Binance.Net.Enums;
 
-var csvPath = args.Length >= 2 && args[0] is "--csv" or "-c"
-    ? args[1]
-    : null;
-
-// ~1006 cycles → 1001 completed round-trips (warmup consumes a handful of cycles).
-var klines = SyntheticKlineSeries.MeanReversionLongCycles(
-    cycles: 1006,
-    startUtc: new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-    barDuration: TimeSpan.FromHours(1));
+var csvPath = ParseCsvPath(args);
+var useBinance = args.Any(static a => a is "--binance" or "-b");
 
 var config = new BacktestConfig(
     Symbol: "BTCUSDT",
@@ -26,7 +19,25 @@ var config = new BacktestConfig(
     MinOrderQuantityBtc: 0.002m,
     QuantityStepBtc: 0.001m);
 
-var source = new InMemoryKlineSource(klines);
+IBacktestKlineSource source;
+if (useBinance)
+{
+    using var client = BinanceUsdFuturesKlineSource.CreateRestClientForBacktest();
+    var binanceSource = await BinanceUsdFuturesKlineSource.LoadBtcUsdt1HourAsync(client, cancellationToken: default)
+        .ConfigureAwait(false);
+    Console.WriteLine($"Loaded {binanceSource.GetKlines().Count} BTCUSDT 1h USD-M klines from Binance.");
+    source = binanceSource;
+}
+else
+{
+    // ~1006 cycles → 1001 completed round-trips (warmup consumes a handful of cycles).
+    var klines = SyntheticKlineSeries.MeanReversionLongCycles(
+        cycles: 1006,
+        startUtc: new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+        barDuration: TimeSpan.FromHours(1));
+    source = new InMemoryKlineSource(klines);
+}
+
 var engine = new BacktestEngine(config);
 var run = engine.Run(source);
 var report = MetricsCalculator.Build(run);
@@ -41,4 +52,15 @@ if (csvPath is not null)
 {
     EquityCurveCsvWriter.Write(csvPath, run.EquityCurve);
     Console.WriteLine($"Wrote equity curve CSV: {csvPath}");
+}
+
+static string? ParseCsvPath(string[] args)
+{
+    for (var i = 0; i < args.Length - 1; i++)
+    {
+        if (args[i] is "--csv" or "-c")
+            return args[i + 1];
+    }
+
+    return null;
 }
