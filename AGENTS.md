@@ -45,6 +45,10 @@ src/TradingAssistant/
 ├── TradingAssistant.Application/    → See Application/AGENTS.md
 ├── TradingAssistant.Infrastructure/ → See Infrastructure/AGENTS.md
 └── TradingAssistant/                → See Host/AGENTS.md
+
+src/Backtesting/
+├── Backtesting.sln                  → Backtesting.Mvp, Cli, Tests (isolated from main host)
+└── …                                → See Backtesting/README.md
 ```
 
 ## Technology Stack
