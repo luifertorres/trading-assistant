@@ -18,7 +18,7 @@ Host → Infrastructure → Application → Domain
 
 - **Domain** (`TradingAssistant.Domain`): Must NOT reference any other project. Must NOT reference infrastructure NuGet packages (EF Core, Binance.Net, FASTER, HTTP clients).
 - **Application** (`TradingAssistant.Application`): May reference Domain only. Must NOT reference Infrastructure or Host. Only allowed NuGet: MediatR, DI abstractions.
-- **Infrastructure** (`TradingAssistant.Infrastructure`): May reference Application and Domain. Must NOT reference Host. All infrastructure NuGet packages live here.
+- **Infrastructure** (`TradingAssistant.Infrastructure`): May reference Application and Domain. Must NOT reference Host. All infrastructure NuGet packages live here. **Binance.Net** is the framework for Binance REST/WebSocket and API models in adapter code (see `.cursor/rules/binance-net.mdc`).
 - **Host** (`TradingAssistant`): May reference Application and Infrastructure. This is the composition root.
 
 ## Adding New Features

@@ -10,7 +10,7 @@ Orchestration layer between Domain and Infrastructure. Defines **interfaces** fo
 
 - **MAY** reference `TradingAssistant.Domain`.
 - **NEVER** reference `TradingAssistant.Infrastructure` or the Host project.
-- **NEVER** add infrastructure NuGet packages (EF Core, Binance.Net, FASTER, etc.).
+- **NEVER** add infrastructure NuGet packages (EF Core, Binance.Net, FASTER, etc.). Binance-facing work uses Binance.Net in **Infrastructure** (and isolated tool projects), not here—Application interfaces stay broker-agnostic.
 - **ALLOWED** packages: `MediatR.Contracts` (for `INotification`, `IRequest`), `Microsoft.Extensions.DependencyInjection.Abstractions`.
 
 ### Interfaces

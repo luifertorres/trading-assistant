@@ -60,6 +60,10 @@ alwaysApply: false
 - Let infrastructure exceptions propagate up (logged by the host).
 - Never catch `Exception` silently — always log.
 
+## Binance integrations
+
+When implementing or changing Binance USD-M (or related) code, use **Binance.Net** clients and types consistently; do not introduce parallel DTO layers unless translating for Domain/Application. See `.cursor/rules/binance-net.mdc` and repo `AGENTS.md`.
+
 ## Testing (when adding tests)
 
 - Use **xUnit** as the test framework.

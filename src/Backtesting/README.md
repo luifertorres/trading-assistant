@@ -2,6 +2,8 @@
 
 Isolated backtest loop using **mock `IBinanceKline`** data, **Skender.Stock.Indicators** RSI, and a small **CLI** for quick runs. No dependency on the main trading host.
 
+**Binance.Net:** Treat Binance.Net as the **framework** for Binance-specific pieces here (e.g. `IBinanceRestClient`, `KlineInterval`, USD-M klines, exchange info / filters). Prefer library models over hand-copied exchange constants unless you need offline-only tests with fixed numbers.
+
 **Solution:** [`Backtesting.sln`](Backtesting.sln) in this folder contains the three Backtesting projects (separate from [`TradingAssistant.sln`](../TradingAssistant/TradingAssistant.sln)).
 
 ## Build / test (solution)

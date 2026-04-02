@@ -10,7 +10,7 @@ This is the **innermost layer** of the Clean Architecture. It contains the core 
 
 - **NEVER** add NuGet packages for infrastructure concerns (EF Core, Binance.Net, HTTP clients, etc.).
 - **NEVER** reference `TradingAssistant.Application`, `TradingAssistant.Infrastructure`, or the Host project.
-- The only acceptable external dependency is `Binance.Net` **temporarily** — it is scheduled for removal. Do not add new usages of it.
+- The only acceptable external dependency is `Binance.Net` **temporarily** — it is scheduled for removal. Do not add new usages of it. (Elsewhere, Binance.Net is the standard **framework** for Binance APIs; Domain is the exception until the refactor removes it.)
 - Pure .NET BCL dependencies only (System.*, Microsoft.Extensions.Primitives if needed).
 
 ### Entities

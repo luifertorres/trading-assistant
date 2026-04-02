@@ -20,6 +20,8 @@ Implements the abstractions defined in Application and Domain. Contains all exte
 
 ### Binance Integration (`Binance/`)
 
+**Framework stance:** Use **[Binance.Net](https://github.com/JKorf/Binance.Net)** as the .NET framework for Binance—`IBinanceRestClient`, `IBinanceSocketClient`, `UsdFuturesApi`, and **library models that match the API** (symbols, filters, streams). Implement adapters that translate to **domain types** at the `IExchangeService` / application boundary; avoid duplicating exchange payloads as custom DTOs unless mapping into Domain requires it.
+
 | File | Purpose |
 |------|---------|
 | `BinanceService.cs` | Core Binance WebSocket/REST service — manages connections, candle streaming, indicator calculation. |

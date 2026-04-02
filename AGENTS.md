@@ -28,13 +28,26 @@ Host → Infrastructure → Application → Domain
 ## Key Conventions
 
 - **Rich Domain Model**: Entities have behavior, not just data (no anemic models).
-- **Broker-agnostic domain**: The domain must not reference any specific broker library (Binance.Net, etc.). All broker specifics live in Infrastructure behind abstractions.
+- **Binance.Net as the Binance framework**: For .NET code that talks to Binance (REST, WebSocket, USD-M models), use **Binance.Net** as the supported stack—clients, enums, and API-shaped DTOs from the library rather than parallel hand-rolled models. **Domain and Application** stay broker-agnostic in their **public** types; Infrastructure adapters own Binance.Net. Isolated tools (e.g. `src/Backtesting/`) may use Binance.Net directly for MVPs. See **Binance.Net framework** below and Infrastructure `AGENTS.md`.
+- **Broker-agnostic domain**: The domain must not grow new dependencies on broker libraries. Legacy `Binance.Net` usage in Domain is scheduled for removal; all new broker specifics live in Infrastructure (or explicit tool projects) behind abstractions at the Application boundary.
 - **MediatR**: Used for in-process messaging (notifications, requests). Registered in Application; host assembly also scans for handlers.
 - **Value Objects**: Use `record` or `readonly struct` for immutability.
 - **High-performance types**: Use `struct` for hot-path types like `Candle`.
 - **Extension methods**: Preferred for conversions and utility operations.
 - **Naming**: PascalCase for public members, `_camelCase` for private fields, no Hungarian notation.
 - **Async/Await**: Use `CancellationToken` in all async signatures.
+
+## Binance.Net framework (.NET)
+
+Treat **[Binance.Net](https://github.com/JKorf/Binance.Net)** as the **framework** for Binance-facing .NET code: `IBinanceRestClient` / `IBinanceSocketClient`, USD-M APIs under `UsdFuturesApi`, and **models as returned by the API** (e.g. `BinanceFuturesUsdtSymbol`, filters, klines). Prefer library types over re-modeling exchange payloads unless translating **into Domain** or **through Application interfaces** (use domain types there).
+
+**Where it applies:** Infrastructure (`TradingAssistant.Infrastructure`, `CandlestickData.Infrastructure`), Host wiring and any code still coupled to Binance clients, and **Backtesting MVP** (`src/Backtesting/`) for fast tools.
+
+**Where it does not:** Domain and Application **public contracts** stay free of Binance.Net; adapters translate at the boundary. Do not add new Binance.Net usage in Domain (legacy removal in progress).
+
+**Practices:** Follow existing `BinanceService` patterns (`GetResultOrError`, etc.); keep **Binance.Net package versions aligned** across projects.
+
+Cursor rule: `.cursor/rules/binance-net.mdc` (path-scoped hints for Binance and Backtesting code).
 
 ## Solution Structure
 
@@ -56,7 +69,7 @@ src/Backtesting/
 | Component | Technology |
 |-----------|------------|
 | Runtime | .NET 10.0 |
-| Exchange API | Binance.Net 12.3.1 |
+| Exchange API | Binance.Net 12.6.x (keep versions aligned across projects) |
 | Mediator/CQRS | MediatR 14.0 |
 | Indicators | Skender.Stock.Indicators 2.7.1 |
 | In-memory cache | Microsoft FASTER (FasterKV) |

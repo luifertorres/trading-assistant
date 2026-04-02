@@ -12,6 +12,10 @@ Composition root and entry point. This is a **Worker Service** that wires up DI,
 - **NEVER** reference `TradingAssistant.Domain` directly for business logic (go through Application interfaces).
 - Infrastructure types are only used here for DI registration, not for business logic.
 
+### Binance
+
+- Binance connectivity is implemented with **Binance.Net** in Infrastructure; the host wires `AddBinance()` and should prefer **`IExchangeService`** in new code over leaking `BinanceService` details into workers.
+
 ### Program.cs (Composition Root)
 
 - `AddApplication()` — registers MediatR from the Application assembly.
