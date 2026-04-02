@@ -34,6 +34,7 @@ public sealed class BacktestEngine(BacktestConfig config)
 
         var cash = config.InitialCapital;
         decimal? entryPrice = null;
+        decimal? entryQuantity = null;
         DateTime? entryTime = null;
         var entryFeePaid = 0m;
         var minBars = Math.Max(config.RsiPeriod * WarmupMultiplier, config.RsiPeriod + 2);
@@ -44,9 +45,9 @@ public sealed class BacktestEngine(BacktestConfig config)
 
             decimal MarkEquity()
             {
-                if (entryPrice is null)
+                if (entryPrice is null || entryQuantity is null)
                     return cash;
-                var unrealized = config.Quantity * (k.ClosePrice - entryPrice.Value);
+                var unrealized = entryQuantity.Value * (k.ClosePrice - entryPrice.Value);
                 return cash + unrealized;
             }
 
@@ -68,18 +69,24 @@ public sealed class BacktestEngine(BacktestConfig config)
                 && curr >= config.RsiOversold)
             {
                 var fill = k.ClosePrice;
-                entryFeePaid = config.Quantity * fill * (config.FeeBpsPerSide / 10_000m);
+                var qty = config.SizePositionByInitialCapitalFraction
+                    ? BtcUsdtPositionSizer.QuantityForLong(fill, config)
+                    : config.Quantity;
+                entryFeePaid = qty * fill * (config.FeeBpsPerSide / 10_000m);
                 cash -= entryFeePaid;
                 entryPrice = fill;
+                entryQuantity = qty;
                 entryTime = k.CloseTime;
             }
             else if (entryPrice is not null
+                     && entryQuantity is not null
                      && prev < config.RsiOverbought
                      && curr >= config.RsiOverbought)
             {
                 var exitPrice = k.ClosePrice;
-                var grossPnl = config.Quantity * (exitPrice - entryPrice.Value);
-                var exitFee = config.Quantity * exitPrice * (config.FeeBpsPerSide / 10_000m);
+                var qty = entryQuantity.Value;
+                var grossPnl = qty * (exitPrice - entryPrice.Value);
+                var exitFee = qty * exitPrice * (config.FeeBpsPerSide / 10_000m);
                 cash += grossPnl - exitFee;
                 var totalFees = entryFeePaid + exitFee;
                 var netPnl = grossPnl - totalFees;
@@ -88,11 +95,12 @@ public sealed class BacktestEngine(BacktestConfig config)
                     k.CloseTime,
                     entryPrice.Value,
                     exitPrice,
-                    config.Quantity,
+                    qty,
                     grossPnl,
                     totalFees,
                     netPnl));
                 entryPrice = null;
+                entryQuantity = null;
                 entryTime = null;
                 entryFeePaid = 0m;
             }
