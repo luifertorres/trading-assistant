@@ -1,0 +1,8 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\BuildingBlocks\TradingPlatform.Kernel\TradingPlatform.Kernel.csproj" />
+    <ProjectReference Include="..\..\Portfolio\Portfolio.Domain\Portfolio.Domain.csproj" />
+    <ProjectReference Include="..\..\Research\Research.Application\Research.Application.csproj" />
+    <ProjectReference Include="..\Execution.Domain\Execution.Domain.csproj" />
+  </ItemGroup>
+</Project>

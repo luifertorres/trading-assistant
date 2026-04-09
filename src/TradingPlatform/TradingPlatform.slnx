@@ -1,0 +1,37 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Analytics/">
+    <Project Path="src/Analytics/Analytics.Application/Analytics.Application.csproj" />
+    <Project Path="src/Analytics/Analytics.Domain/Analytics.Domain.csproj" />
+    <Project Path="src/Analytics/Analytics.Infrastructure/Analytics.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/BuildingBlocks/">
+    <Project Path="src/BuildingBlocks/TradingPlatform.Kernel/TradingPlatform.Kernel.csproj" />
+  </Folder>
+  <Folder Name="/src/Execution/">
+    <Project Path="src/Execution/Execution.Application/Execution.Application.csproj" />
+    <Project Path="src/Execution/Execution.Domain/Execution.Domain.csproj" />
+    <Project Path="src/Execution/Execution.Infrastructure/Execution.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Hosts/">
+    <Project Path="src/Hosts/TradingPlatform.Host/TradingPlatform.Host.csproj" />
+  </Folder>
+  <Folder Name="/src/MarketData/">
+    <Project Path="src/MarketData/MarketData.Application/MarketData.Application.csproj" />
+    <Project Path="src/MarketData/MarketData.Domain/MarketData.Domain.csproj" />
+    <Project Path="src/MarketData/MarketData.Infrastructure/MarketData.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Portfolio/">
+    <Project Path="src/Portfolio/Portfolio.Application/Portfolio.Application.csproj" />
+    <Project Path="src/Portfolio/Portfolio.Domain/Portfolio.Domain.csproj" />
+    <Project Path="src/Portfolio/Portfolio.Infrastructure/Portfolio.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Research/">
+    <Project Path="src/Research/Research.Application/Research.Application.csproj" />
+    <Project Path="src/Research/Research.Domain/Research.Domain.csproj" />
+    <Project Path="src/Research/Research.Infrastructure/Research.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Tools/">
+    <Project Path="src/Tools/TradingPlatform.Cli/TradingPlatform.Cli.csproj" />
+  </Folder>
+</Solution>

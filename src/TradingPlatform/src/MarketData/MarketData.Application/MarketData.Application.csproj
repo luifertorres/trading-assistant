@@ -1,0 +1,6 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\BuildingBlocks\TradingPlatform.Kernel\TradingPlatform.Kernel.csproj" />
+    <ProjectReference Include="..\MarketData.Domain\MarketData.Domain.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,7 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\Analytics\Analytics.Application\Analytics.Application.csproj" />
+    <ProjectReference Include="..\..\Research\Research.Domain\Research.Domain.csproj" />
+    <ProjectReference Include="..\Portfolio.Domain\Portfolio.Domain.csproj" />
+  </ItemGroup>
+</Project>

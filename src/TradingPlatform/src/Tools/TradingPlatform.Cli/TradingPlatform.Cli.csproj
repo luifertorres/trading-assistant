@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Analytics\Analytics.Infrastructure\Analytics.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Execution\Execution.Application\Execution.Application.csproj" />
+    <ProjectReference Include="..\..\Execution\Execution.Infrastructure\Execution.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\MarketData\MarketData.Application\MarketData.Application.csproj" />
+    <ProjectReference Include="..\..\MarketData\MarketData.Infrastructure\MarketData.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Portfolio\Portfolio.Infrastructure\Portfolio.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Research\Research.Application\Research.Application.csproj" />
+    <ProjectReference Include="..\..\Research\Research.Domain\Research.Domain.csproj" />
+    <ProjectReference Include="..\..\Research\Research.Infrastructure\Research.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\BuildingBlocks\TradingPlatform.Kernel\TradingPlatform.Kernel.csproj" />
+  </ItemGroup>
+</Project>

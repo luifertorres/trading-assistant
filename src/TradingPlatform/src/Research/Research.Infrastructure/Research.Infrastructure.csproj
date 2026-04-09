@@ -1,0 +1,11 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\MarketData\MarketData.Application\MarketData.Application.csproj" />
+    <ProjectReference Include="..\Research.Application\Research.Application.csproj" />
+    <ProjectReference Include="..\Research.Domain\Research.Domain.csproj" />
+  </ItemGroup>
+</Project>
