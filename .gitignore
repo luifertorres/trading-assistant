@@ -116,6 +116,12 @@ ipch/
 *.db
 *.db-shm
 *.db-wal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# TradingPlatform CLI/local data (any working directory)
+.trading-platform-data/
 
 # Visual Studio profiler
 *.psess
