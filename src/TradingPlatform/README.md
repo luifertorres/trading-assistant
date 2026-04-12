@@ -26,6 +26,7 @@ dotnet run --project src/TradingPlatform/src/Hosts/TradingPlatform.Host
 
 - [ADRs](docs/ADRs.md)
 - [Glossary / ubiquitous language](docs/GLOSSARY.md)
+- [Design journey — DDD workbook (step-by-step)](docs/design-journey/00-how-to-use-this-trail.md)
 
 ## Data
 
