@@ -416,3 +416,5 @@ FodyWeavers.xsd
 !.cursor/skills/**
 !.cursor/commands/
 !.cursor/commands/**
+!.cursor/context/
+!.cursor/context/**
