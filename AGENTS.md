@@ -4,18 +4,40 @@
 
 Automated trading bot for **Binance Futures (USDT Perpetual)** built with .NET 10 and C# 13. Monitors the market in real-time, detects technical signals, and executes trades with integrated risk management.
 
+## Repository routing (read when ambiguous)
+
+**Default for new work:** `[src/TradingPlatform/](src/TradingPlatform/)` — modular monolith by bounded context; **no references** to legacy solutions. Start with `[src/TradingPlatform/AGENTS.md](src/TradingPlatform/AGENTS.md)` and `[src/TradingPlatform/README.md](src/TradingPlatform/README.md)`.
+
+**Legacy reference:** `[src/TradingAssistant/](src/TradingAssistant/)` — existing Clean Architecture bot. Prefer for **targeted maintenance** in that codebase; avoid growing it when the same capability belongs in TradingPlatform (see `[.cursor/context/refactor-ledger.md](.cursor/context/refactor-ledger.md)`).
+
+**Routing protocol:** infer **intent and blast radius**, not keywords. If the task is cross-cutting, multi-context, or unclear on OpenSpec vs direct implementation, read `[.cursor/context/routing-map.md](.cursor/context/routing-map.md)` first. For a short preflight only, use the **chief-of-staff** skill (`.cursor/skills/chief-of-staff/SKILL.md`).
+
+### Modular context (by rate of change)
+
+
+| File                                                                                     | Purpose                                                                               |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `[.cursor/context/routing-map.md](.cursor/context/routing-map.md)`                       | Paired-change hints, OpenSpec **bypass** command matrix, Platform vs legacy defaults. |
+| `[.cursor/context/engineering-principles.md](.cursor/context/engineering-principles.md)` | Dependency direction, broker boundaries, migrations/testing bar.                      |
+| `[.cursor/context/trading-domain.md](.cursor/context/trading-domain.md)`                 | Product scope, vocabulary pointers, operational risk stance.                          |
+| `[.cursor/context/refactor-ledger.md](.cursor/context/refactor-ledger.md)`               | Migration story: what is greenfield vs frozen legacy.                                 |
+| `[.cursor/context/routing-overrides.md](.cursor/context/routing-overrides.md)`           | Log routing corrections; promote patterns after three similar overrides.              |
+
+
 ## Architecture
 
 Modern simplified **Clean Architecture** with **DDD** — no Ports and Adapters pattern.
 
 ### Layers (inner to outer)
 
-| Layer | Project | Purpose |
-|-------|---------|---------|
-| Domain | `TradingAssistant.Domain` | Entities, Value Objects, domain logic. Zero external dependencies. |
-| Application | `TradingAssistant.Application` | Interfaces, MediatR notifications/events, orchestration. |
-| Infrastructure | `TradingAssistant.Infrastructure` | Adapters (Binance, EF Core, FASTER), repository implementations. |
-| Host | `TradingAssistant` | DI composition root, BackgroundServices, configuration. |
+
+| Layer          | Project                           | Purpose                                                            |
+| -------------- | --------------------------------- | ------------------------------------------------------------------ |
+| Domain         | `TradingAssistant.Domain`         | Entities, Value Objects, domain logic. Zero external dependencies. |
+| Application    | `TradingAssistant.Application`    | Interfaces, MediatR notifications/events, orchestration.           |
+| Infrastructure | `TradingAssistant.Infrastructure` | Adapters (Binance, EF Core, FASTER), repository implementations.   |
+| Host           | `TradingAssistant`                | DI composition root, BackgroundServices, configuration.            |
+
 
 ### Dependency Rule
 
@@ -52,6 +74,10 @@ Cursor rule: `.cursor/rules/binance-net.mdc` (path-scoped hints for Binance and 
 ## Solution Structure
 
 ```
+src/TradingPlatform/
+├── TradingPlatform.slnx             → Greenfield DDD modular monolith; see TradingPlatform/README.md and TradingPlatform/AGENTS.md
+└── src/                             → Bounded contexts (MarketData, Research, Analytics, Portfolio, Execution), Kernel, Host, Cli
+
 src/TradingAssistant/
 ├── TradingAssistant.sln
 ├── TradingAssistant.Domain/         → See Domain/AGENTS.md
@@ -66,15 +92,17 @@ src/Backtesting/
 
 ## Technology Stack
 
-| Component | Technology |
-|-----------|------------|
-| Runtime | .NET 10.0 |
-| Exchange API | Binance.Net 12.6.x (keep versions aligned across projects) |
-| Mediator/CQRS | MediatR 14.0 |
-| Indicators | Skender.Stock.Indicators 2.7.1 |
-| In-memory cache | Microsoft FASTER (FasterKV) |
-| Database | SQLite via EF Core 10.0.2 |
-| Notifications | Telegram |
+
+| Component       | Technology                                                 |
+| --------------- | ---------------------------------------------------------- |
+| Runtime         | .NET 10.0                                                  |
+| Exchange API    | Binance.Net 12.6.x (keep versions aligned across projects) |
+| Mediator/CQRS   | MediatR 14.0                                               |
+| Indicators      | Skender.Stock.Indicators 2.7.1                             |
+| In-memory cache | Microsoft FASTER (FasterKV)                                |
+| Database        | SQLite via EF Core 10.0.2                                  |
+| Notifications   | Telegram                                                   |
+
 
 ## Migrations Policy
 
@@ -88,6 +116,7 @@ dotnet ef database update --project TradingAssistant.Infrastructure --startup-pr
 ## Current Refactoring Status
 
 The project is mid-refactor toward full Clean Architecture. Remaining work:
+
 1. Move handlers/strategies from Host to Application layer.
 2. Remove `Binance.Net` dependency from Domain (replace with own enums: `TimeFrame`, `OrderSide`, etc.).
 3. Replace direct `BinanceService` usage with `IExchangeService` everywhere.

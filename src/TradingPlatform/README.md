@@ -2,6 +2,8 @@
 
 Parallel DDD modular monolith under `src/TradingPlatform`. **No project references** to legacy `TradingAssistant`, `CandlestickData`, or `Backtesting` solutions.
 
+**Agent instructions:** [AGENTS.md](./AGENTS.md).
+
 ## Build
 
 ```bash
