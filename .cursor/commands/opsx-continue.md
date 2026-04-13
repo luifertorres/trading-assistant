@@ -47,7 +47,8 @@ Continue working on a change by creating the next artifact.
    ---
 
    **If artifacts are ready to create** (status shows artifacts with `status: "ready"`):
-   - Pick the FIRST artifact with `status: "ready"` from the status output
+   - Among `ready` artifacts, pick the one **first in canonical schema order**—not the first `ready` in the `artifacts` JSON array (OpenSpec may list e.g. `design` before `specs`).
+     - **spec-driven:** `proposal` → `specs` → `design` → `tasks` (same sequence as below).
    - Get its instructions:
      ```bash
      openspec instructions <artifact-id> --change "<name>" --json
