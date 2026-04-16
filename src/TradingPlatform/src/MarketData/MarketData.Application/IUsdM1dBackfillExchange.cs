@@ -1,0 +1,18 @@
+using TradingPlatform.Kernel;
+
+namespace MarketData.Application;
+
+/// <summary>USD-M REST surface for 1d backfill; implemented in Infrastructure with Binance.Net.</summary>
+public interface IUsdM1dBackfillExchange
+{
+    Task<IReadOnlyList<string>> GetActiveUsdtPerpetualSymbolsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>One page of daily bars, ascending <see cref="OhlcBar.OpenTime"/>, at most 1500 rows.</summary>
+    Task<IReadOnlyList<OhlcBar>> GetDailyKlinesPageAsync(
+        string symbol,
+        DateTimeOffset startTimeInclusive,
+        DateTimeOffset endTimeInclusive,
+        CancellationToken cancellationToken = default);
+
+    Task WriteExchangeInfoSnapshotAsync(string dataRoot, Guid runId, CancellationToken cancellationToken = default);
+}

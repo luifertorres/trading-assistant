@@ -14,6 +14,13 @@ using Research.Domain;
 using Research.Infrastructure;
 using TradingPlatform.Kernel;
 
+var cmd = args.Length > 0 ? args[0] : "demo";
+if (cmd.Equals("backfill-1d", StringComparison.OrdinalIgnoreCase))
+{
+    await RunBackfill1dAsync(args).ConfigureAwait(false);
+    return;
+}
+
 var services = new ServiceCollection();
 services.AddLogging(b => b.AddSimpleConsole(o =>
 {
@@ -36,15 +43,47 @@ services.AddExecutionInfrastructure();
 await using var provider = services.BuildServiceProvider();
 var log = provider.GetRequiredService<ILoggerFactory>().CreateLogger("Cli");
 
-var cmd = args.Length > 0 ? args[0] : "demo";
 switch (cmd.ToLowerInvariant())
 {
     case "demo":
         await RunDemoAsync(provider, log).ConfigureAwait(false);
         break;
     default:
-        log.LogInformation("Usage: TradingPlatform.Cli [demo]");
+        log.LogInformation("Usage: TradingPlatform.Cli [demo|backfill-1d] …");
         break;
+}
+
+static async Task RunBackfill1dAsync(string[] args)
+{
+    var parsed = Backfill1dArgs.Parse(args);
+    var dataRoot = Path.GetFullPath(parsed.DataRoot);
+    Directory.CreateDirectory(dataRoot);
+    var marketDb = Path.GetFullPath(parsed.MarketDatabasePath);
+    var checkpointPath = string.IsNullOrWhiteSpace(parsed.CheckpointPath)
+        ? Path.Combine(dataRoot, "backfill-1d-checkpoint.json")
+        : Path.GetFullPath(parsed.CheckpointPath);
+
+    var services = new ServiceCollection();
+    services.AddLogging(b => b.AddSimpleConsole(o =>
+    {
+        o.SingleLine = true;
+        o.TimestampFormat = "HH:mm:ss ";
+    }));
+    services.AddMarketDataSqlite(marketDb);
+    services.AddMarketDataBinanceUsdM1dBackfill(checkpointPath);
+
+    await using var provider = services.BuildServiceProvider();
+    var log = provider.GetRequiredService<ILoggerFactory>().CreateLogger("backfill-1d");
+    var runner = provider.GetRequiredService<Usdm1dBackfillOrchestrator>();
+
+    log.LogInformation("Market DB: {Path}", marketDb);
+    log.LogInformation("Data root: {Path}", dataRoot);
+    log.LogInformation("Checkpoint: {Path}", checkpointPath);
+
+    await runner.RunAsync(
+            new Usdm1dBackfillRunOptions(marketDb, dataRoot, checkpointPath, parsed.WriteSnapshot),
+            CancellationToken.None)
+        .ConfigureAwait(false);
 }
 
 static async Task RunDemoAsync(ServiceProvider provider, ILogger log)
@@ -118,4 +157,49 @@ static IReadOnlyList<OhlcBar> SyntheticBars(int count, DateTimeOffset start)
     }
 
     return list;
+}
+
+internal sealed record Backfill1dArgs(string MarketDatabasePath, string DataRoot, string? CheckpointPath, bool WriteSnapshot)
+{
+    public static Backfill1dArgs Parse(string[] args)
+    {
+        string? marketDb = null;
+        string? dataRoot = null;
+        string? checkpoint = null;
+        var snapshot = false;
+
+        for (var i = 1; i < args.Length; i++)
+        {
+            var a = args[i];
+            if (a.Equals("--snapshot", StringComparison.OrdinalIgnoreCase))
+            {
+                snapshot = true;
+                continue;
+            }
+
+            string? TakeValue()
+            {
+                if (i + 1 >= args.Length)
+                    throw new ArgumentException($"Missing value after {a}");
+                return args[++i];
+            }
+
+            if (a.Equals("--market-db", StringComparison.OrdinalIgnoreCase))
+                marketDb = TakeValue();
+            else if (a.Equals("--data-root", StringComparison.OrdinalIgnoreCase))
+                dataRoot = TakeValue();
+            else if (a.Equals("--checkpoint", StringComparison.OrdinalIgnoreCase))
+                checkpoint = TakeValue();
+            else
+                throw new ArgumentException($"Unknown argument: {a}");
+        }
+
+        if (string.IsNullOrWhiteSpace(marketDb) || string.IsNullOrWhiteSpace(dataRoot))
+        {
+            throw new ArgumentException(
+                "Usage: TradingPlatform.Cli backfill-1d --market-db <path> --data-root <path> [--checkpoint <path>] [--snapshot]");
+        }
+
+        return new Backfill1dArgs(marketDb, dataRoot, checkpoint, snapshot);
+    }
 }
