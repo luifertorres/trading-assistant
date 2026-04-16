@@ -6,7 +6,7 @@ TradingPlatform MarketData SHALL support a **bulk backfill** of Binance USD-M Fu
 
 ### Requirement: Active USDT perpetual symbol universe
 
-The backfill SHALL derive the symbol list from Binance USD-M Futures **exchange information** (or equivalent REST) and SHALL include only contracts that are **actively tradable** for this scope: `**TRADING`**, `**PERPETUAL**`, and `**USDT**` quote asset, unless a run-time configuration explicitly documents a different filter set.
+The backfill SHALL derive the symbol list from Binance USD-M Futures **exchange information** (or equivalent REST) and SHALL include only contracts that are **actively tradable** for this scope: `**TRADING`**, `**PERPETUAL`**, and `**USDT**` quote asset, unless a run-time configuration explicitly documents a different filter set.
 
 #### Scenario: Symbol excluded when not tradable perpetual USDT
 
@@ -34,7 +34,7 @@ For every symbol in the universe, the system SHALL fetch **all available daily (
 
 ### Requirement: Chronological batch download and persist order
 
-Binance USD-M Futures kline REST (and **Binance.Net**) support paging with `**startTime`** and `**endTime**`, so the implementation SHALL **compute each request window in chronological order** (oldest window first, advancing toward the present) and SHALL fetch batches that way whenever using that API. For each symbol, the backfill SHALL persist daily bars in **ascending `OpenTime` order at the batch level**: each `ICandleSeriesWriter.UpsertAsync` call for that symbol in a run MUST follow an **older** batch with a **newer** batch (inception → present). If an implementation instead uses reverse-time paging, it MUST buffer, sort, or otherwise reorder so that **writes** still satisfy the same ascending batch order.
+Binance USD-M Futures kline REST (and **Binance.Net**) support paging with `**startTime`** and `**endTime`**, so the implementation SHALL **compute each request window in chronological order** (oldest window first, advancing toward the present) and SHALL fetch batches that way whenever using that API. For each symbol, the backfill SHALL persist daily bars in **ascending `OpenTime` order at the batch level**: each `ICandleSeriesWriter.UpsertAsync` call for that symbol in a run MUST follow an **older** batch with a **newer** batch (inception → present). If an implementation instead uses reverse-time paging, it MUST buffer, sort, or otherwise reorder so that **writes** still satisfy the same ascending batch order.
 
 #### Scenario: Forward windows use startTime and endTime
 
@@ -62,7 +62,7 @@ All ingested bars SHALL be written only through `**ICandleSeriesWriter.UpsertAsy
 
 ### Requirement: Broker isolation
 
-Binance client types, REST DTOs, and **Binance.Net** (or equivalent) SHALL reside only in **Infrastructure** (or delivery wiring), MUST NOT appear in Domain or Application **public** contracts, and MUST map into kernel `**OhlcBar`** / `**SeriesDescriptor**` at the boundary.
+Binance client types, REST DTOs, and **Binance.Net** (or equivalent) SHALL reside only in **Infrastructure** (or delivery wiring), MUST NOT appear in Domain or Application **public** contracts, and MUST map into kernel `**OhlcBar`** / `**SeriesDescriptor`** at the boundary.
 
 #### Scenario: Application orchestration stays broker-agnostic
 
