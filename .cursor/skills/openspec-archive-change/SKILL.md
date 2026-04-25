@@ -41,7 +41,7 @@ Archive a completed change in the experimental workflow.
 
    Read the tasks file (typically `tasks.md`) to check for incomplete tasks.
 
-   Count tasks marked with `- [ ]` (incomplete) vs `- [x]` (complete).
+   Count tasks marked with `[ ]` (incomplete) vs `[x]` (complete), or legacy `- [ ]` / `- [x]`.
 
    **If incomplete tasks found:**
    - Display warning showing count of incomplete tasks

@@ -367,8 +367,8 @@ Here are the implementation tasks:
 
 ## 1. [Category or file]
 
-- [ ] 1.1 [Specific task]
-- [ ] 1.2 [Specific task]
+[ ] 1.1 [Specific task]
+[ ] 1.2 [Specific task]
 
 ## 2. Verify
 
@@ -399,7 +399,7 @@ Now we implement each task, checking them off as we go. I'll announce each one a
 1. Announce: "Working on task N: [description]"
 2. Implement the change in the codebase
 3. Reference specs/design naturally: "The spec says X, so I'm doing Y"
-4. Mark complete in tasks.md: `- [ ]` → `- [x]`
+4. Mark complete in tasks.md: `[ ]` → `[x]`
 5. Brief status: "✓ Task N complete"
 
 Keep narration light—don't over-explain every line of code.
@@ -410,9 +410,9 @@ After all tasks:
 ## Implementation Complete
 
 All tasks done:
-- [x] Task 1
-- [x] Task 2
-- [x] ...
+[x] Task 1
+[x] Task 2
+[x] ...
 
 The change is implemented! One more step—let's archive it.
 ```

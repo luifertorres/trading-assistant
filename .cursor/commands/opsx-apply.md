@@ -66,7 +66,7 @@ Implement tasks from an OpenSpec change.
    - Show which task is being worked on
    - Make the code changes required
    - Keep changes minimal and focused
-   - Mark task complete in the tasks file: `- [ ]` → `- [x]`
+   - Mark task complete in the tasks file: `[ ]` → `[x]` (or legacy `- [ ]` → `- [x]`)
    - Continue to next task
 
    **Pause if:**
@@ -107,8 +107,8 @@ Working on task 4/7: <task description>
 **Progress:** 7/7 tasks complete ✓
 
 ### Completed This Session
-- [x] Task 1
-- [x] Task 2
+[x] Task 1
+[x] Task 2
 ...
 
 All tasks complete! You can archive this change with `/opsx:archive`.

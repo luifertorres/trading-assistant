@@ -50,7 +50,7 @@ Verify that an implementation matches the change artifacts (specs, tasks, design
 
    **Task Completion**:
    - If tasks.md exists in contextFiles, read it
-   - Parse checkboxes: `- [ ]` (incomplete) vs `- [x]` (complete)
+   - Parse checkboxes: `[ ]` (incomplete) vs `[x]` (complete) / legacy bullet form
    - Count complete vs total tasks
    - If incomplete tasks exist:
      - Add CRITICAL issue for each incomplete task

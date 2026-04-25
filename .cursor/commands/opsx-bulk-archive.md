@@ -37,7 +37,7 @@ This skill allows you to batch-archive changes, handling spec conflicts intellig
       - Note which artifacts are `done` vs other states
 
    b. **Task completion** - Read `openspec/changes/<name>/tasks.md`
-      - Count `- [ ]` (incomplete) vs `- [x]` (complete)
+      - Count `[ ]` (incomplete) vs `[x]` (complete) / legacy `- [ ]` / `- [x]`
       - If no tasks file exists, note as "No tasks"
 
    c. **Delta specs** - Check `openspec/changes/<name>/specs/` directory
