@@ -96,7 +96,7 @@ src/Backtesting/
 | Component       | Technology                                                 |
 | --------------- | ---------------------------------------------------------- |
 | Runtime         | .NET 10.0                                                  |
-| Exchange API    | Binance.Net 12.6.x (keep versions aligned across projects) |
+| Exchange API    | Binance.Net 12.11.x (keep versions aligned across projects) |
 | Mediator/CQRS   | MediatR 14.0                                               |
 | Indicators      | Skender.Stock.Indicators 2.7.1                             |
 | In-memory cache | Microsoft FASTER (FasterKV)                                |
