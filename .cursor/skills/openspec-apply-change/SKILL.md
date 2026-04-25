@@ -70,7 +70,7 @@ Implement tasks from an OpenSpec change.
    - Show which task is being worked on
    - Make the code changes required
    - Keep changes minimal and focused
-   - Mark task complete in the tasks file: `[ ]` → `[x]` (or legacy `- [ ]` → `- [x]`)
+   - Mark task complete: `[ ]` → `[x]` on the same line (bracket-only; do not add a `-` before `[` in this flow)
    - Continue to next task
 
    **Pause if:**

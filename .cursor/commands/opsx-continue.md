@@ -99,7 +99,7 @@ Common artifact patterns:
   - The Capabilities section is critical - each capability listed will need a spec file.
 - **specs/<capability>/spec.md**: Create one spec per capability listed in the proposal's Capabilities section (use the capability name, not the change name).
 - **design.md**: Document technical decisions, architecture, and implementation approach.
-- **tasks.md**: Before writing, run `openspec instructions tasks --change "<name>" --json` and follow **`instruction`** and **`template`**. Each task line must be a Markdown checkbox: `[ ] X.Y …` or `[x] X.Y …` (optional legacy `- [ ]` / `- [x]`). OpenSpec’s apply step only tracks those checkbox lines; numbered bullets without checkboxes register as **zero** tasks and block `/opsx:apply`.
+- **tasks.md**: Before writing, run `openspec instructions tasks --change "<name>" --json` and follow **`instruction`** and **`template`**. **Use bracket-only task lines: `[ ] X.Y …` or `[x] X.Y …` (no leading `-` before the bracket).** OpenSpec’s apply step only tracks those lines; `openspec/patches/README-fission-openspec-bracket-tasks.md` documents the required format. Legacy `- [ ]` is only for pre-existing files the CLI can still read.
 
 For other schemas, follow the `instruction` field from the CLI output.
 

@@ -103,7 +103,7 @@ Common artifact patterns:
   - The Capabilities section is critical - each capability listed will need a spec file.
 - **specs/<capability>/spec.md**: Create one spec per capability listed in the proposal's Capabilities section (use the capability name, not the change name).
 - **design.md**: Document technical decisions, architecture, and implementation approach.
-- **tasks.md**: Before writing, run `openspec instructions tasks --change "<name>" --json` and follow **`instruction`** and **`template`**. Each line must be a Markdown checkbox: `[ ] X.Y …` or `[x] X.Y …` (no leading list hyphen, so previews show checkboxes). Legacy `- [ ]` / `- [x]` is still accepted. OpenSpec’s apply step only tracks lines matching `[ ]` / `[x]` (with or without a leading `- `); numbered bullets without checkboxes register as **zero** tasks and block `/opsx-apply`.
+- **tasks.md**: Before writing, run `openspec instructions tasks --change "<name>" --json` and follow **`instruction`** and **`template`**. **Each task line must start with `[ ]` or `[x]` (no leading `-` before the bracket).** Do not use `- [ ]` / `- [x]` for new or edited `tasks.md` in this repo; use bracket-only so previews show checkboxes. The CLI still parses legacy list lines for old changes. OpenSpec’s apply step only tracks those checkbox lines; plain numbered bullets with no bracket register as **zero** tasks and block `/opsx-apply`.
 
 For other schemas, follow the `instruction` field from the CLI output.
 
