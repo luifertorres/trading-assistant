@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace MarketData.Application;
 
 public sealed class BackfillCheckpointDocumentV1
@@ -21,4 +23,10 @@ public sealed class BackfillCheckpointSymbolEntryV1
     public bool Complete { get; set; }
 
     public long? LastWrittenOpenTimeMs { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LastErrorMessage { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public DateTimeOffset? LastErrorAtUtc { get; set; }
 }

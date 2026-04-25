@@ -37,3 +37,9 @@ Short-lived notes for the parallel `src/TradingPlatform` tree. Revise as you ite
 **Decision:** Target `net10.0` with `LangVersion=preview` via `Directory.Build.props` to match the main repo stack.
 
 **Rationale:** Consistency with existing trading-assistant projects.
+
+## ADR-007 — Temporary exchange-symbol table naming
+
+**Decision:** Until `marketdata-instrument-identity-and-candles-registry` replaces raw symbols with kernel `InstrumentId`s and a canonical candles table, `MarketData` continues to render per-series SQLite table names from the exchange symbol plus timeframe. The storage-boundary predicate rejects only characters that are unsafe inside the quoted SQLite identifier form (ASCII control characters and literal double quotes), so valid Binance USD-M symbols such as `龙虾USDT`, `币安人生USDT`, `我踏马来了USDT`, `1000PEPEUSDT`, and `4USDT` are accepted.
+
+**Rationale:** This keeps the current per-series store operational for the USD-M 1d backfill while acknowledging that raw exchange symbols are not the long-term domain identity. The follow-up registry change owns the durable fix.

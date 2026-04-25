@@ -54,70 +54,93 @@ public sealed class Usdm1dBackfillOrchestrator(
         {
             cancellationToken.ThrowIfCancellationRequested();
             var entry = checkpoint.Symbols.First(e => e.Symbol == symbol);
-            if (entry.Complete)
+            try
             {
-                log.LogInformation("Skip {Symbol} (already complete in checkpoint).", symbol);
-                continue;
-            }
-
-            var series = new SeriesDescriptor(symbol, TimeFrameCode.Day1);
-            series.Validate();
-            EnsureDailySeries(series);
-
-            var tableName = SeriesTableNaming.ToPhysicalTableName(series);
-            log.LogInformation("Backfill {Symbol} → table {Table} …", symbol, tableName);
-
-            DateTimeOffset pageStart;
-            if (entry.LastWrittenOpenTimeMs is { } ms)
-            {
-                var lastOpen = DateTimeOffset.FromUnixTimeMilliseconds(ms);
-                pageStart = lastOpen.Add(OneDay);
-            }
-            else
-            {
-                pageStart = DateTimeOffset.FromUnixTimeMilliseconds(0);
-            }
-
-            var endCap = DateTimeOffset.UtcNow;
-
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                var bars = await exchange
-                    .GetDailyKlinesPageAsync(symbol, pageStart, endCap, cancellationToken)
-                    .ConfigureAwait(false);
-
-                if (bars.Count == 0)
+                if (entry.Complete)
                 {
-                    entry.Complete = true;
-                    TouchCheckpoint(checkpoint);
-                    await checkpointStore.SaveAsync(checkpoint, cancellationToken).ConfigureAwait(false);
-                    log.LogInformation("{Symbol}: no more daily rows (empty page). Marked complete.", symbol);
-                    break;
+                    log.LogInformation("Skip {Symbol} (already complete in checkpoint).", symbol);
+                    continue;
                 }
 
-                await candleWriter.UpsertAsync(series, bars, cancellationToken).ConfigureAwait(false);
+                var series = new SeriesDescriptor(symbol, TimeFrameCode.Day1);
+                series.Validate();
+                EnsureDailySeries(series);
 
-                var maxOpen = bars[^1].OpenTime;
-                entry.LastWrittenOpenTimeMs = maxOpen.ToUnixTimeMilliseconds();
+                var tableName = SeriesTableNaming.ToPhysicalTableName(series);
+                log.LogInformation("Backfill {Symbol} → table {Table} …", symbol, tableName);
+
+                DateTimeOffset pageStart;
+                if (entry.LastWrittenOpenTimeMs is { } ms)
+                {
+                    var lastOpen = DateTimeOffset.FromUnixTimeMilliseconds(ms);
+                    pageStart = lastOpen.Add(OneDay);
+                }
+                else
+                {
+                    pageStart = DateTimeOffset.FromUnixTimeMilliseconds(0);
+                }
+
+                var endCap = DateTimeOffset.UtcNow;
+
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    var bars = await exchange
+                        .GetDailyKlinesPageAsync(symbol, pageStart, endCap, cancellationToken)
+                        .ConfigureAwait(false);
+
+                    if (bars.Count == 0)
+                    {
+                        MarkComplete(entry);
+                        TouchCheckpoint(checkpoint);
+                        await checkpointStore.SaveAsync(checkpoint, cancellationToken).ConfigureAwait(false);
+                        log.LogInformation("{Symbol}: no more daily rows (empty page). Marked complete.", symbol);
+                        break;
+                    }
+
+                    await candleWriter.UpsertAsync(series, bars, cancellationToken).ConfigureAwait(false);
+
+                    var maxOpen = bars[^1].OpenTime;
+                    entry.LastWrittenOpenTimeMs = maxOpen.ToUnixTimeMilliseconds();
+                    TouchCheckpoint(checkpoint);
+                    await checkpointStore.SaveAsync(checkpoint, cancellationToken).ConfigureAwait(false);
+
+                    if (bars.Count < 1500)
+                    {
+                        MarkComplete(entry);
+                        TouchCheckpoint(checkpoint);
+                        await checkpointStore.SaveAsync(checkpoint, cancellationToken).ConfigureAwait(false);
+                        log.LogInformation("{Symbol}: caught up (last page had {N} rows). Marked complete.", symbol, bars.Count);
+                        break;
+                    }
+
+                    pageStart = maxOpen.Add(OneDay);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                entry.LastErrorMessage = ex.Message;
+                entry.LastErrorAtUtc = DateTimeOffset.UtcNow;
                 TouchCheckpoint(checkpoint);
                 await checkpointStore.SaveAsync(checkpoint, cancellationToken).ConfigureAwait(false);
 
-                if (bars.Count < 1500)
-                {
-                    entry.Complete = true;
-                    TouchCheckpoint(checkpoint);
-                    await checkpointStore.SaveAsync(checkpoint, cancellationToken).ConfigureAwait(false);
-                    log.LogInformation("{Symbol}: caught up (last page had {N} rows). Marked complete.", symbol, bars.Count);
-                    break;
-                }
-
-                pageStart = maxOpen.Add(OneDay);
+                log.LogWarning(ex, "{Symbol}: backfill failed; recorded error and continuing with next symbol.", symbol);
             }
         }
     }
 
     private static void TouchCheckpoint(BackfillCheckpointDocumentV1 checkpoint) =>
         checkpoint.UpdatedAtUtc = DateTimeOffset.UtcNow;
+
+    private static void MarkComplete(BackfillCheckpointSymbolEntryV1 entry)
+    {
+        entry.Complete = true;
+        entry.LastErrorMessage = null;
+        entry.LastErrorAtUtc = null;
+    }
 
     internal static void EnsureDailySeries(SeriesDescriptor series)
     {
