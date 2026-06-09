@@ -1,13 +1,13 @@
 namespace TradingPlatform.Kernel;
 
-/// <summary>Symbol, position side, timeframe, and strategy identity + parameters.</summary>
+/// <summary>Instrument, position side, timeframe, and strategy identity + parameters.</summary>
 public sealed record TradingVectorSpec(
     TradingVectorId Id,
-    string Symbol,
+    InstrumentId Instrument,
     TimeFrameCode TimeFrame,
     PositionSide PositionSide,
     string StrategyKind,
     IReadOnlyDictionary<string, string> Parameters)
 {
-    public SeriesDescriptor Series => new(Symbol, TimeFrame);
+    public SeriesDescriptor Series => new(Instrument, TimeFrame);
 }

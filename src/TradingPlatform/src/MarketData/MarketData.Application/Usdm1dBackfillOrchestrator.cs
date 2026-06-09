@@ -1,13 +1,13 @@
-using MarketData.Domain;
 using Microsoft.Extensions.Logging;
 using TradingPlatform.Kernel;
 
 namespace MarketData.Application;
 
-/// <summary>Loads checkpoint, lists symbols, pages klines forward, upserts through <see cref="ICandleSeriesWriter"/>. Exchange pacing is delegated to Binance.Net.</summary>
+/// <summary>Loads checkpoint, upserts universe into registry, pages klines forward, upserts through <see cref="ICandleSeriesWriter"/>.</summary>
 public sealed class Usdm1dBackfillOrchestrator(
     ICandleSeriesWriter candleWriter,
     IUsdM1dBackfillExchange exchange,
+    IInstrumentRegistry registry,
     IBackfillCheckpointStore checkpointStore,
     ILogger<Usdm1dBackfillOrchestrator> log)
 {
@@ -22,52 +22,58 @@ public sealed class Usdm1dBackfillOrchestrator(
         var checkpoint = await checkpointStore.LoadAsync(cancellationToken).ConfigureAwait(false);
         if (checkpoint is null || !string.Equals(Path.GetFullPath(checkpoint.MarketDatabasePath), dbFullPath, StringComparison.OrdinalIgnoreCase))
         {
-            checkpoint = new BackfillCheckpointDocumentV1
+            checkpoint = new BackfillCheckpointDocumentV2
             {
                 RunId = Guid.NewGuid(),
                 MarketDatabasePath = dbFullPath,
-                Symbols = []
+                Instruments = []
             };
             log.LogInformation("Starting new backfill run {RunId} (no checkpoint or database path mismatch).", checkpoint.RunId);
         }
 
+        var listings = await exchange.ListUsdtPerpetualInstrumentsAsync(cancellationToken).ConfigureAwait(false);
+        log.LogInformation("Backfill universe: {Count} USDT perpetual TRADING instruments.", listings.Count);
+
+        var instruments = new List<(InstrumentId Id, BrokerFetchHandle Handle, string ExchangeSymbol)>(listings.Count);
+        foreach (var listing in listings)
+        {
+            var id = await registry.UpsertAsync(listing.Upsert, cancellationToken).ConfigureAwait(false);
+            instruments.Add((id, listing.FetchHandle, listing.Upsert.ExchangeSymbol));
+        }
+
+        var instrumentIdSet = instruments.Select(i => i.Id.Value).ToHashSet();
+        checkpoint.Instruments.RemoveAll(e => !instrumentIdSet.Contains(e.InstrumentId));
+        foreach (var (id, _, _) in instruments)
+        {
+            if (!checkpoint.Instruments.Any(e => e.InstrumentId == id.Value))
+                checkpoint.Instruments.Add(new BackfillCheckpointInstrumentEntryV2 { InstrumentId = id.Value });
+        }
+
         if (options.WriteExchangeInfoSnapshot)
         {
+            var idMap = instruments.ToDictionary(i => i.ExchangeSymbol, i => i.Id, StringComparer.Ordinal);
             await exchange
-                .WriteExchangeInfoSnapshotAsync(dataRoot, checkpoint.RunId, cancellationToken)
+                .WriteExchangeInfoSnapshotAsync(dataRoot, checkpoint.RunId, idMap, cancellationToken)
                 .ConfigureAwait(false);
         }
 
-        var symbols = await exchange.GetActiveUsdtPerpetualSymbolsAsync(cancellationToken).ConfigureAwait(false);
-        log.LogInformation("Backfill universe: {Count} USDT perpetual TRADING symbols.", symbols.Count);
-
-        var symbolSet = symbols.ToHashSet(StringComparer.Ordinal);
-        checkpoint.Symbols.RemoveAll(e => !symbolSet.Contains(e.Symbol));
-
-        foreach (var sym in symbols)
-        {
-            if (!checkpoint.Symbols.Any(e => e.Symbol == sym))
-                checkpoint.Symbols.Add(new BackfillCheckpointSymbolEntryV1 { Symbol = sym });
-        }
-
-        foreach (var symbol in symbols)
+        foreach (var (instrumentId, fetchHandle, exchangeSymbol) in instruments)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var entry = checkpoint.Symbols.First(e => e.Symbol == symbol);
+            var entry = checkpoint.Instruments.First(e => e.InstrumentId == instrumentId.Value);
             try
             {
                 if (entry.Complete)
                 {
-                    log.LogInformation("Skip {Symbol} (already complete in checkpoint).", symbol);
+                    log.LogInformation("Skip {ExchangeSymbol} (instrument {InstrumentId}, already complete).", exchangeSymbol, instrumentId);
                     continue;
                 }
 
-                var series = new SeriesDescriptor(symbol, TimeFrameCode.Day1);
+                var series = new SeriesDescriptor(instrumentId, TimeFrameCode.Day1);
                 series.Validate();
                 EnsureDailySeries(series);
 
-                var tableName = SeriesTableNaming.ToPhysicalTableName(series);
-                log.LogInformation("Backfill {Symbol} → table {Table} …", symbol, tableName);
+                log.LogInformation("Backfill {ExchangeSymbol} (instrument {InstrumentId}) …", exchangeSymbol, instrumentId);
 
                 DateTimeOffset pageStart;
                 if (entry.LastWrittenOpenTimeMs is { } ms)
@@ -85,7 +91,7 @@ public sealed class Usdm1dBackfillOrchestrator(
                 while (!cancellationToken.IsCancellationRequested)
                 {
                     var bars = await exchange
-                        .GetDailyKlinesPageAsync(symbol, pageStart, endCap, cancellationToken)
+                        .GetDailyKlinesPageAsync(fetchHandle, pageStart, endCap, cancellationToken)
                         .ConfigureAwait(false);
 
                     if (bars.Count == 0)
@@ -93,7 +99,7 @@ public sealed class Usdm1dBackfillOrchestrator(
                         MarkComplete(entry);
                         TouchCheckpoint(checkpoint);
                         await checkpointStore.SaveAsync(checkpoint, cancellationToken).ConfigureAwait(false);
-                        log.LogInformation("{Symbol}: no more daily rows (empty page). Marked complete.", symbol);
+                        log.LogInformation("{ExchangeSymbol}: no more daily rows (empty page). Marked complete.", exchangeSymbol);
                         break;
                     }
 
@@ -109,7 +115,7 @@ public sealed class Usdm1dBackfillOrchestrator(
                         MarkComplete(entry);
                         TouchCheckpoint(checkpoint);
                         await checkpointStore.SaveAsync(checkpoint, cancellationToken).ConfigureAwait(false);
-                        log.LogInformation("{Symbol}: caught up (last page had {N} rows). Marked complete.", symbol, bars.Count);
+                        log.LogInformation("{ExchangeSymbol}: caught up (last page had {N} rows). Marked complete.", exchangeSymbol, bars.Count);
                         break;
                     }
 
@@ -127,15 +133,26 @@ public sealed class Usdm1dBackfillOrchestrator(
                 TouchCheckpoint(checkpoint);
                 await checkpointStore.SaveAsync(checkpoint, cancellationToken).ConfigureAwait(false);
 
-                log.LogWarning(ex, "{Symbol}: backfill failed; recorded error and continuing with next symbol.", symbol);
+                var displaySymbol = await ResolveDisplaySymbolAsync(instrumentId, exchangeSymbol, cancellationToken)
+                    .ConfigureAwait(false);
+                log.LogWarning(ex, "{ExchangeSymbol}: backfill failed; recorded error and continuing with next instrument.", displaySymbol);
             }
         }
     }
 
-    private static void TouchCheckpoint(BackfillCheckpointDocumentV1 checkpoint) =>
+    private async Task<string> ResolveDisplaySymbolAsync(
+        InstrumentId instrumentId,
+        string fallbackSymbol,
+        CancellationToken cancellationToken)
+    {
+        var instrument = await registry.GetByIdAsync(instrumentId, cancellationToken).ConfigureAwait(false);
+        return instrument?.ExchangeSymbol ?? fallbackSymbol;
+    }
+
+    private static void TouchCheckpoint(BackfillCheckpointDocumentV2 checkpoint) =>
         checkpoint.UpdatedAtUtc = DateTimeOffset.UtcNow;
 
-    private static void MarkComplete(BackfillCheckpointSymbolEntryV1 entry)
+    private static void MarkComplete(BackfillCheckpointInstrumentEntryV2 entry)
     {
         entry.Complete = true;
         entry.LastErrorMessage = null;

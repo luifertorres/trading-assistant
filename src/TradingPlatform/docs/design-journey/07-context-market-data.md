@@ -19,12 +19,12 @@ Understand **candle series** as the core concept: identity, persistence boundari
 |---|----------|------------------|
 | 1 | Upsert overlapping bars for same `OpenTime` | Row updated (idempotent on key) |
 | 2 | Read range `from`–`to` | Ordered `OhlcBar` list |
-| 3 | Unknown series | Table created on first write (current infra behavior—validate if you agree) |
+| 3 | Unknown instrument/timeframe | Reject read/write until instrument is registered and timeframe is seeded |
 | 4 | Invalid symbol/timeframe combo | (define: reject vs sanitize vs allow) |
 
 ## Model sketch
 
-- **Entities / VOs:** `SeriesDescriptor`, `OhlcBar` (in Kernel today), physical table naming internal to MarketData.
+- **Entities / VOs:** `Instrument` (registry), kernel `InstrumentId`, `SeriesDescriptor`, `OhlcBar`.
 - **Aggregate / consistency boundary (your call):**
   - Option A: **One aggregate = CandleSeries** keyed by `SeriesDescriptor`; invariant “no two bars with same open time” inside series.
   - Option B: **Series is not a classic aggregate**; SQLite table + upsert is the source of truth; domain is thin.
@@ -39,15 +39,15 @@ Understand **candle series** as the core concept: identity, persistence boundari
 
 ## Infrastructure choices
 
-- **SQLite file** per deployment slice; **per-series physical table** — see [ADRs.md](../ADRs.md) **ADR-002**.
-- Table naming: [SeriesTableNaming.cs](../../src/MarketData/MarketData.Domain/SeriesTableNaming.cs) (not exposed outside MarketData).
+- **SQLite file** per deployment slice; **instrument registry + canonical `candles` table** — see [ADRs.md](../ADRs.md) **ADR-002**.
 
 ## Compare with repo
 
 | Artifact | Path |
 |----------|------|
 | Reader/Writer interfaces | [ICandleSeriesReader.cs](../../src/MarketData/MarketData.Application/ICandleSeriesReader.cs), [ICandleSeriesWriter.cs](../../src/MarketData/MarketData.Application/ICandleSeriesWriter.cs) |
-| SQLite store | [SqlitePerSeriesCandleStore.cs](../../src/MarketData/MarketData.Infrastructure/SqlitePerSeriesCandleStore.cs) |
+| Instrument registry | [SqliteInstrumentRegistry.cs](../../src/MarketData/MarketData.Infrastructure/SqliteInstrumentRegistry.cs) |
+| SQLite candles store | [SqliteCandleStore.cs](../../src/MarketData/MarketData.Infrastructure/SqliteCandleStore.cs) |
 | DI registration | [MarketData.Infrastructure/ServiceCollectionExtensions.cs](../../src/MarketData/MarketData.Infrastructure/ServiceCollectionExtensions.cs) |
 | Kernel shapes used | [SeriesDescriptor.cs](../../src/BuildingBlocks/TradingPlatform.Kernel/SeriesDescriptor.cs), [OhlcBar.cs](../../src/BuildingBlocks/TradingPlatform.Kernel/OhlcBar.cs), [TimeFrameCode.cs](../../src/BuildingBlocks/TradingPlatform.Kernel/TimeFrameCode.cs) |
 
@@ -55,7 +55,7 @@ Understand **candle series** as the core concept: identity, persistence boundari
 
 ## Open questions / ADR candidates
 
-- Challenge ADR-002 if you prefer **one table** + series column for operational simplicity.
+- ADR-002 now uses **one candles table** keyed by `(instrument_id, timeframe_id, open_time_ms)`.
 - Should **feeds** (WebSocket ingest) live in MarketData.Infrastructure or a future Delivery worker?
 
 ## Next doc

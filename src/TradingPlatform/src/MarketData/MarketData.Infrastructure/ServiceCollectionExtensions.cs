@@ -6,12 +6,15 @@ namespace MarketData.Infrastructure;
 
 public static class ServiceCollectionExtensions
 {
-    /// <summary>Registers per-series SQLite store as both reader and writer. Single connection per host lifetime.</summary>
+    /// <summary>Registers instrument registry and canonical candles store against a shared SQLite connection.</summary>
     public static IServiceCollection AddMarketDataSqlite(this IServiceCollection services, string databasePath)
     {
-        services.AddSingleton(_ => new SqlitePerSeriesCandleStore(databasePath));
-        services.AddSingleton<ICandleSeriesReader>(sp => sp.GetRequiredService<SqlitePerSeriesCandleStore>());
-        services.AddSingleton<ICandleSeriesWriter>(sp => sp.GetRequiredService<SqlitePerSeriesCandleStore>());
+        services.AddSingleton(_ => new SqliteMarketDatabase(databasePath));
+        services.AddSingleton<SqliteInstrumentRegistry>();
+        services.AddSingleton<IInstrumentRegistry>(sp => sp.GetRequiredService<SqliteInstrumentRegistry>());
+        services.AddSingleton<SqliteCandleStore>();
+        services.AddSingleton<ICandleSeriesReader>(sp => sp.GetRequiredService<SqliteCandleStore>());
+        services.AddSingleton<ICandleSeriesWriter>(sp => sp.GetRequiredService<SqliteCandleStore>());
         return services;
     }
 
@@ -19,7 +22,8 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddMarketDataBinanceUsdM1dBackfill(this IServiceCollection services, string checkpointFilePath)
     {
         services.AddBinance(options => { options.Rest.RequestTimeout = Timeout.InfiniteTimeSpan; });
-        services.AddSingleton<IBackfillCheckpointStore>(_ => new BackfillCheckpointJsonStore(checkpointFilePath));
+        services.AddSingleton<IBackfillCheckpointStore>(sp =>
+            new BackfillCheckpointJsonStore(checkpointFilePath, sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<BackfillCheckpointJsonStore>>()));
         services.AddSingleton<IUsdM1dBackfillExchange, BinanceUsdM1dBackfillExchange>();
         services.AddSingleton<Usdm1dBackfillOrchestrator>();
         return services;

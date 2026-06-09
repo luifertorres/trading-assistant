@@ -1,12 +1,12 @@
 namespace TradingPlatform.Kernel;
 
-/// <summary>Logical candle series: symbol + timeframe. Physical table name is a MarketData implementation detail.</summary>
-public readonly record struct SeriesDescriptor(string Symbol, TimeFrameCode TimeFrame)
+/// <summary>Logical candle series: instrument + timeframe.</summary>
+public readonly record struct SeriesDescriptor(InstrumentId Instrument, TimeFrameCode TimeFrame)
 {
     public void Validate()
     {
-        if (string.IsNullOrWhiteSpace(Symbol))
-            throw new ArgumentException("Symbol is required.", nameof(Symbol));
+        if (Instrument.Value <= 0)
+            throw new ArgumentException("Instrument id must be positive.", nameof(Instrument));
         if (string.IsNullOrWhiteSpace(TimeFrame.Value))
             throw new ArgumentException("Time frame is required.", nameof(TimeFrame));
     }

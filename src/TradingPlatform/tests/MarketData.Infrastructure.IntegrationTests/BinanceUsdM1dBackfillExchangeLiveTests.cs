@@ -27,7 +27,7 @@ public sealed class BinanceUsdM1dBackfillExchangeLiveTests
         var start = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero);
         var end = DateTimeOffset.UtcNow;
 
-        var bars = await exchange.GetDailyKlinesPageAsync("BTCUSDT", start, end, CancellationToken.None);
+        var bars = await exchange.GetDailyKlinesPageAsync(new BrokerFetchHandle("BTCUSDT"), start, end, CancellationToken.None);
 
         bars.Should().NotBeEmpty();
         for (var i = 1; i < bars.Count; i++)

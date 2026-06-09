@@ -21,19 +21,32 @@ dotnet test src/TradingPlatform/TradingPlatform.slnx
 
 ## Run
 
-**CLI demo** (synthetic bars → per-series SQLite tables → two backtests → analytics rank → portfolio JSON → execution router with logging stub):
+**CLI demo** (seed instrument registry → synthetic bars in canonical `candles` table → two backtests → analytics rank → portfolio JSON → execution router with logging stub):
 
 ```bash
 dotnet run --project src/TradingPlatform/src/Tools/TradingPlatform.Cli -- demo
 ```
 
-**CLI: USD-M 1d candle backfill** (Binance.Net rate limits; checkpoint file under `--data-root`, default `backfill-1d-checkpoint.json`; use separate `--data-root` values for parallel runs):
+**CLI: USD-M 1d candle backfill** (Binance.Net rate limits; **schema v2** checkpoint under `--data-root`, default `backfill-1d-checkpoint.json`; use separate `--data-root` values for parallel runs):
 
 ```bash
 dotnet run --project src/TradingPlatform/src/Tools/TradingPlatform.Cli -- backfill-1d --market-db ./.trading-platform-data/market.sqlite --data-root ./.trading-platform-data --snapshot
 ```
 
 Optional: `--checkpoint <path>` to override the checkpoint file location.
+
+With `--snapshot`, writes `exchangeInfo-usdm-snapshot-{runId}.json` and `instrument-ids-{runId}.json` (exchange symbol → numeric id) under `--data-root`.
+
+### Greenfield after instrument-registry deploy
+
+Delete the old per-series database and v1 checkpoint, then re-run the backfill (full re-download expected):
+
+```powershell
+Remove-Item ./.trading-platform-data/market.sqlite, ./.trading-platform-data/backfill-1d-checkpoint.json -ErrorAction SilentlyContinue
+dotnet run --project src/TradingPlatform/src/Tools/TradingPlatform.Cli -- backfill-1d --market-db ./.trading-platform-data/market.sqlite --data-root ./.trading-platform-data
+```
+
+(`-ErrorAction SilentlyContinue` skips missing files if you already deleted one of them.)
 
 **Host** (composition root + broker ACL stub; blocks until cancelled):
 

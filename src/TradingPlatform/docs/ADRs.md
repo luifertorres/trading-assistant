@@ -8,11 +8,13 @@ Short-lived notes for the parallel `src/TradingPlatform` tree. Revise as you ite
 
 **Rationale:** Matches strategic DDD seams without microservice operational cost for a solo developer.
 
-## ADR-002 — SQLite + per-series candle tables
+## ADR-002 — SQLite instrument registry + canonical candles table
 
-**Decision:** `MarketData` persists each `(Symbol, TimeFrameCode)` series in its own physical table; naming is internal to `MarketData.Domain.SeriesTableNaming`.
+**Decision:** `MarketData` persists instruments in an `instruments` registry (stable kernel `InstrumentId`, unique on venue/market/contract type/exchange symbol) and OHLCV rows in a single `candles` table keyed by `(instrument_id, timeframe_id, open_time_ms)`. `SeriesDescriptor` carries `InstrumentId` + `TimeFrameCode`; other contexts depend only on `ICandleSeriesReader` / `ICandleSeriesWriter` and `IInstrumentRegistry`.
 
-**Rationale:** Aligns with chart-style table names (e.g. `BTCUSDT_1m`, `BTCUSDT_1M`, `ETHUSDT_1D`); other contexts depend only on `ICandleSeriesReader` / `ICandleSeriesWriter`.
+**Rationale:** Decouples domain identity from exchange symbol strings and Unicode table-name edge cases; supports multi-venue expansion without revisiting storage layout.
+
+**Supersedes:** Per-series SQLite tables and `SeriesTableNaming` (removed).
 
 ## ADR-003 — Simulation vs live intent sinks
 
@@ -38,8 +40,8 @@ Short-lived notes for the parallel `src/TradingPlatform` tree. Revise as you ite
 
 **Rationale:** Consistency with existing trading-assistant projects.
 
-## ADR-007 — Temporary exchange-symbol table naming
+## ADR-007 — Exchange symbols are registry metadata, not domain identity
 
-**Decision:** Until `marketdata-instrument-identity-and-candles-registry` replaces raw symbols with kernel `InstrumentId`s and a canonical candles table, `MarketData` continues to render per-series SQLite table names from the exchange symbol plus timeframe. The storage-boundary predicate rejects only characters that are unsafe inside the quoted SQLite identifier form (ASCII control characters and literal double quotes), so valid Binance USD-M symbols such as `龙虾USDT`, `币安人生USDT`, `我踏马来了USDT`, `1000PEPEUSDT`, and `4USDT` are accepted.
+**Decision:** Raw exchange symbols (including Unicode Binance USD-M names) are stored on registry rows as `exchange_symbol` and resolved for logging or operator snapshots. Domain and kernel types use opaque `InstrumentId` only.
 
-**Rationale:** This keeps the current per-series store operational for the USD-M 1d backfill while acknowledging that raw exchange symbols are not the long-term domain identity. The follow-up registry change owns the durable fix.
+**Rationale:** Supersedes the ADR-007 stopgap that widened per-series table naming; identity now lives in the instrument registry (see ADR-002).

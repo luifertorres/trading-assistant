@@ -1,6 +1,6 @@
 using System.Text.Json;
-using Binance.Net.Interfaces.Clients;
 using Binance.Net.Enums;
+using Binance.Net.Interfaces.Clients;
 using MarketData.Application;
 using TradingPlatform.Kernel;
 
@@ -10,29 +10,48 @@ namespace MarketData.Infrastructure;
 public sealed class BinanceUsdM1dBackfillExchange(IBinanceRestClient rest) : IUsdM1dBackfillExchange
 {
     private const int MaxKlinesPerRequest = 1500;
+    private const string Venue = "binance";
+    private const string Market = "usdm";
+    private const string RegistryContractType = "perpetual";
 
-    public async Task<IReadOnlyList<string>> GetActiveUsdtPerpetualSymbolsAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<UsdMInstrumentListing>> ListUsdtPerpetualInstrumentsAsync(
+        CancellationToken cancellationToken = default)
     {
         var result = await rest.UsdFuturesApi.ExchangeData.GetExchangeInfoAsync(cancellationToken).ConfigureAwait(false);
         if (!result.Success || result.Data is null)
             throw new InvalidOperationException($"Exchange info failed: {result.Error?.Message}");
 
+        var seenAt = DateTimeOffset.UtcNow;
         return result.Data.Symbols
             .Where(s => s.Status == SymbolStatus.Trading)
             .Where(s => s.ContractType == ContractType.Perpetual)
             .Where(s => string.Equals(s.QuoteAsset, "USDT", StringComparison.OrdinalIgnoreCase))
-            .Select(s => s.Name)
-            .Distinct(StringComparer.Ordinal)
-            .OrderBy(s => s, StringComparer.Ordinal)
+            .Select(s => new UsdMInstrumentListing(
+                new InstrumentUpsert(
+                    Venue,
+                    Market,
+                    RegistryContractType,
+                    s.Name,
+                    s.BaseAsset,
+                    s.QuoteAsset,
+                    s.Pair,
+                    s.PricePrecision,
+                    s.QuantityPrecision,
+                    JsonSerializer.Serialize(s.Filters),
+                    s.Status.ToString(),
+                    seenAt),
+                new BrokerFetchHandle(s.Name)))
+            .OrderBy(l => l.Upsert.ExchangeSymbol, StringComparer.Ordinal)
             .ToList();
     }
 
     public async Task<IReadOnlyList<OhlcBar>> GetDailyKlinesPageAsync(
-        string symbol,
+        BrokerFetchHandle handle,
         DateTimeOffset startTimeInclusive,
         DateTimeOffset endTimeInclusive,
         CancellationToken cancellationToken = default)
     {
+        var symbol = BrokerFetchHandleUnwrap.Symbol(handle);
         var start = startTimeInclusive.UtcDateTime;
         var end = endTimeInclusive.UtcDateTime;
 
@@ -53,15 +72,27 @@ public sealed class BinanceUsdM1dBackfillExchange(IBinanceRestClient rest) : IUs
             .ToList();
     }
 
-    public async Task WriteExchangeInfoSnapshotAsync(string dataRoot, Guid runId, CancellationToken cancellationToken = default)
+    public async Task WriteExchangeInfoSnapshotAsync(
+        string dataRoot,
+        Guid runId,
+        IReadOnlyDictionary<string, InstrumentId> instrumentIdsByExchangeSymbol,
+        CancellationToken cancellationToken = default)
     {
         Directory.CreateDirectory(dataRoot);
         var result = await rest.UsdFuturesApi.ExchangeData.GetExchangeInfoAsync(cancellationToken).ConfigureAwait(false);
         if (!result.Success || result.Data is null)
             throw new InvalidOperationException($"Exchange info failed: {result.Error?.Message}");
 
-        var path = Path.Combine(dataRoot, $"exchangeInfo-usdm-snapshot-{runId:N}.json");
+        var exchangeInfoPath = Path.Combine(dataRoot, $"exchangeInfo-usdm-snapshot-{runId:N}.json");
         var json = JsonSerializer.Serialize(result.Data, new JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(path, json, cancellationToken).ConfigureAwait(false);
+        await File.WriteAllTextAsync(exchangeInfoPath, json, cancellationToken).ConfigureAwait(false);
+
+        var idMap = instrumentIdsByExchangeSymbol.ToDictionary(
+            kv => kv.Key,
+            kv => kv.Value.Value,
+            StringComparer.Ordinal);
+        var idMapPath = Path.Combine(dataRoot, $"instrument-ids-{runId:N}.json");
+        var idMapJson = JsonSerializer.Serialize(idMap, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(idMapPath, idMapJson, cancellationToken).ConfigureAwait(false);
     }
 }

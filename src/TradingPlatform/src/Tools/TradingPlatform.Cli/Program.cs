@@ -89,6 +89,7 @@ static async Task RunBackfill1dAsync(string[] args)
 static async Task RunDemoAsync(ServiceProvider provider, ILogger log)
 {
     var writer = provider.GetRequiredService<ICandleSeriesWriter>();
+    var registry = provider.GetRequiredService<IInstrumentRegistry>();
     var runner = provider.GetRequiredService<IBacktestRunner>();
     var runRepo = provider.GetRequiredService<ISimulationRunRepository>();
     var analytics = provider.GetRequiredService<IRunAnalytics>();
@@ -97,22 +98,25 @@ static async Task RunDemoAsync(ServiceProvider provider, ILogger log)
     var router = provider.GetRequiredService<PortfolioExecutionRouter>();
     var candles = provider.GetRequiredService<ICandleSeriesReader>();
 
-    var series = new SeriesDescriptor("BTCUSDT", TimeFrameCode.Min1);
+    var instrumentId = await registry.UpsertAsync(new InstrumentUpsert(
+        "binance", "usdm", "perpetual", "BTCUSDT",
+        "BTC", "USDT", "BTCUSDT", 2, 3, "[]", "TRADING", DateTimeOffset.UtcNow)).ConfigureAwait(false);
+    var series = new SeriesDescriptor(instrumentId, TimeFrameCode.Min1);
     var bars = SyntheticBars(count: 40, start: new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
     await writer.UpsertAsync(series, bars).ConfigureAwait(false);
-    log.LogInformation("Seeded {Count} bars into per-series store.", bars.Count);
+    log.LogInformation("Seeded {Count} bars for instrument {InstrumentId}.", bars.Count, instrumentId);
 
     var cfg = new SimulationConfiguration(InitialCapital: 10_000m, FeeBpsPerSide: 4m, PositionNotionalFraction: 0.1m);
     var v1 = new TradingVectorSpec(
         TradingVectorId.New(),
-        "BTCUSDT",
+        instrumentId,
         TimeFrameCode.Min1,
         PositionSide.Long,
         "FixedWindow",
         new Dictionary<string, string> { ["enterBar"] = "3", ["exitBar"] = "12" });
     var v2 = new TradingVectorSpec(
         TradingVectorId.New(),
-        "BTCUSDT",
+        instrumentId,
         TimeFrameCode.Min1,
         PositionSide.Long,
         "FixedWindow",

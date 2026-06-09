@@ -2,9 +2,9 @@ using System.Text.Json.Serialization;
 
 namespace MarketData.Application;
 
-public sealed class BackfillCheckpointDocumentV1
+public sealed class BackfillCheckpointDocumentV2
 {
-    public int SchemaVersion { get; set; } = 1;
+    public int SchemaVersion { get; set; } = 2;
 
     public Guid RunId { get; set; }
 
@@ -13,12 +13,12 @@ public sealed class BackfillCheckpointDocumentV1
     /// <summary>Full normalized path; resume only when it matches the current run.</summary>
     public string MarketDatabasePath { get; set; } = "";
 
-    public List<BackfillCheckpointSymbolEntryV1> Symbols { get; set; } = [];
+    public List<BackfillCheckpointInstrumentEntryV2> Instruments { get; set; } = [];
 }
 
-public sealed class BackfillCheckpointSymbolEntryV1
+public sealed class BackfillCheckpointInstrumentEntryV2
 {
-    public string Symbol { get; set; } = "";
+    public long InstrumentId { get; set; }
 
     public bool Complete { get; set; }
 
