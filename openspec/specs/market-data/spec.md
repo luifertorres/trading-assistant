@@ -1,3 +1,5 @@
+> **Status:** Legacy reference — TradingAssistant / CandlestickData. Do not extend for new TradingPlatform features.
+
 ## Purpose
 
 Defines the market data model and technical indicator calculation capabilities that power all trading strategies.

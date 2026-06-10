@@ -12,6 +12,8 @@ For **fast / routine** work, **bypass** this document: go straight to the right 
 | Bugfix or small change in existing bot | Matching layer under `src/TradingAssistant/**/AGENTS.md` | Legacy path; see root `AGENTS.md` for EF and Binance boundaries. |
 | Backtesting CLI / MVP only | `src/Backtesting/README.md` | Isolated from main host. |
 | OpenSpec change already named and scoped | `openspec/changes/<name>/` artifacts | Use bypass commands; do not re-plan from scratch unless blocked. |
+| **New** OpenSpec feature (greenfield) | [openspec/README.md](../../openspec/README.md), `openspec/specs/trading-platform-*` | `/opsx:new` with `trading-platform-…` prefix; never `/opsx:apply` archived legacy changes to Platform. |
+| Legacy behavior reference (strategies, risk, CandlestickData) | Archived change under `openspec/changes/archive/`, legacy main specs | `src/TradingAssistant/`; specs marked **Legacy reference** in `openspec/specs/`. |
 
 ## Cross-cutting “paired change” hints
 

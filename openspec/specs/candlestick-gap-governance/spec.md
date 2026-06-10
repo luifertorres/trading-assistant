@@ -1,3 +1,5 @@
+> **Status:** Legacy reference — TradingAssistant / CandlestickData. Do not extend for new TradingPlatform features.
+
 ## Purpose
 
 Defines detection, classification, and operational handling of missing-candle gaps, including integrity flags for downstream consumers. Ensures trading signal processing can be suspended when data integrity is compromised.

@@ -36,14 +36,15 @@ Cross-context dependencies exist (example: Execution Application references Rese
 - **Infrastructure**: adapters, persistence, external APIs.
 - **Host / Cli**: composition roots, configuration, process lifetime.
 
-## OpenSpec (repo-wide)
+## OpenSpec (Platform primary)
 
-Same OpenSpec layout as the repository root:
+Read the two-track map: [openspec/README.md](../../openspec/README.md).
 
-- Main specs: `openspec/specs/<capability>/spec.md`
-- Changes: `openspec/changes/<change-name>/`
+- **Canonical Platform specs:** `openspec/specs/trading-platform-*/spec.md` (MarketData today; Research simulation as it lands).
+- **Active changes:** `openspec/changes/<name>/` — use names prefixed `trading-platform-…` for new work.
+- **Legacy specs** (`architecture`, `trading-strategies`, etc.) document `src/TradingAssistant/` only; do not extend them for Platform features.
 
-Use `/opsx:apply <change-name>` (or other `opsx` commands) when doing spec-driven work that applies to Platform features. Platform-specific deltas should still live under `openspec/changes/…` unless you are updating main specs intentionally (`/opsx:sync`).
+Use `/opsx:new` to start Platform changes, then `/opsx:apply`, `/opsx:sync`, `/opsx:archive` as usual. Archived legacy proposals live under `openspec/changes/archive/` with `LEGACY.md`.
 
 ## Repo-wide agent context
 

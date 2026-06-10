@@ -1,3 +1,5 @@
+> **Status:** Legacy reference — TradingAssistant / CandlestickData. Do not extend for new TradingPlatform features.
+
 ## Purpose
 
 Defines the independent Candlestick Data API that owns historical and realtime candlestick ingestion, persistence, and retrieval. This service is the canonical clock for trading and enables the main app to start quickly while market data ingestion runs asynchronously.

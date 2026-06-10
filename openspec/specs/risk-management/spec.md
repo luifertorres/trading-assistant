@@ -1,3 +1,5 @@
+> **Status:** Legacy reference — TradingAssistant / CandlestickData. Do not extend for new TradingPlatform features.
+
 ## Purpose
 
 Defines the risk management capabilities that protect positions from excessive loss and lock in profits. Currently implemented as independent BackgroundService workers.

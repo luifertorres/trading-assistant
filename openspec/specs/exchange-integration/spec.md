@@ -1,3 +1,5 @@
+> **Status:** Legacy reference — TradingAssistant / CandlestickData. Do not extend for new TradingPlatform features.
+
 ## Purpose
 
 Defines the exchange integration capabilities. The system connects to Binance Futures via REST and WebSocket APIs, abstracted behind `IExchangeService` to support future multi-broker scenarios.

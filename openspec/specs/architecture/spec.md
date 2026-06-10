@@ -1,3 +1,5 @@
+> **Status:** Legacy reference — TradingAssistant / CandlestickData. Do not extend for new TradingPlatform features.
+
 ## Purpose
 
 Defines the architectural constraints, layer responsibilities, and dependency rules for the trading-assistant system. All other capabilities must conform to these rules.

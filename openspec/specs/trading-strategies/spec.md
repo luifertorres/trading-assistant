@@ -1,3 +1,5 @@
+> **Status:** Legacy reference — TradingAssistant / CandlestickData. Do not extend for new TradingPlatform features.
+
 ## Purpose
 
 Defines the trading strategy capabilities of the system. Strategies detect technical signals and generate trade requests based on indicator conditions and market data.
