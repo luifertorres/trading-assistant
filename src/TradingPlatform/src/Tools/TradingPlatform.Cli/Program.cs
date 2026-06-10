@@ -1,4 +1,5 @@
-﻿using Analytics.Application;
+﻿using TradingPlatform.Cli;
+using Analytics.Application;
 using Analytics.Infrastructure;
 using Execution.Application;
 using Execution.Infrastructure;
@@ -18,6 +19,22 @@ var cmd = args.Length > 0 ? args[0] : "demo";
 if (cmd.Equals("backfill-1d", StringComparison.OrdinalIgnoreCase))
 {
     await RunBackfill1dAsync(args).ConfigureAwait(false);
+    return;
+}
+
+if (cmd.Equals("backtest", StringComparison.OrdinalIgnoreCase))
+{
+    try
+    {
+        var outcome = await BacktestCommand.RunAsync(BacktestArgs.Parse(args)).ConfigureAwait(false);
+        Environment.Exit(outcome.ExitCode);
+    }
+    catch (ArgumentException ex)
+    {
+        Console.Error.WriteLine(ex.Message);
+        Environment.Exit(1);
+    }
+
     return;
 }
 
@@ -49,7 +66,10 @@ switch (cmd.ToLowerInvariant())
         await RunDemoAsync(provider, log).ConfigureAwait(false);
         break;
     default:
-        log.LogInformation("Usage: TradingPlatform.Cli [demo|backfill-1d] …");
+        log.LogInformation(
+            "Usage: TradingPlatform.Cli [demo|backfill-1d|backtest] … — " +
+            "backtest: {BacktestUsage}",
+            BacktestArgs.Usage);
         break;
 }
 

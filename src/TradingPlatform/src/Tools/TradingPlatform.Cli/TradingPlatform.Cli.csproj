@@ -7,6 +7,9 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.1" />
   </ItemGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="TradingPlatform.Cli.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\Analytics\Analytics.Infrastructure\Analytics.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Execution\Execution.Application\Execution.Application.csproj" />
     <ProjectReference Include="..\..\Execution\Execution.Infrastructure\Execution.Infrastructure.csproj" />

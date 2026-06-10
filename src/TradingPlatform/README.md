@@ -18,6 +18,7 @@ dotnet test src/TradingPlatform/TradingPlatform.slnx
 
 - **Unit tests** (domain/kernel invariants): `tests/MarketData.Domain.Tests/`
 - **Integration tests** (optional live Binance USD-M REST): `tests/MarketData.Infrastructure.IntegrationTests/` — set `RUN_TRADINGPLATFORM_LIVE_BINANCE=1` to run the network test; see that folder’s `README.md`.
+- **CLI backtest tests**: `tests/TradingPlatform.Cli.Tests/`
 
 ## Run
 
@@ -47,6 +48,28 @@ dotnet run --project src/TradingPlatform/src/Tools/TradingPlatform.Cli -- backfi
 ```
 
 (`-ErrorAction SilentlyContinue` skips missing files if you already deleted one of them.)
+
+**CLI: backtest on persisted Day1 data** (requires prior `backfill-1d` for the target symbol):
+
+```bash
+dotnet run --project src/TradingPlatform/src/Tools/TradingPlatform.Cli -- backtest \
+  --market-db ./.trading-platform-data/market.sqlite \
+  --symbol BTCUSDT \
+  --enter-bar 5 --exit-bar 15
+```
+
+| Flag | Required | Default | Description |
+|------|----------|---------|-------------|
+| `--market-db` | yes | — | SQLite path from `backfill-1d` (instruments + candles) |
+| `--research-db` | no | `./.trading-platform-data/research.sqlite` | Simulation run persistence DB |
+| `--symbol` | no | `BTCUSDT` | Exchange symbol (must exist in registry) |
+| `--from` / `--to` | no | all bars | UTC ISO-8601 open-time filter |
+| `--strategy` | no | `FixedWindow` | Strategy kind (only `FixedWindow` today) |
+| `--enter-bar` / `--exit-bar` | no | `5` / `15` | 0-based bar indices for `FixedWindow` |
+| `--initial-capital` | no | `10000` | Starting capital |
+| `--fee-bps` | no | `4` | Fee in basis points per side |
+| `--position-fraction` | no | `0.1` | Position notional fraction of initial capital |
+| `--save` | no | off | Persist `SimulationRunResult` to research DB |
 
 **Host** (composition root + broker ACL stub; blocks until cancelled):
 

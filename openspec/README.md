@@ -9,6 +9,7 @@ Two tracks share one `openspec/` tree (required by the OpenSpec CLI). **New feat
 | `trading-platform-marketdata-instrument-registry` | [`src/TradingPlatform/`](../src/TradingPlatform/) MarketData |
 | `trading-platform-marketdata-candles-store` | MarketData |
 | `trading-platform-marketdata-binance-1d-backfill` | MarketData + Cli |
+| `trading-platform-research-backtest-cli` | Research + Cli |
 
 **New changes:** use `/opsx:new` with names prefixed `trading-platform-…`. Implement under `src/TradingPlatform/` only (no references to legacy solutions).
 

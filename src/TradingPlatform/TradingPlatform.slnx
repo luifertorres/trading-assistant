@@ -38,5 +38,6 @@
     <Project Path="tests/MarketData.Application.Tests/MarketData.Application.Tests.csproj" />
     <Project Path="tests/MarketData.Domain.Tests/MarketData.Domain.Tests.csproj" />
     <Project Path="tests/MarketData.Infrastructure.IntegrationTests/MarketData.Infrastructure.IntegrationTests.csproj" />
+    <Project Path="tests/TradingPlatform.Cli.Tests/TradingPlatform.Cli.Tests.csproj" />
   </Folder>
 </Solution>

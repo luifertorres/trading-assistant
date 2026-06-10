@@ -27,6 +27,5 @@ Single place to record **where new work should go** and what is frozen or legacy
 
 ## Open migration notes
 
-- **Done on Platform:** MarketData instrument registry, canonical candles store, USD-M 1d backfill (main specs `trading-platform-marketdata-*`).
+- **Done on Platform:** MarketData instrument registry, canonical candles store, USD-M 1d backfill (main specs `trading-platform-marketdata-*`); Research backtest CLI (`trading-platform-research-backtest-cli`).
 - **Frozen on legacy:** OpenSpec proposals for clean-architecture, multi-broker, event-driven-dca, risk-v2, backtesting-module (archived with `LEGACY.md`).
-- **In progress on Platform:** Research simulation / backtest CLI (`trading-platform-research-backtest-cli` change when active).
