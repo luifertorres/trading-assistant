@@ -36,7 +36,7 @@ List words you will **not** use interchangeably (e.g. “run” vs “backtest�
 ## Compare with repo
 
 - Source of truth for terms: [GLOSSARY.md](../GLOSSARY.md).
-- Types that **encode** language: `TradingVectorSpec`, `PortfolioDefinition`, `SimulationRunResult` under `src/TradingPlatform/src/`.
+- Types that **encode** language: `TradingVectorSpec`, `PortfolioDefinition`, `SimulationRunResult` under `src/platform/TradingPlatform/src/`.
 
 ## Open questions / ADR candidates
 

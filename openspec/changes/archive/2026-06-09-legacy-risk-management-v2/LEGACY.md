@@ -1,6 +1,6 @@
 # Legacy reference — superseded / not planned
 
-**Target:** `src/TradingAssistant/` (`RiskProfile`, unified `RiskEvaluator`, replace Host risk managers).
+**Target:** `src/legacy/TradingAssistant/` (`RiskProfile`, unified `RiskEvaluator`, replace Host risk managers).
 
 **Status:** Unstarted proposal. Archived for reference only.
 

@@ -1,6 +1,6 @@
 ---
 description: Domain-Driven Design conventions for the trading domain
-globs: src/TradingAssistant/TradingAssistant.Domain/**/*.cs, src/TradingAssistant/TradingAssistant.Application/**/*.cs
+globs: src/legacy/TradingAssistant/TradingAssistant.Domain/**/*.cs, src/legacy/TradingAssistant/TradingAssistant.Application/**/*.cs
 alwaysApply: false
 ---
 

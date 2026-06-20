@@ -11,7 +11,7 @@ ISimulationRunRepository ──▶ research.sqlite (optional persist)
 
 The `demo` CLI command bypasses real data by writing synthetic 1m bars and running two hard-coded `FixedWindow` vectors. The `backfill-1d` command populates `market.sqlite` with real USD-M daily history for the full USDT perpetual universe. The missing piece is a **delivery command** that connects backfill output to `IBacktestRunner` without synthetic seeding.
 
-Isolated `src/Backtesting/Backtesting.Mvp` already supports live Binance 1h fetches with a hard-coded RSI engine; that path is **out of scope** — this change stays on the greenfield Platform stack per refactor ledger.
+Isolated `src/mvp/Backtesting/Backtesting.Mvp` already supports live Binance 1h fetches with a hard-coded RSI engine; that path is **out of scope** — this change stays on the greenfield Platform stack per refactor ledger.
 
 ## Goals / Non-Goals
 
@@ -31,7 +31,7 @@ Isolated `src/Backtesting/Backtesting.Mvp` already supports live Binance 1h fetc
 - Additional timeframe backfill (1h, 1m) or live WebSocket ingest.
 - Changes to `BacktestRunner`, `SimulationOrderIntentSink`, or MarketData storage contracts unless a bug blocks wiring.
 - Portfolio composition, analytics ranking, or execution router (remain in `demo`).
-- Project references to `src/Backtesting/` or `src/TradingAssistant/`.
+- Project references to `src/mvp/Backtesting/` or `src/legacy/TradingAssistant/`.
 
 ## Decisions
 
@@ -111,7 +111,7 @@ No CSV equity export in this change (can add `--csv` later).
 ## Migration Plan
 
 1. Ship `backtest` command (no breaking changes to existing verbs).
-2. Update `src/TradingPlatform/README.md` with two-step workflow: `backfill-1d` → `backtest`.
+2. Update `src/platform/TradingPlatform/README.md` with two-step workflow: `backfill-1d` → `backtest`.
 3. Optionally add integration test with in-memory/SQLite fixture bars (no live network).
 
 **Rollback:** Remove command handler; no schema migrations.

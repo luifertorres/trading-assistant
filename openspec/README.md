@@ -6,12 +6,12 @@ Two tracks share one `openspec/` tree (required by the OpenSpec CLI). **New feat
 
 | Main spec capability | Codebase |
 |----------------------|----------|
-| `trading-platform-marketdata-instrument-registry` | [`src/TradingPlatform/`](../src/TradingPlatform/) MarketData |
+| `trading-platform-marketdata-instrument-registry` | [`src/platform/TradingPlatform/`](../src/platform/TradingPlatform/) MarketData |
 | `trading-platform-marketdata-candles-store` | MarketData |
 | `trading-platform-marketdata-binance-1d-backfill` | MarketData + Cli |
 | `trading-platform-research-backtest-cli` | Research + Cli |
 
-**New changes:** use `/opsx:new` with names prefixed `trading-platform-…`. Implement under `src/TradingPlatform/` only (no references to legacy solutions).
+**New changes:** use `/opsx:new` with names prefixed `trading-platform-…`. Implement under `src/platform/TradingPlatform/` only (no references to legacy solutions).
 
 **Shipped changes** live under [`openspec/changes/archive/`](changes/archive/) with date prefixes.
 
@@ -19,12 +19,12 @@ Two tracks share one `openspec/` tree (required by the OpenSpec CLI). **New feat
 
 | Main spec capability | Codebase |
 |----------------------|----------|
-| `architecture` | [`src/TradingAssistant/`](../src/TradingAssistant/) |
+| `architecture` | [`src/legacy/TradingAssistant/`](../src/legacy/TradingAssistant/) |
 | `exchange-integration` | TradingAssistant.Infrastructure |
 | `market-data` | TradingAssistant + CandlestickData integration |
 | `trading-strategies` | TradingAssistant Host strategies |
 | `risk-management` | TradingAssistant Host managers |
-| `candlestick-data-service` | [`CandlestickData.*`](../src/TradingAssistant/) |
+| `candlestick-data-service` | [`CandlestickData.*`](../src/legacy/TradingAssistant/) |
 | `candlestick-gap-governance` | CandlestickData |
 
 These specs are **reference only** for real-time multi-strategy trading. Do not extend them for greenfield Platform work; port intent into new `trading-platform-*` capabilities instead.
@@ -53,7 +53,7 @@ These specs are **reference only** for real-time multi-strategy trading. Do not 
 
 ## Agent routing
 
-- New feature → [`src/TradingPlatform/AGENTS.md`](../src/TradingPlatform/AGENTS.md), then `/opsx:new`
+- New feature → [`src/platform/TradingPlatform/AGENTS.md`](../src/platform/TradingPlatform/AGENTS.md), then `/opsx:new`
 - Legacy bugfix → matching `TradingAssistant/**/AGENTS.md`, read archived change if needed
 - Full routing → [`.cursor/context/routing-map.md`](../.cursor/context/routing-map.md), [`.cursor/context/refactor-ledger.md`](../.cursor/context/refactor-ledger.md)
 

@@ -4,15 +4,15 @@ Isolated backtest loop using **mock `IBinanceKline`** data, **Skender.Stock.Indi
 
 **Binance.Net:** Treat Binance.Net as the **framework** for Binance-specific pieces here (e.g. `IBinanceRestClient`, `KlineInterval`, USD-M klines, exchange info / filters). Prefer library models over hand-copied exchange constants unless you need offline-only tests with fixed numbers.
 
-**Solution:** [`Backtesting.sln`](Backtesting.sln) in this folder contains the three Backtesting projects (separate from [`TradingAssistant.sln`](../TradingAssistant/TradingAssistant.sln)).
+**Solution:** [`Backtesting.sln`](Backtesting.sln) in this folder contains the three Backtesting projects (separate from [`TradingAssistant.sln`](../../legacy/TradingAssistant/TradingAssistant.sln)).
 
 ## Build / test (solution)
 
 From repo root:
 
 ```bash
-dotnet build src/Backtesting/Backtesting.sln
-dotnet test src/Backtesting/Backtesting.sln
+dotnet build src/mvp/Backtesting/Backtesting.sln
+dotnet test src/mvp/Backtesting/Backtesting.sln
 ```
 
 ## Run
@@ -20,26 +20,26 @@ dotnet test src/Backtesting/Backtesting.sln
 From repo root (or any path):
 
 ```bash
-dotnet run --project src/Backtesting/Backtesting.Mvp.Cli/Backtesting.Mvp.Cli.csproj
+dotnet run --project src/mvp/Backtesting/Backtesting.Mvp.Cli/Backtesting.Mvp.Cli.csproj
 ```
 
 Optional equity CSV:
 
 ```bash
-dotnet run --project src/Backtesting/Backtesting.Mvp.Cli/Backtesting.Mvp.Cli.csproj -- --csv equity.csv
+dotnet run --project src/mvp/Backtesting/Backtesting.Mvp.Cli/Backtesting.Mvp.Cli.csproj -- --csv equity.csv
 ```
 
 ## Tests (project only)
 
 ```bash
-dotnet test src/Backtesting/Backtesting.Mvp.Tests/Backtesting.Mvp.Tests.csproj
+dotnet test src/mvp/Backtesting/Backtesting.Mvp.Tests/Backtesting.Mvp.Tests.csproj
 ```
 
 ## References
 
 - [Binance USDⓈ-M Futures — General Info](https://developers.binance.com/docs/derivatives/usds-margined-futures/general-info) (REST ordering, timestamps, limits)
 - [Binance.Net (JKorf)](https://github.com/JKorf/Binance.Net) — `IBinanceKline`, clients, enums
-- In-repo patterns: `Rsi5RealtimeIndicatorTracker`, `CandleExtensions` under `src/TradingAssistant/TradingAssistant/` (quotes from klines)
+- In-repo patterns: `Rsi5RealtimeIndicatorTracker`, `CandleExtensions` under `src/legacy/TradingAssistant/TradingAssistant/` (quotes from klines)
 
 ## Strategy (MVP)
 

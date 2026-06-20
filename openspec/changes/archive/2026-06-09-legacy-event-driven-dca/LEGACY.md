@@ -1,6 +1,6 @@
 # Legacy reference — superseded / not planned
 
-**Target:** `src/TradingAssistant/` (decompose `TradeHandler`, DCA event bus, exposure guard).
+**Target:** `src/legacy/TradingAssistant/` (decompose `TradeHandler`, DCA event bus, exposure guard).
 
 **Status:** Unstarted proposal. Archived for reference only.
 

@@ -19,9 +19,9 @@
 
 - [x] 3.1 Add CLI or application-level test: seed registry + `Day1` bars in temp SQLite, run backtest logic (extract handler to testable static if needed), assert non-zero trades for `FixedWindow` with valid enter/exit indices.
 - [x] 3.2 Add test for missing instrument (non-zero exit / exception) and empty bar series.
-- [x] 3.3 Run `dotnet build src/TradingPlatform/TradingPlatform.slnx` and `dotnet test` on affected test projects.
+- [x] 3.3 Run `dotnet build src/platform/TradingPlatform/TradingPlatform.slnx` and `dotnet test` on affected test projects.
 
 ## 4. Documentation
 
-- [x] 4.1 Update `src/TradingPlatform/README.md` with `backtest` command example, flag table, and two-step workflow (`backfill-1d` then `backtest` for `BTCUSDT`).
+- [x] 4.1 Update `src/platform/TradingPlatform/README.md` with `backtest` command example, flag table, and two-step workflow (`backfill-1d` then `backtest` for `BTCUSDT`).
 - [x] 4.2 Update `TradingPlatform.Cli` usage string in `Program.cs` to list `backtest` flags at a high level.

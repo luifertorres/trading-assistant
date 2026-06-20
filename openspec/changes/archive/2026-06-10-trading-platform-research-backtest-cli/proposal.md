@@ -21,7 +21,7 @@ TradingPlatform Research already has `IBacktestRunner`, simulation models, and a
 
 ## Impact
 
-- **Code:** `src/TradingPlatform/src/Tools/TradingPlatform.Cli/` (new `backtest` command and argument parsing), minor README updates; no changes required to `BacktestRunner` unless gaps surface during wiring.
+- **Code:** `src/platform/TradingPlatform/src/Tools/TradingPlatform.Cli/` (new `backtest` command and argument parsing), minor README updates; no changes required to `BacktestRunner` unless gaps surface during wiring.
 - **Dependencies:** Reuses existing Research and MarketData DI extensions (`AddMarketDataSqlite`, `AddResearchInfrastructure`).
 - **Data:** Reads `market.sqlite` (candles + instrument registry) and optionally writes `research.sqlite` (simulation runs).
 - **Operations:** Requires prior `backfill-1d` (or equivalent data load) for the target symbol and `TimeFrameCode.Day1`; fails clearly when no bars exist in range.

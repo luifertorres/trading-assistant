@@ -1,6 +1,6 @@
 # Architecture decision records (greenfield TradingPlatform)
 
-Short-lived notes for the parallel `src/TradingPlatform` tree. Revise as you iterate.
+Short-lived notes for the parallel `src/platform/TradingPlatform` tree. Revise as you iterate.
 
 ## ADR-001 — Modular monolith
 

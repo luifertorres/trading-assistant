@@ -6,9 +6,13 @@ Automated trading bot for **Binance Futures (USDT Perpetual)** built with .NET 1
 
 ## Repository routing (read when ambiguous)
 
-**Default for new work:** `[src/TradingPlatform/](src/TradingPlatform/)` — modular monolith by bounded context; **no references** to legacy solutions. Start with `[src/TradingPlatform/AGENTS.md](src/TradingPlatform/AGENTS.md)` and `[src/TradingPlatform/README.md](src/TradingPlatform/README.md)`.
+**Default for new work:** [`src/platform/TradingPlatform/`](src/platform/TradingPlatform/) — modular monolith by bounded context; **no references** to legacy solutions. Start with [`src/platform/TradingPlatform/AGENTS.md`](src/platform/TradingPlatform/AGENTS.md) and [`src/platform/TradingPlatform/README.md`](src/platform/TradingPlatform/README.md).
 
-**Legacy reference:** `[src/TradingAssistant/](src/TradingAssistant/)` — existing Clean Architecture bot. Prefer for **targeted maintenance** in that codebase; avoid growing it when the same capability belongs in TradingPlatform (see `[.cursor/context/refactor-ledger.md](.cursor/context/refactor-ledger.md)`).
+**Legacy reference:** [`src/legacy/TradingAssistant/`](src/legacy/TradingAssistant/) — existing Clean Architecture bot. Prefer for **targeted maintenance** in that codebase; avoid growing it when the same capability belongs in TradingPlatform (see [`.cursor/context/refactor-ledger.md`](.cursor/context/refactor-ledger.md)).
+
+**MVP tooling:** [`src/mvp/Backtesting/`](src/mvp/Backtesting/) — isolated backtest CLI.
+
+**Source tree index:** [`src/README.md`](src/README.md).
 
 **Routing protocol:** infer **intent and blast radius**, not keywords. If the task is cross-cutting, multi-context, or unclear on OpenSpec vs direct implementation, read `[.cursor/context/routing-map.md](.cursor/context/routing-map.md)` first. For a short preflight only, use the **chief-of-staff** skill (`.cursor/skills/chief-of-staff/SKILL.md`).
 
@@ -50,7 +54,7 @@ Host → Infrastructure → Application → Domain
 ## Key Conventions
 
 - **Rich Domain Model**: Entities have behavior, not just data (no anemic models).
-- **Binance.Net as the Binance framework**: For .NET code that talks to Binance (REST, WebSocket, USD-M models), use **Binance.Net** as the supported stack—clients, enums, and API-shaped DTOs from the library rather than parallel hand-rolled models. **Domain and Application** stay broker-agnostic in their **public** types; Infrastructure adapters own Binance.Net. Isolated tools (e.g. `src/Backtesting/`) may use Binance.Net directly for MVPs. See **Binance.Net framework** below and Infrastructure `AGENTS.md`.
+- **Binance.Net as the Binance framework**: For .NET code that talks to Binance (REST, WebSocket, USD-M models), use **Binance.Net** as the supported stack—clients, enums, and API-shaped DTOs from the library rather than parallel hand-rolled models. **Domain and Application** stay broker-agnostic in their **public** types; Infrastructure adapters own Binance.Net. Isolated tools (e.g. `src/mvp/Backtesting/`) may use Binance.Net directly for MVPs. See **Binance.Net framework** below and Infrastructure `AGENTS.md`.
 - **Broker-agnostic domain**: The domain must not grow new dependencies on broker libraries. Legacy `Binance.Net` usage in Domain is scheduled for removal; all new broker specifics live in Infrastructure (or explicit tool projects) behind abstractions at the Application boundary.
 - **MediatR**: Used for in-process messaging (notifications, requests). Registered in Application; host assembly also scans for handlers.
 - **Value Objects**: Use `record` or `readonly struct` for immutability.
@@ -63,7 +67,7 @@ Host → Infrastructure → Application → Domain
 
 Treat **[Binance.Net](https://github.com/JKorf/Binance.Net)** as the **framework** for Binance-facing .NET code: `IBinanceRestClient` / `IBinanceSocketClient`, USD-M APIs under `UsdFuturesApi`, and **models as returned by the API** (e.g. `BinanceFuturesUsdtSymbol`, filters, klines). Prefer library types over re-modeling exchange payloads unless translating **into Domain** or **through Application interfaces** (use domain types there).
 
-**Where it applies:** Infrastructure (`TradingAssistant.Infrastructure`, `CandlestickData.Infrastructure`), Host wiring and any code still coupled to Binance clients, and **Backtesting MVP** (`src/Backtesting/`) for fast tools.
+**Where it applies:** Infrastructure (`TradingAssistant.Infrastructure`, `CandlestickData.Infrastructure`), Host wiring and any code still coupled to Binance clients, and **Backtesting MVP** (`src/mvp/Backtesting/`) for fast tools.
 
 **Where it does not:** Domain and Application **public contracts** stay free of Binance.Net; adapters translate at the boundary. Do not add new Binance.Net usage in Domain (legacy removal in progress).
 
@@ -73,21 +77,24 @@ Cursor rule: `.cursor/rules/binance-net.mdc` (path-scoped hints for Binance and 
 
 ## Solution Structure
 
+See [src/README.md](src/README.md) for build/run commands. Buckets:
+
 ```
-src/TradingPlatform/
-├── TradingPlatform.slnx             → Greenfield DDD modular monolith; see TradingPlatform/README.md and TradingPlatform/AGENTS.md
-└── src/                             → Bounded contexts (MarketData, Research, Analytics, Portfolio, Execution), Kernel, Host, Cli
-
-src/TradingAssistant/
-├── TradingAssistant.sln
-├── TradingAssistant.Domain/         → See Domain/AGENTS.md
-├── TradingAssistant.Application/    → See Application/AGENTS.md
-├── TradingAssistant.Infrastructure/ → See Infrastructure/AGENTS.md
-└── TradingAssistant/                → See Host/AGENTS.md
-
-src/Backtesting/
-├── Backtesting.sln                  → Backtesting.Mvp, Cli, Tests (isolated from main host)
-└── …                                → See Backtesting/README.md
+src/
+├── platform/TradingPlatform/
+│   ├── TradingPlatform.slnx         → Greenfield DDD modular monolith; see README.md and AGENTS.md
+│   └── src/                         → Bounded contexts (MarketData, Research, Analytics, Portfolio, Execution), Kernel, Host, Cli
+│
+├── legacy/TradingAssistant/
+│   ├── TradingAssistant.sln
+│   ├── TradingAssistant.Domain/     → See Domain/AGENTS.md
+│   ├── TradingAssistant.Application/→ See Application/AGENTS.md
+│   ├── TradingAssistant.Infrastructure/ → See Infrastructure/AGENTS.md
+│   └── TradingAssistant/            → See Host/AGENTS.md
+│
+└── mvp/Backtesting/
+    ├── Backtesting.sln              → Backtesting.Mvp, Cli, Tests (isolated from main host)
+    └── …                            → See Backtesting/README.md
 ```
 
 ## Technology Stack
@@ -106,7 +113,7 @@ src/Backtesting/
 
 ## Migrations Policy
 
-Never edit migration files manually. Always run from `src/TradingAssistant/`:
+Never edit migration files manually. Always run from `src/legacy/TradingAssistant/`:
 
 ```bash
 dotnet ef migrations add <Name> --project TradingAssistant.Infrastructure --startup-project TradingAssistant --output-dir Migrations

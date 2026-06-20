@@ -7,8 +7,8 @@
 
 ## Authoritative vocabulary
 
-- **TradingPlatform terms and bounded contexts:** [src/TradingPlatform/docs/GLOSSARY.md](../../src/TradingPlatform/docs/GLOSSARY.md) (e.g. `SeriesDescriptor`, `TimeFrameCode`, `TradingVectorSpec`, broker ACL).
-- **Legacy layer concepts:** per-project `AGENTS.md` under `src/TradingAssistant/` (Domain entities, application orchestration, infrastructure adapters).
+- **TradingPlatform terms and bounded contexts:** [src/platform/TradingPlatform/docs/GLOSSARY.md](../../src/platform/TradingPlatform/docs/GLOSSARY.md) (e.g. `SeriesDescriptor`, `TimeFrameCode`, `TradingVectorSpec`, broker ACL).
+- **Legacy layer concepts:** per-project `AGENTS.md` under `src/legacy/TradingAssistant/` (Domain entities, application orchestration, infrastructure adapters).
 
 ## Risk and operations
 

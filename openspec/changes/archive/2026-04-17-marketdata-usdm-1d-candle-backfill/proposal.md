@@ -22,7 +22,7 @@ TradingPlatform’s MarketData context can persist per-series OHLCV bars, but no
 
 ## Impact
 
-- **Code:** `src/TradingPlatform/src/MarketData/` (new Application ports and/or use cases, Infrastructure Binance adapter), `TradingPlatform.Kernel` (only if new shared types are justified), `TradingPlatform.Cli` and/or `TradingPlatform.Host` (orchestration, DI wiring).
+- **Code:** `src/platform/TradingPlatform/src/MarketData/` (new Application ports and/or use cases, Infrastructure Binance adapter), `TradingPlatform.Kernel` (only if new shared types are justified), `TradingPlatform.Cli` and/or `TradingPlatform.Host` (orchestration, DI wiring).
 - **Dependencies:** **Binance.Net** at the **latest stable** version on MarketData Infrastructure (reconciled with any repo-wide package pin); broker-facing code stays behind Infrastructure per platform rules.
 - **Data:** Growth of `market.sqlite` (or configured path) by **one physical table per symbol** for `1d` series; size bounded by years listed × number of symbols (daily granularity).
 - **Operations:** Long-running job; **API weight/rate limits** are enforced **by Binance.Net** (no separate app delay knob); suitable for manual or scheduled runs, not assumed to run inside tight startup budgets.

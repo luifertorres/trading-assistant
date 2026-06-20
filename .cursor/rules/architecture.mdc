@@ -1,6 +1,6 @@
 ---
 description: Clean Architecture rules for the trading-assistant solution
-globs: src/TradingAssistant/**/*.cs
+globs: src/legacy/TradingAssistant/**/*.cs
 alwaysApply: false
 ---
 

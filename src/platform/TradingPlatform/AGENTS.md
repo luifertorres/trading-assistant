@@ -38,11 +38,11 @@ Cross-context dependencies exist (example: Execution Application references Rese
 
 ## OpenSpec (Platform primary)
 
-Read the two-track map: [openspec/README.md](../../openspec/README.md).
+Read the two-track map: [openspec/README.md](../../../openspec/README.md).
 
 - **Canonical Platform specs:** `openspec/specs/trading-platform-*/spec.md` (MarketData today; Research simulation as it lands).
 - **Active changes:** `openspec/changes/<name>/` — use names prefixed `trading-platform-…` for new work.
-- **Legacy specs** (`architecture`, `trading-strategies`, etc.) document `src/TradingAssistant/` only; do not extend them for Platform features.
+- **Legacy specs** (`architecture`, `trading-strategies`, etc.) document `src/legacy/TradingAssistant/` only; do not extend them for Platform features.
 
 Use `/opsx:new` to start Platform changes, then `/opsx:apply`, `/opsx:sync`, `/opsx:archive` as usual. Archived legacy proposals live under `openspec/changes/archive/` with `LEGACY.md`.
 
@@ -50,5 +50,5 @@ Use `/opsx:new` to start Platform changes, then `/opsx:apply`, `/opsx:sync`, `/o
 
 For **routing** (Platform vs legacy), slash-command bypasses, and paired-change hints, read:
 
-- [.cursor/context/routing-map.md](../../.cursor/context/routing-map.md)
-- [.cursor/context/refactor-ledger.md](../../.cursor/context/refactor-ledger.md)
+- [.cursor/context/routing-map.md](../../../.cursor/context/routing-map.md)
+- [.cursor/context/refactor-ledger.md](../../../.cursor/context/refactor-ledger.md)

@@ -2,8 +2,8 @@
 
 ## 1. Dependencies and build surface
 
-- [x] 1.1 Add **Binance.Net** at the **latest stable** version to `[src/TradingPlatform/src/MarketData/MarketData.Infrastructure/MarketData.Infrastructure.csproj](../../../src/TradingPlatform/src/MarketData/MarketData.Infrastructure/MarketData.Infrastructure.csproj)` only; if the repo’s `AGENTS.md` or other projects pin a different Binance.Net version, reconcile (single version across solutions where practical).
-- [x] 1.2 Ensure `dotnet build src/TradingPlatform/TradingPlatform.slnx` succeeds after the reference.
+- [x] 1.1 Add **Binance.Net** at the **latest stable** version to `[src/platform/TradingPlatform/src/MarketData/MarketData.Infrastructure/MarketData.Infrastructure.csproj](../../../src/platform/TradingPlatform/src/MarketData/MarketData.Infrastructure/MarketData.Infrastructure.csproj)` only; if the repo’s `AGENTS.md` or other projects pin a different Binance.Net version, reconcile (single version across solutions where practical).
+- [x] 1.2 Ensure `dotnet build src/platform/TradingPlatform/TradingPlatform.slnx` succeeds after the reference.
 
 ## 2. Application layer (ports, orchestration)
 
@@ -28,7 +28,7 @@
 
 ## 6. Delivery — CLI
 
-- [x] 6.1 Add a **CLI subcommand** (e.g. `backfill-1d`) on `[TradingPlatform.Cli](../../../src/TradingPlatform/src/Tools/TradingPlatform.Cli/Program.cs)`: wire `**AddMarketDataSqlite`**, backfill service, Binance client with the **same registration as §3.1** (including **infinite HTTP timeout**), argparse for DB path, data root, checkpoint path, optional snapshot flag.
+- [x] 6.1 Add a **CLI subcommand** (e.g. `backfill-1d`) on `[TradingPlatform.Cli](../../../src/platform/TradingPlatform/src/Tools/TradingPlatform.Cli/Program.cs)`: wire `**AddMarketDataSqlite`**, backfill service, Binance client with the **same registration as §3.1** (including **infinite HTTP timeout**), argparse for DB path, data root, checkpoint path, optional snapshot flag.
 - [x] 6.2 **Optional:** write `**exchangeInfo` snapshot JSON** when flag is set (path next to data root as in spec).
 
 ## 7. Verification
@@ -40,4 +40,4 @@
 
 ## 8. Documentation
 
-- [x] 8.1 Document the new command usage, checkpoint file location, and how to run **unit + integration** tests in `[src/TradingPlatform/README.md](../../../src/TradingPlatform/README.md)` (or CLI `--help` + test README—keep one discoverable location).
+- [x] 8.1 Document the new command usage, checkpoint file location, and how to run **unit + integration** tests in `[src/platform/TradingPlatform/README.md](../../../src/platform/TradingPlatform/README.md)` (or CLI `--help` + test README—keep one discoverable location).

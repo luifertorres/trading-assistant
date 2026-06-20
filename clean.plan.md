@@ -1,10 +1,10 @@
 Clean Architecture Refactor Plan (Multi-project, Worker host)
 
 Solution layout
-- src/TradingAssistant/TradingAssistant.Domain
-- src/TradingAssistant/TradingAssistant.Application
-- src/TradingAssistant/TradingAssistant.Infrastructure
-- src/TradingAssistant/TradingAssistant (current host)
+- src/legacy/TradingAssistant/TradingAssistant.Domain
+- src/legacy/TradingAssistant/TradingAssistant.Application
+- src/legacy/TradingAssistant/TradingAssistant.Infrastructure
+- src/legacy/TradingAssistant/TradingAssistant (current host)
 
 Layer dependencies
 - Application -> Domain
@@ -50,7 +50,7 @@ DI summary
 
 Migrations policy
 - Never edit migration files manually.
-- Use dotnet-ef from src/TradingAssistant:
+- Use dotnet-ef from src/legacy/TradingAssistant:
   - dotnet ef migrations add <Name> --project TradingAssistant.Infrastructure --startup-project TradingAssistant --output-dir Migrations
   - dotnet ef database update --project TradingAssistant.Infrastructure --startup-project TradingAssistant
 

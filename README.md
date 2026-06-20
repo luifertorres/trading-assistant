@@ -2,6 +2,14 @@
 
 Bot de trading automatizado para **Binance Futures (USDT Perpetual)** que monitorea el mercado en tiempo real, detecta señales técnicas y ejecuta operaciones automáticamente con gestión de riesgo integrada.
 
+El repositorio contiene tres soluciones bajo `src/` (ver [src/README.md](src/README.md)):
+
+| Bucket | Solución | Uso |
+|--------|----------|-----|
+| `platform/` | TradingPlatform | Monolito modular DDD (desarrollo principal) |
+| `legacy/` | TradingAssistant | Bot en vivo + CandlestickData (mantenimiento) |
+| `mvp/` | Backtesting | Herramienta aislada de backtesting |
+
 ## Características
 
 - Monitoreo de velas (candlesticks) vía WebSocket en tiempo real
@@ -51,7 +59,7 @@ TradingAssistant/
 Usando User Secrets (recomendado para desarrollo):
 
 ```bash
-cd src/TradingAssistant/TradingAssistant
+cd src/legacy/TradingAssistant/TradingAssistant
 dotnet user-secrets set "Binance:Futures:ApiKey" "TU_API_KEY"
 dotnet user-secrets set "Binance:Futures:ApiSecret" "TU_API_SECRET"
 ```
@@ -114,7 +122,7 @@ En `appsettings.json`:
 ### Desarrollo local
 
 ```bash
-cd src/TradingAssistant/TradingAssistant
+cd src/legacy/TradingAssistant/TradingAssistant
 dotnet run
 ```
 
@@ -122,7 +130,9 @@ dotnet run
 
 ```bash
 # Build
-docker build -t trading-assistant -f src/TradingAssistant/TradingAssistant/Dockerfile .
+docker build -t trading-assistant \
+  -f src/legacy/TradingAssistant/TradingAssistant/Dockerfile \
+  src/legacy/TradingAssistant
 
 # Run
 docker run -d \
@@ -155,7 +165,16 @@ El bot incluye múltiples mecanismos de protección:
 ## Estructura del Proyecto
 
 ```
-src/TradingAssistant/
+src/
+├── platform/TradingPlatform/   # Greenfield DDD modular monolith
+├── legacy/TradingAssistant/    # Live bot + CandlestickData
+└── mvp/Backtesting/            # Isolated backtest MVP
+```
+
+Detalle del bot legacy:
+
+```
+src/legacy/TradingAssistant/
 ├── TradingAssistant/
 │   ├── Program.cs                    # Entry point
 │   ├── *Strategy.cs                  # Estrategias de trading

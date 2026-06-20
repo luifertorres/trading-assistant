@@ -10,13 +10,13 @@ To run them locally:
 2. Run:
 
 ```bash
-dotnet test src/TradingPlatform/tests/MarketData.Infrastructure.IntegrationTests/MarketData.Infrastructure.IntegrationTests.csproj
+dotnet test src/platform/TradingPlatform/tests/MarketData.Infrastructure.IntegrationTests/MarketData.Infrastructure.IntegrationTests.csproj
 ```
 
 Or filter by class name:
 
 ```bash
-dotnet test src/TradingPlatform/TradingPlatform.slnx --filter "FullyQualifiedName~BinanceUsdM1dBackfillExchangeLiveTests"
+dotnet test src/platform/TradingPlatform/TradingPlatform.slnx --filter "FullyQualifiedName~BinanceUsdM1dBackfillExchangeLiveTests"
 ```
 
 No API keys are required for market-data endpoints used by these tests.

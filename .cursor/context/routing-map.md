@@ -6,14 +6,14 @@ For **fast / routine** work, **bypass** this document: go straight to the right 
 
 ## Default: which solution?
 
-| Situation | Read first | Notes |
-|-----------|------------|--------|
-| New feature, new module, DDD/context work | `src/TradingPlatform/AGENTS.md`, `src/TradingPlatform/README.md` | No references to legacy solutions. |
-| Bugfix or small change in existing bot | Matching layer under `src/TradingAssistant/**/AGENTS.md` | Legacy path; see root `AGENTS.md` for EF and Binance boundaries. |
-| Backtesting CLI / MVP only | `src/Backtesting/README.md` | Isolated from main host. |
-| OpenSpec change already named and scoped | `openspec/changes/<name>/` artifacts | Use bypass commands; do not re-plan from scratch unless blocked. |
-| **New** OpenSpec feature (greenfield) | [openspec/README.md](../../openspec/README.md), `openspec/specs/trading-platform-*` | `/opsx:new` with `trading-platform-…` prefix; never `/opsx:apply` archived legacy changes to Platform. |
-| Legacy behavior reference (strategies, risk, CandlestickData) | Archived change under `openspec/changes/archive/`, legacy main specs | `src/TradingAssistant/`; specs marked **Legacy reference** in `openspec/specs/`. |
+| Situation | Bucket | Read first | Notes |
+|-----------|--------|------------|--------|
+| New feature, new module, DDD/context work | `platform` | `src/platform/TradingPlatform/AGENTS.md`, `src/platform/TradingPlatform/README.md` | No references to legacy solutions. |
+| Bugfix or small change in existing bot | `legacy` | Matching layer under `src/legacy/TradingAssistant/**/AGENTS.md` | Legacy path; see root `AGENTS.md` for EF and Binance boundaries. |
+| Backtesting CLI / MVP only | `mvp` | `src/mvp/Backtesting/README.md` | Isolated from main host. |
+| OpenSpec change already named and scoped | — | `openspec/changes/<name>/` artifacts | Use bypass commands; do not re-plan from scratch unless blocked. |
+| **New** OpenSpec feature (greenfield) | `platform` | [openspec/README.md](../../openspec/README.md), `openspec/specs/trading-platform-*` | `/opsx:new` with `trading-platform-…` prefix; never `/opsx:apply` archived legacy changes to Platform. |
+| Legacy behavior reference (strategies, risk, CandlestickData) | `legacy` | Archived change under `openspec/changes/archive/`, legacy main specs | `src/legacy/TradingAssistant/`; specs marked **Legacy reference** in `openspec/specs/`. |
 
 ## Cross-cutting “paired change” hints
 

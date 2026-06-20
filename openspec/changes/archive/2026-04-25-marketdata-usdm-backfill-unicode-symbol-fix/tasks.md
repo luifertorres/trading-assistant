@@ -25,7 +25,7 @@
 
 ## 5. Documentation
 
-[x] 5.1 Add a short ADR entry in `src/TradingPlatform/docs/ADRs.md` documenting the temporary raw-symbol storage-name approach, the relaxed predicate, and the follow-up `marketdata-instrument-identity-and-candles-registry` change.
+[x] 5.1 Add a short ADR entry in `src/platform/TradingPlatform/docs/ADRs.md` documenting the temporary raw-symbol storage-name approach, the relaxed predicate, and the follow-up `marketdata-instrument-identity-and-candles-registry` change.
 
 ## 6. Verification
 

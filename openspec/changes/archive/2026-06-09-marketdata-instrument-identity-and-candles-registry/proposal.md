@@ -30,21 +30,21 @@ Today the USD-M backfill smears one concept across three layers: the raw exchang
 ## Impact
 
 - **Code — new:**
-  - `src/TradingPlatform/src/BuildingBlocks/TradingPlatform.Kernel/InstrumentId.cs` — opaque wrapper (record struct over `long` or `Guid`; decision belongs in `design.md`).
-  - `src/TradingPlatform/src/MarketData/MarketData.Domain/Instrument.cs` — domain entity with the registry fields listed above.
-  - `src/TradingPlatform/src/MarketData/MarketData.Application/IInstrumentRegistry.cs` — `UpsertAsync(InstrumentUpsert)`, `GetByIdAsync`, `GetByExchangeSymbolAsync(venue, market, contractType, symbol)`, `ListAllAsync`.
-  - `src/TradingPlatform/src/MarketData/MarketData.Infrastructure/SqliteInstrumentRegistry.cs` — `instruments` table + DDL.
-  - `src/TradingPlatform/src/MarketData/MarketData.Infrastructure/SqliteCandleStore.cs` — `candles` + `timeframes` tables; implements `ICandleSeriesReader` and `ICandleSeriesWriter`.
+  - `src/platform/TradingPlatform/src/BuildingBlocks/TradingPlatform.Kernel/InstrumentId.cs` — opaque wrapper (record struct over `long` or `Guid`; decision belongs in `design.md`).
+  - `src/platform/TradingPlatform/src/MarketData/MarketData.Domain/Instrument.cs` — domain entity with the registry fields listed above.
+  - `src/platform/TradingPlatform/src/MarketData/MarketData.Application/IInstrumentRegistry.cs` — `UpsertAsync(InstrumentUpsert)`, `GetByIdAsync`, `GetByExchangeSymbolAsync(venue, market, contractType, symbol)`, `ListAllAsync`.
+  - `src/platform/TradingPlatform/src/MarketData/MarketData.Infrastructure/SqliteInstrumentRegistry.cs` — `instruments` table + DDL.
+  - `src/platform/TradingPlatform/src/MarketData/MarketData.Infrastructure/SqliteCandleStore.cs` — `candles` + `timeframes` tables; implements `ICandleSeriesReader` and `ICandleSeriesWriter`.
 - **Code — changed:**
-  - `src/TradingPlatform/src/BuildingBlocks/TradingPlatform.Kernel/SeriesDescriptor.cs` — identity shifts to `InstrumentId`.
-  - `src/TradingPlatform/src/BuildingBlocks/TradingPlatform.Kernel/TradingVectorSpec.cs` — `Symbol` → `InstrumentId`.
-  - `src/TradingPlatform/src/MarketData/MarketData.Infrastructure/BinanceUsdM1dBackfillExchange.cs` — returns registry upsert inputs (venue/market/contractType/exchangeSymbol/base/quote/pair/precisions/filters/status) instead of bare `string`s.
-  - `src/TradingPlatform/src/MarketData/MarketData.Application/IUsdM1dBackfillExchange.cs` — `GetActiveUsdtPerpetualSymbolsAsync` replaced by `ListUsdtPerpetualInstrumentsAsync` returning broker-agnostic DTOs for registry upsert; `GetDailyKlinesPageAsync` accepts a resolved broker-specific handle rather than a raw string, keeping exchange strings out of Application public types.
-  - `src/TradingPlatform/src/MarketData/MarketData.Application/Usdm1dBackfillOrchestrator.cs` — universe upsert → instrument-id loop → writer; no `SeriesTableNaming` call.
-  - `src/TradingPlatform/src/MarketData/MarketData.Application/BackfillCheckpointDocumentV2.cs` — keyed by `InstrumentId`, retains `LastWrittenOpenTimeMs` + `Complete`.
+  - `src/platform/TradingPlatform/src/BuildingBlocks/TradingPlatform.Kernel/SeriesDescriptor.cs` — identity shifts to `InstrumentId`.
+  - `src/platform/TradingPlatform/src/BuildingBlocks/TradingPlatform.Kernel/TradingVectorSpec.cs` — `Symbol` → `InstrumentId`.
+  - `src/platform/TradingPlatform/src/MarketData/MarketData.Infrastructure/BinanceUsdM1dBackfillExchange.cs` — returns registry upsert inputs (venue/market/contractType/exchangeSymbol/base/quote/pair/precisions/filters/status) instead of bare `string`s.
+  - `src/platform/TradingPlatform/src/MarketData/MarketData.Application/IUsdM1dBackfillExchange.cs` — `GetActiveUsdtPerpetualSymbolsAsync` replaced by `ListUsdtPerpetualInstrumentsAsync` returning broker-agnostic DTOs for registry upsert; `GetDailyKlinesPageAsync` accepts a resolved broker-specific handle rather than a raw string, keeping exchange strings out of Application public types.
+  - `src/platform/TradingPlatform/src/MarketData/MarketData.Application/Usdm1dBackfillOrchestrator.cs` — universe upsert → instrument-id loop → writer; no `SeriesTableNaming` call.
+  - `src/platform/TradingPlatform/src/MarketData/MarketData.Application/BackfillCheckpointDocumentV2.cs` — keyed by `InstrumentId`, retains `LastWrittenOpenTimeMs` + `Complete`.
 - **Code — removed:**
-  - `src/TradingPlatform/src/MarketData/MarketData.Domain/SeriesTableNaming.cs`
-  - `src/TradingPlatform/src/MarketData/MarketData.Infrastructure/SqlitePerSeriesCandleStore.cs`
+  - `src/platform/TradingPlatform/src/MarketData/MarketData.Domain/SeriesTableNaming.cs`
+  - `src/platform/TradingPlatform/src/MarketData/MarketData.Infrastructure/SqlitePerSeriesCandleStore.cs`
   - Associated tests under `tests/MarketData.Domain.Tests/SeriesTableNamingTests.cs`.
 - **Dependencies:** No new NuGet packages. Binance.Net stays at the same version pinned by the existing infrastructure project.
 - **Data:** Greenfield. Operators delete `.trading-platform-data/market.sqlite` (or point the CLI at a fresh `--market-db`) and re-run the backfill. The previous checkpoint file is not read; a clean v2 checkpoint is written. No migration script is provided — this is an explicit non-goal.

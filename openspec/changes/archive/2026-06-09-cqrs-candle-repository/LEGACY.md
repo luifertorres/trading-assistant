@@ -1,6 +1,6 @@
 # Legacy reference — shipped
 
-**Target:** `src/TradingAssistant/CandlestickData.*` (independent Candlestick Data API).
+**Target:** `src/legacy/TradingAssistant/CandlestickData.*` (independent Candlestick Data API).
 
 **Status:** Implemented; main specs synced (`candlestick-data-service`, `candlestick-gap-governance`, and related deltas).
 

@@ -16,12 +16,12 @@ Use this skill when the user asks to:
 
 ### 1. Check if Test Project Exists
 
-Look for `*.Tests.csproj` files in `src/TradingAssistant/`. If none exist, create the test project first.
+Look for `*.Tests.csproj` files in `src/legacy/TradingAssistant/`. If none exist, create the test project first.
 
 ### 2. Create Test Project (if needed)
 
 ```bash
-cd src/TradingAssistant
+cd src/legacy/TradingAssistant
 dotnet new xunit -n TradingAssistant.Domain.Tests
 dotnet sln add TradingAssistant.Domain.Tests
 cd TradingAssistant.Domain.Tests
@@ -104,7 +104,7 @@ exchangeService.GetPositionsAsync(Arg.Any<CancellationToken>())
 ### 6. Run Tests
 
 ```bash
-cd src/TradingAssistant
+cd src/legacy/TradingAssistant
 dotnet test                              # Run all tests
 dotnet test --filter "FullyQualifiedName~Domain"  # Run domain tests only
 dotnet test --verbosity normal           # Detailed output

@@ -98,5 +98,5 @@ Platform documentation SHALL describe the two-step workflow: run `backfill-1d` t
 
 #### Scenario: README workflow
 
-- **WHEN** an operator consults `src/TradingPlatform/README.md`
+- **WHEN** an operator consults `src/platform/TradingPlatform/README.md`
 - **THEN** it MUST document the `backtest` command, its required flags, and the dependency on prior `backfill-1d` (or equivalent data load)
