@@ -1,3 +1,5 @@
+> **Status: archived.** See [archive README](README.md) for current guidance.
+
 # Event-Driven Trading Architecture Plan
 
 ## Goals
@@ -118,5 +120,5 @@
 ## Notas Finales
 - Mantener contratos inmutables y versionados para permitir replays.
 - Monitorear métricas por evento (tiempo en cola, rechazos).
-- Documentar políticas en `ARCHITECTURE.md` una vez estabilice el pipeline.
+- Documentar políticas en [architecture-preferences.md](architecture-preferences.md) una vez estabilice el pipeline (superseded by Platform ADRs and engineering-principles).
 

@@ -1,3 +1,5 @@
+> **Status: archived.** See [archive README](README.md) for current guidance.
+
 # Backtesting Strategic DDD Plan
 
 ## 1. Vision General

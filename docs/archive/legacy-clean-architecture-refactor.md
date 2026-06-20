@@ -1,3 +1,5 @@
+> **Status: archived.** See [archive README](README.md) for current guidance.
+
 Clean Architecture Refactor Plan (Multi-project, Worker host)
 
 Solution layout

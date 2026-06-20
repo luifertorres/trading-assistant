@@ -81,7 +81,28 @@ dotnet run --project src/platform/TradingPlatform/src/Hosts/TradingPlatform.Host
 
 - [ADRs](docs/ADRs.md)
 - [Glossary / ubiquitous language](docs/GLOSSARY.md)
-- [Design journey — DDD workbook (step-by-step)](docs/design-journey/00-how-to-use-this-trail.md)
+- [Design journey — DDD workbook](docs/design-journey/00-how-to-use-this-trail.md)
+
+Design journey steps:
+
+| # | Topic |
+|---|--------|
+| [00](docs/design-journey/00-how-to-use-this-trail.md) | How to use this trail |
+| [01](docs/design-journey/01-problem-space-and-outcomes.md) | Problem space and outcomes |
+| [02](docs/design-journey/02-event-storming-big-picture.md) | Event storming (big picture) |
+| [03](docs/design-journey/03-subdomains-and-bounded-contexts.md) | Subdomains and bounded contexts |
+| [04](docs/design-journey/04-context-map.md) | Context map |
+| [05](docs/design-journey/05-ubiquitous-language-and-glossary-diff.md) | Ubiquitous language and glossary diff |
+| [06](docs/design-journey/06-tactical-ddd-cross-cutting.md) | Tactical DDD cross-cutting |
+| [07](docs/design-journey/07-context-market-data.md) | Context: MarketData |
+| [08](docs/design-journey/08-context-research.md) | Context: Research |
+| [09](docs/design-journey/09-context-analytics.md) | Context: Analytics |
+| [10](docs/design-journey/10-context-portfolio.md) | Context: Portfolio |
+| [11](docs/design-journey/11-context-execution.md) | Context: Execution |
+| [12](docs/design-journey/12-delivery-host-and-cli.md) | Delivery: Host and CLI |
+| [13](docs/design-journey/13-end-to-end-alignment-review.md) | End-to-end alignment review |
+
+Repository documentation hub: [docs/README.md](../../../docs/README.md).
 
 ## Data
 

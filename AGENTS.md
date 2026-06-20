@@ -4,6 +4,8 @@
 
 Automated trading bot for **Binance Futures (USDT Perpetual)** built with .NET 10 and C# 13. Monitors the market in real-time, detects technical signals, and executes trades with integrated risk management.
 
+Human documentation: [docs/README.md](docs/README.md).
+
 ## Repository routing (read when ambiguous)
 
 **Default for new work:** [`src/platform/TradingPlatform/`](src/platform/TradingPlatform/) — modular monolith by bounded context; **no references** to legacy solutions. Start with [`src/platform/TradingPlatform/AGENTS.md`](src/platform/TradingPlatform/AGENTS.md) and [`src/platform/TradingPlatform/README.md`](src/platform/TradingPlatform/README.md).
