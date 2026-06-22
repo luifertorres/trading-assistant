@@ -56,7 +56,7 @@ Use a **direct command** when you already know the workflow—**zero extra routi
 
 **Sequencing (typical):** explore or spec → apply → verify → (sync if needed) → archive.
 
-**Ambiguous?** If you are unsure whether to use OpenSpec at all, read `/opsx:explore` stance in `openspec/agent/commands/opsx-explore.md` or run `/opsx:explore` after bootstrap.
+**Ambiguous?** If you are unsure whether to use OpenSpec at all, read `/opsx:explore` stance in `openspec/agent/commands/opsx-explore.md` or run `/opsx:explore` after `/ai-onboard`.
 
 ## Bypass: skills (direct invocation)
 
@@ -66,7 +66,7 @@ Invoke by name when the task clearly matches (see each skill; repo-native canoni
 - `dotnet-verification` — running / fixing .NET tests, verify order.
 - `implementation-planning` — granular CreatePlan todos.
 - `binance-net` — USD-M Binance.Net usage and boundaries.
-- `openspec-*` — OpenSpec vendor (bootstrap copies from `openspec/agent/skills/`; requires CLI or manual fallback).
+- `openspec-*` — OpenSpec vendor (`/ai-onboard` copies from `openspec/agent/skills/`; requires CLI or manual fallback).
 - `commit` / `pr` — git hygiene when requested.
 - `chief-of-staff` — short **preflight** only (goal, audience, sequence, stop conditions); not for bulk implementation.
 - `ship-a-slice` — pick one visible win, proof command, append WINS.md; use `/slice` at session start.

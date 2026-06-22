@@ -112,5 +112,5 @@ When OpenSpec CLI is unavailable, read `openspec/changes/<name>/tasks.md` direct
 ## Related routing
 
 - Strict TDD: [`ai/skills/test-driven-development/SKILL.md`](../test-driven-development/SKILL.md)
-- Editor enforcement: run `ai/commands/synchronize-editor-devkit.md` after changing `ai/templates/rules/` or plan/TDD rules are missing locally.
+- Editor enforcement: run `ai/commands/ai-onboard.md` after changing `ai/templates/rules/` or plan/TDD rules are missing locally.
 - Root index: [`AGENTS.md`](../../../AGENTS.md)

@@ -18,7 +18,7 @@ Human documentation: [docs/README.md](docs/README.md).
 
 **Routing protocol:** infer **intent and blast radius**, not keywords. If the task is cross-cutting, multi-context, or unclear on OpenSpec vs direct implementation, read [`ai/context/routing-map.md`](ai/context/routing-map.md) first. For a short preflight only, use the **chief-of-staff** skill (`ai/skills/chief-of-staff/SKILL.md`).
 
-**Editor setup after clone:** [`EDITOR-AGENTS.md`](EDITOR-AGENTS.md) — run `ai/commands/synchronize-editor-devkit.md` (**required**; entire `.cursor/` is local-only).
+**Editor setup after clone:** [`EDITOR-AGENTS.md`](EDITOR-AGENTS.md) — run `ai/commands/ai-onboard.md` (**required**; entire `.cursor/` is local-only).
 
 ### Task routing (read matching skill before coding)
 
@@ -27,11 +27,11 @@ Human documentation: [docs/README.md](docs/README.md).
 | Strict TDD / test-first | `ai/skills/test-driven-development/SKILL.md` |
 | Tests / verify order | `ai/skills/dotnet-verification/SKILL.md` |
 | Plan Mode / CreatePlan | `ai/skills/implementation-planning/SKILL.md` |
-| Editor bootstrap | `ai/commands/synchronize-editor-devkit.md` |
+| AI onboard | `ai/commands/ai-onboard.md` |
 | Binance.Net usage | `ai/skills/binance-net/SKILL.md` |
 | Commit / PR | `ai/skills/commit/SKILL.md`, `ai/skills/pr/SKILL.md` |
 | Session slice | `/slice` → `ai/skills/ship-a-slice/SKILL.md` |
-| OpenSpec workflows | `/opsx:*` after bootstrap ([`openspec/SETUP.md`](openspec/SETUP.md); vendor in `openspec/agent/`) |
+| OpenSpec workflows | `/opsx:*` after `/ai-onboard` ([`openspec/SETUP.md`](openspec/SETUP.md); vendor in `openspec/agent/`) |
 
 ### Done checklist
 
@@ -82,7 +82,7 @@ Treat **[Binance.Net](https://github.com/JKorf/Binance.Net)** as the **framework
 
 **Practices:** Keep **Binance.Net package versions aligned** across projects (12.11.x). Legacy uses `BinanceCredentials` for API keys (Binance.Net 12.11+).
 
-Cursor rule (after bootstrap): `ai/templates/rules/binance-net.mdc` → `.cursor/rules/`.
+Cursor rule (after `/ai-onboard`): `ai/templates/rules/binance-net.mdc` → `.cursor/rules/`.
 
 ## Solution Structure
 

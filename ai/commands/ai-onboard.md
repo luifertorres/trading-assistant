@@ -1,4 +1,4 @@
-# Synchronize editor devkit
+# AI onboard
 
 Use when setting up a new clone, after changing files under `ai/`, `openspec/agent/`, or when editor workflow commands or rules are out of date.
 
@@ -23,7 +23,7 @@ Use when setting up a new clone, after changing files under `ai/`, `openspec/age
 9. **OpenSpec CLI (report only)** — Run `openspec --version 2>&1` or echo missing. Do **not** install automatically. If missing, report: install via [`openspec/SETUP.md`](../../openspec/SETUP.md); `/opsx:*` commands will recommend install on first use.
 10. **Report** — List `{editorRoot}/` areas updated: context, rules, openspec commands/skills, repo-native commands, skill stubs; note OpenSpec CLI status.
 
-Do not emit a slim copy of `synchronize-editor-devkit` into `{editorRoot}/commands/`.
+Do not emit a slim copy of `ai-onboard` into `{editorRoot}/commands/`.
 
 ## Slim command recipes
 
@@ -35,4 +35,4 @@ Do not emit a slim copy of `synchronize-editor-devkit` into `{editorRoot}/comman
 
 ## Maintainer: refresh OpenSpec vendor
 
-When upgrading `@fission-ai/openspec`, update committed sources under `openspec/agent/` (not `{editorRoot}/`), then re-run this bootstrap. See [`openspec/SETUP.md`](../../openspec/SETUP.md).
+When upgrading `@fission-ai/openspec`, update committed sources under `openspec/agent/` (not `{editorRoot}/`), then re-run `/ai-onboard`. See [`openspec/SETUP.md`](../../openspec/SETUP.md).

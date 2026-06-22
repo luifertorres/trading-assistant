@@ -1,6 +1,6 @@
 # AI editor setup
 
-Canonical agent specs are **not** in `.cursor/`. The entire `.cursor/` directory is **local-only** (gitignored). Run bootstrap after every clone.
+Canonical agent specs are **not** in `.cursor/`. The entire `.cursor/` directory is **local-only** (gitignored). Run `/ai-onboard` after every clone.
 
 ## Committed sources
 
@@ -14,9 +14,9 @@ Canonical agent specs are **not** in `.cursor/`. The entire `.cursor/` directory
 ## Required after clone
 
 1. Open an agent session in Cursor.
-2. Run [`ai/commands/synchronize-editor-devkit.md`](ai/commands/synchronize-editor-devkit.md) (or `/synchronize-editor-devkit` if already bootstrapped once on this machine).
+2. Run [`ai/commands/ai-onboard.md`](ai/commands/ai-onboard.md) (or `/ai-onboard` if already onboarded once on this machine).
 
-Bootstrap writes the full local editor tree:
+Onboarding writes the full local editor tree:
 
 ```
 .cursor/
@@ -26,11 +26,11 @@ Bootstrap writes the full local editor tree:
 └── skills/      ← openspec/agent/skills/ + repo-native stubs → ai/skills/
 ```
 
-Re-run bootstrap after changes under `ai/`, `ai/context/`, `ai/templates/`, or `openspec/agent/`.
+Re-run `/ai-onboard` after changes under `ai/`, `ai/context/`, `ai/templates/`, or `openspec/agent/`.
 
 ### OpenSpec CLI (optional Tier 2)
 
-Not installed by bootstrap. Install when you need `/opsx:new`, archive, or sync — see [`openspec/SETUP.md`](openspec/SETUP.md). `/opsx:*` commands recommend install on first use if CLI is missing.
+Not installed by `/ai-onboard`. Install when you need `/opsx:new`, archive, or sync — see [`openspec/SETUP.md`](openspec/SETUP.md). `/opsx:*` commands recommend install on first use if CLI is missing.
 
 ### Work without OpenSpec CLI (Tier 1)
 
@@ -38,5 +38,5 @@ Read `openspec/changes/<name>/` markdown directly; use `ai/skills/implementation
 
 ## Maintainer notes
 
-- **Repo-native changes:** edit `ai/` → re-run bootstrap.
-- **OpenSpec vendor refresh:** update `openspec/agent/` (from upstream `openspec update`) → re-run bootstrap → commit `openspec/agent/` only — never commit `.cursor/`.
+- **Repo-native changes:** edit `ai/` → re-run `/ai-onboard`.
+- **OpenSpec vendor refresh:** update `openspec/agent/` (from upstream `openspec update`) → re-run `/ai-onboard` → commit `openspec/agent/` only — never commit `.cursor/`.

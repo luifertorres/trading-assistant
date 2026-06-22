@@ -5,15 +5,15 @@ OpenSpec is an **external framework** ([`@fission-ai/openspec`](https://github.c
 - `openspec/agent/commands/opsx-*.md`
 - `openspec/agent/skills/openspec-*/SKILL.md`
 
-Bootstrap copies them into local `.cursor/` (not in git). See [`EDITOR-AGENTS.md`](../EDITOR-AGENTS.md).
+`/ai-onboard` copies them into local `.cursor/` (not in git). See [`EDITOR-AGENTS.md`](../EDITOR-AGENTS.md).
 
 ## Three tiers
 
 | Tier | Requirement | What you get |
 |------|-------------|--------------|
-| **0** | Run [`ai/commands/synchronize-editor-devkit.md`](../ai/commands/synchronize-editor-devkit.md) | Full `.cursor/` including `/opsx:*`, TDD, `/commit`, `/slice` |
-| **1** | Bootstrap only (no CLI) | Read `openspec/changes/<name>/`; `/opsx:apply` markdown fallback |
-| **2** | Bootstrap + OpenSpec CLI | Full CLI workflows (`openspec new`, archive, sync) |
+| **0** | Run [`ai/commands/ai-onboard.md`](../ai/commands/ai-onboard.md) | Full `.cursor/` including `/opsx:*`, TDD, `/commit`, `/slice` |
+| **1** | `/ai-onboard` only (no CLI) | Read `openspec/changes/<name>/`; `/opsx:apply` markdown fallback |
+| **2** | `/ai-onboard` + OpenSpec CLI | Full CLI workflows (`openspec new`, archive, sync) |
 
 ## Install CLI (Tier 2)
 
@@ -30,7 +30,7 @@ Checkbox lines in `tasks.md` **start with `[ ]` or `[x]`** (no leading list hyph
 
 ## Tier 1 — work without CLI
 
-When `openspec --version` fails after bootstrap:
+When `openspec --version` fails after `/ai-onboard`:
 
 1. List active changes under `openspec/changes/` (exclude `archive/`).
 2. Read `tasks.md`, `proposal.md`, `design.md`, `specs/` directly.
@@ -45,7 +45,7 @@ After upgrading `@fission-ai/openspec`:
 
 1. Run upstream `openspec update` into a temp tree or manually merge into `openspec/agent/`.
 2. Commit changes under `openspec/agent/` only.
-3. Re-run bootstrap locally. **Do not** commit `.cursor/`.
+3. Re-run `/ai-onboard` locally. **Do not** commit `.cursor/`.
 
 ## Workflow commands
 

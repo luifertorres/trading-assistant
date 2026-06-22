@@ -1,4 +1,4 @@
-# Bootstrap manifest for editor agent devkit. See ai/commands/synchronize-editor-devkit.md.
+# Bootstrap manifest for editor agent devkit. See ai/commands/ai-onboard.md.
 
 commands:
   test-driven-implementation:

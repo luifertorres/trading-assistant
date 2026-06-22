@@ -10,7 +10,7 @@ triggers: [TDD, test first, red green refactor, strict TDD, write test before, t
 >
 > Specs, OpenSpec tasks, and plans define **what** to build; TDD defines **proof** of done — whether or not you used SDD/planning first.
 >
-> Test patterns and verify order: [`ai/skills/dotnet-verification/SKILL.md`](../dotnet-verification/SKILL.md). For editor-side enforcement rules, run `ai/commands/synchronize-editor-devkit.md` when `ai/templates/rules/`, or `ai/commands/` changes.
+> Test patterns and verify order: [`ai/skills/dotnet-verification/SKILL.md`](../dotnet-verification/SKILL.md). For editor-side enforcement rules, run `ai/commands/ai-onboard.md` when `ai/templates/rules/`, or `ai/commands/` changes.
 
 ## When this skill applies
 
