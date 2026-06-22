@@ -5,10 +5,14 @@ namespace TradingPlatform.Cli;
 internal sealed record BacktestArgs(
     string MarketDatabasePath,
     string ResearchDatabasePath,
+    string? VerdictDirectory,
     string Symbol,
     string StrategyKind,
+    string TimeFrame,
     int EnterBar,
     int ExitBar,
+    decimal TakeProfitPct,
+    decimal RsiExit,
     decimal InitialCapital,
     decimal FeeBpsPerSide,
     decimal PositionNotionalFraction,
@@ -18,19 +22,24 @@ internal sealed record BacktestArgs(
 {
     public const string Usage =
         "Usage: TradingPlatform.Cli backtest --market-db <path> " +
-        "[--research-db <path>] [--symbol <exchangeSymbol>] " +
-        "[--from <iso8601>] [--to <iso8601>] " +
-        "[--strategy FixedWindow] [--enter-bar <int>] [--exit-bar <int>] " +
+        "[--research-db <path>] [--verdict-dir <path>] [--symbol <exchangeSymbol>] " +
+        "[--timeframe 4H|1D] [--from <iso8601>] [--to <iso8601>] " +
+        "[--strategy FixedWindow|Rsi5Extreme] [--enter-bar <int>] [--exit-bar <int>] " +
+        "[--take-profit-pct <decimal>] [--rsi-exit <decimal>] " +
         "[--initial-capital <decimal>] [--fee-bps <decimal>] [--position-fraction <decimal>] [--save]";
 
     public static BacktestArgs Parse(string[] args)
     {
         string? marketDb = null;
         string? researchDb = null;
+        string? verdictDir = null;
         var symbol = "BTCUSDT";
         var strategy = "FixedWindow";
+        var timeFrame = "1D";
         var enterBar = 5;
         var exitBar = 15;
+        var takeProfitPct = 0.08m;
+        var rsiExit = 70m;
         var initialCapital = 10_000m;
         var feeBps = 4m;
         var positionFraction = 0.1m;
@@ -58,8 +67,12 @@ internal sealed record BacktestArgs(
                 marketDb = TakeValue();
             else if (a.Equals("--research-db", StringComparison.OrdinalIgnoreCase))
                 researchDb = TakeValue();
+            else if (a.Equals("--verdict-dir", StringComparison.OrdinalIgnoreCase))
+                verdictDir = TakeValue();
             else if (a.Equals("--symbol", StringComparison.OrdinalIgnoreCase))
                 symbol = TakeValue();
+            else if (a.Equals("--timeframe", StringComparison.OrdinalIgnoreCase))
+                timeFrame = TakeValue();
             else if (a.Equals("--from", StringComparison.OrdinalIgnoreCase))
                 from = ParseUtcOffset(TakeValue(), a);
             else if (a.Equals("--to", StringComparison.OrdinalIgnoreCase))
@@ -70,6 +83,10 @@ internal sealed record BacktestArgs(
                 enterBar = int.Parse(TakeValue());
             else if (a.Equals("--exit-bar", StringComparison.OrdinalIgnoreCase))
                 exitBar = int.Parse(TakeValue());
+            else if (a.Equals("--take-profit-pct", StringComparison.OrdinalIgnoreCase))
+                takeProfitPct = decimal.Parse(TakeValue(), CultureInfo.InvariantCulture);
+            else if (a.Equals("--rsi-exit", StringComparison.OrdinalIgnoreCase))
+                rsiExit = decimal.Parse(TakeValue(), CultureInfo.InvariantCulture);
             else if (a.Equals("--initial-capital", StringComparison.OrdinalIgnoreCase))
                 initialCapital = decimal.Parse(TakeValue(), CultureInfo.InvariantCulture);
             else if (a.Equals("--fee-bps", StringComparison.OrdinalIgnoreCase))
@@ -88,10 +105,14 @@ internal sealed record BacktestArgs(
         return new BacktestArgs(
             Path.GetFullPath(marketDb),
             Path.GetFullPath(researchDb),
+            string.IsNullOrWhiteSpace(verdictDir) ? null : Path.GetFullPath(verdictDir),
             symbol,
             strategy,
+            timeFrame,
             enterBar,
             exitBar,
+            takeProfitPct,
+            rsiExit,
             initialCapital,
             feeBps,
             positionFraction,
@@ -102,7 +123,7 @@ internal sealed record BacktestArgs(
 
     private static DateTimeOffset ParseUtcOffset(string value, string flag)
     {
-        if (!DateTimeOffset.TryParse(value, null, System.Globalization.DateTimeStyles.AssumeUniversal, out var parsed))
+        if (!DateTimeOffset.TryParse(value, null, DateTimeStyles.AssumeUniversal, out var parsed))
             throw new ArgumentException($"Invalid {flag} value '{value}'; use ISO-8601 UTC (e.g. 2024-01-01T00:00:00Z).");
         return parsed.ToUniversalTime();
     }

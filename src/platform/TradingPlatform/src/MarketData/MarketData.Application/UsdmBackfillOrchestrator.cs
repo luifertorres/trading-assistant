@@ -4,17 +4,23 @@ using TradingPlatform.Kernel;
 namespace MarketData.Application;
 
 /// <summary>Loads checkpoint, upserts universe into registry, pages klines forward, upserts through <see cref="ICandleSeriesWriter"/>.</summary>
-public sealed class Usdm1dBackfillOrchestrator(
+public sealed class UsdmBackfillOrchestrator(
     ICandleSeriesWriter candleWriter,
     IUsdM1dBackfillExchange exchange,
     IInstrumentRegistry registry,
     IBackfillCheckpointStore checkpointStore,
-    ILogger<Usdm1dBackfillOrchestrator> log)
+    ILogger<UsdmBackfillOrchestrator> log)
 {
-    private static readonly TimeSpan OneDay = TimeSpan.FromDays(1);
+    private const int MaxKlinesPerRequest = 1500;
 
-    public async Task RunAsync(Usdm1dBackfillRunOptions options, CancellationToken cancellationToken = default)
+    public Task RunAsync(Usdm1dBackfillRunOptions options, CancellationToken cancellationToken = default) =>
+        RunAsync(options.ToGeneral(), cancellationToken);
+
+    public async Task RunAsync(UsdmBackfillRunOptions options, CancellationToken cancellationToken = default)
     {
+        BackfillTimeFrames.EnsureSupported(options.TimeFrame);
+        var barStep = BackfillTimeFrames.BarDuration(options.TimeFrame);
+
         var dbFullPath = Path.GetFullPath(options.MarketDatabasePath);
         var dataRoot = options.DataRoot;
         Directory.CreateDirectory(dataRoot);
@@ -32,7 +38,16 @@ public sealed class Usdm1dBackfillOrchestrator(
         }
 
         var listings = await exchange.ListUsdtPerpetualInstrumentsAsync(cancellationToken).ConfigureAwait(false);
-        log.LogInformation("Backfill universe: {Count} USDT perpetual TRADING instruments.", listings.Count);
+        if (options.SymbolFilter is { Count: > 0 } filter)
+        {
+            var set = filter.ToHashSet(StringComparer.Ordinal);
+            listings = listings.Where(l => set.Contains(l.Upsert.ExchangeSymbol)).ToList();
+        }
+
+        log.LogInformation(
+            "Backfill universe ({TimeFrame}): {Count} USDT perpetual TRADING instruments.",
+            options.TimeFrame.Value,
+            listings.Count);
 
         var instruments = new List<(InstrumentId Id, BrokerFetchHandle Handle, string ExchangeSymbol)>(listings.Count);
         foreach (var listing in listings)
@@ -69,17 +84,16 @@ public sealed class Usdm1dBackfillOrchestrator(
                     continue;
                 }
 
-                var series = new SeriesDescriptor(instrumentId, TimeFrameCode.Day1);
+                var series = new SeriesDescriptor(instrumentId, options.TimeFrame);
                 series.Validate();
-                EnsureDailySeries(series);
 
-                log.LogInformation("Backfill {ExchangeSymbol} (instrument {InstrumentId}) …", exchangeSymbol, instrumentId);
+                log.LogInformation("Backfill {ExchangeSymbol} {TimeFrame} (instrument {InstrumentId}) …", exchangeSymbol, options.TimeFrame.Value, instrumentId);
 
                 DateTimeOffset pageStart;
                 if (entry.LastWrittenOpenTimeMs is { } ms)
                 {
                     var lastOpen = DateTimeOffset.FromUnixTimeMilliseconds(ms);
-                    pageStart = lastOpen.Add(OneDay);
+                    pageStart = lastOpen.Add(barStep);
                 }
                 else
                 {
@@ -91,7 +105,7 @@ public sealed class Usdm1dBackfillOrchestrator(
                 while (!cancellationToken.IsCancellationRequested)
                 {
                     var bars = await exchange
-                        .GetDailyKlinesPageAsync(fetchHandle, pageStart, endCap, cancellationToken)
+                        .GetKlinesPageAsync(fetchHandle, options.TimeFrame, pageStart, endCap, cancellationToken)
                         .ConfigureAwait(false);
 
                     if (bars.Count == 0)
@@ -99,7 +113,7 @@ public sealed class Usdm1dBackfillOrchestrator(
                         MarkComplete(entry);
                         TouchCheckpoint(checkpoint);
                         await checkpointStore.SaveAsync(checkpoint, cancellationToken).ConfigureAwait(false);
-                        log.LogInformation("{ExchangeSymbol}: no more daily rows (empty page). Marked complete.", exchangeSymbol);
+                        log.LogInformation("{ExchangeSymbol}: no more {TimeFrame} rows (empty page). Marked complete.", exchangeSymbol, options.TimeFrame.Value);
                         break;
                     }
 
@@ -110,7 +124,7 @@ public sealed class Usdm1dBackfillOrchestrator(
                     TouchCheckpoint(checkpoint);
                     await checkpointStore.SaveAsync(checkpoint, cancellationToken).ConfigureAwait(false);
 
-                    if (bars.Count < 1500)
+                    if (bars.Count < MaxKlinesPerRequest)
                     {
                         MarkComplete(entry);
                         TouchCheckpoint(checkpoint);
@@ -119,7 +133,7 @@ public sealed class Usdm1dBackfillOrchestrator(
                         break;
                     }
 
-                    pageStart = maxOpen.Add(OneDay);
+                    pageStart = maxOpen.Add(barStep);
                 }
             }
             catch (OperationCanceledException)
@@ -157,11 +171,5 @@ public sealed class Usdm1dBackfillOrchestrator(
         entry.Complete = true;
         entry.LastErrorMessage = null;
         entry.LastErrorAtUtc = null;
-    }
-
-    internal static void EnsureDailySeries(SeriesDescriptor series)
-    {
-        if (series.TimeFrame != TimeFrameCode.Day1)
-            throw new ArgumentException("Backfill requires daily series (TimeFrameCode.Day1).", nameof(series));
     }
 }

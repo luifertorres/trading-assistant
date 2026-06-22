@@ -1,0 +1,49 @@
+---
+description: Real-money guardrails for Platform Execution and Binance order adapters
+globs:
+  - src/platform/TradingPlatform/src/Execution/**
+  - src/platform/TradingPlatform/**/Binance/**
+---
+
+# Live trading safety (real money)
+
+**Non-negotiable** for any code that places Binance USD-M orders from TradingPlatform.
+
+## Defaults
+
+- **`LiveTradingOptions.Armed` = false** — no orders unless explicitly armed for the session.
+- **Leverage = 1x, margin = ISOLATED** — set per symbol before every entry; never raise leverage in live paths.
+- **Kill-switch file** — if `LiveTradingOptions.KillSwitchFilePath` exists on disk, reject every order.
+
+## Exposure caps (enforce in adapter, not config alone)
+
+- **Per-symbol `MaxNotionalUsd`** (~5–10 USD) — reject if computed entry notional exceeds cap (guards `minQty * price` blow-up).
+- **`MaxTotalNotionalUsd`** (~40 USD across open positions).
+- **`MaxConcurrentPositions`** = selected portfolio count, **hard cap 4**.
+- **Daily order cap** — reject when exceeded.
+
+## Arming gates
+
+Live arming is blocked unless **all** of:
+
+1. Vector's latest backtest verdict is **PASS** (machine-readable JSON).
+2. Symbol is in the **selected portfolio** JSON.
+3. User/session explicitly set `Armed = true` (CLI `--arm` or config).
+4. Build + documented run command shown before first real order in a session.
+
+## Sizing
+
+- Use **`MARKET_LOT_SIZE`** filter: `qty = roundUpToStep(max(minQty, MIN_NOTIONAL / price), stepSize)`.
+- Override strategy margin % (e.g. 10%) with exchange-minimum sizing for tiny live orders.
+- Reject if resulting notional > per-symbol cap.
+
+## What agents must not do
+
+- Auto-arm or auto-scale position size.
+- Skip kill-switch check.
+- Place orders without 1x + ISOLATED setup.
+- Commit API keys or secrets.
+
+## Proof before merge
+
+Show the guarded CLI (e.g. `fire-test-order --symbol X --arm`) or host path with **disarmed** default passing build; live demo only when user explicitly arms.

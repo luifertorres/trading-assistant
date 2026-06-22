@@ -2,20 +2,20 @@ using FluentAssertions;
 
 namespace TradingPlatform.Cli.Tests;
 
-/// <summary>Lightweight checks that existing CLI subcommand parsers were not regressed by backtest work.</summary>
+/// <summary>Lightweight checks that existing CLI subcommand parsers were not regressed.</summary>
 public sealed class CliSubcommandSmokeTests
 {
     [Fact]
-    public void Backfill1dArgs_Parse_StillRequiresDataRoot()
+    public void BackfillArgs_Parse_StillRequiresDataRoot()
     {
-        var act = () => Backfill1dArgs.Parse(["backfill-1d", "--market-db", "market.sqlite"]);
+        var act = () => BackfillArgs.Parse(["backfill-1d", "--market-db", "market.sqlite"]);
         act.Should().Throw<ArgumentException>().WithMessage("*data-root*");
     }
 
     [Fact]
-    public void Backfill1dArgs_Parse_AcceptsRequiredFlags()
+    public void BackfillArgs_Parse_AcceptsRequiredFlags()
     {
-        var args = Backfill1dArgs.Parse(
+        var args = BackfillArgs.Parse(
         [
             "backfill-1d",
             "--market-db", "market.sqlite",
@@ -28,9 +28,9 @@ public sealed class CliSubcommandSmokeTests
     }
 
     [Fact]
-    public void Backfill1dArgs_Parse_StillSupportsSnapshotFlag()
+    public void BackfillArgs_Parse_StillSupportsSnapshotFlag()
     {
-        var args = Backfill1dArgs.Parse(
+        var args = BackfillArgs.Parse(
         [
             "backfill-1d",
             "--market-db", "market.sqlite",

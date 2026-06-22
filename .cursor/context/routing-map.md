@@ -29,6 +29,7 @@ For **fast / routine** work, **bypass** this document: go straight to the right 
 - Stable norms: [engineering-principles.md](./engineering-principles.md)
 - Domain vocabulary: [trading-domain.md](./trading-domain.md)
 - Migration defaults: [refactor-ledger.md](./refactor-ledger.md)
+- Delivery / dopamine wins: [delivery-principles.md](./delivery-principles.md), [WINS.md](../../WINS.md), `/slice` command
 - Routing mistakes: [routing-overrides.md](./routing-overrides.md)
 
 ---
@@ -63,3 +64,4 @@ Invoke by name when the task clearly matches (see each `SKILL.md`):
 - `openspec-*` — new/continue/apply/verify/archive/sync/ff/onboard/explore/bulk-archive per description.
 - `commit` / `pr` — git hygiene when requested.
 - `chief-of-staff` — short **preflight** only (goal, audience, sequence, stop conditions); not for bulk implementation.
+- `ship-a-slice` — pick one visible win, proof command, append WINS.md; use `/slice` at session start.

@@ -183,19 +183,20 @@ public sealed class Usdm1dBackfillOrchestratorTests
         json.Should().NotContain("lastErrorAtUtc");
     }
 
-    private static Usdm1dBackfillOrchestrator CreateOrchestrator(
+    private static UsdmBackfillOrchestrator CreateOrchestrator(
         ICandleSeriesWriter writer,
         IUsdM1dBackfillExchange exchange,
         IInstrumentRegistry registry,
         IBackfillCheckpointStore checkpointStore) =>
-        new(writer, exchange, registry, checkpointStore, NullLogger<Usdm1dBackfillOrchestrator>.Instance);
+        new(writer, exchange, registry, checkpointStore, NullLogger<UsdmBackfillOrchestrator>.Instance);
 
-    private static Usdm1dBackfillRunOptions Options() =>
+    private static UsdmBackfillRunOptions Options() =>
         new(
             Path.Combine(Path.GetTempPath(), "market.sqlite"),
             Path.Combine(Path.GetTempPath(), "trading-platform-test-data"),
             null,
-            false);
+            false,
+            TimeFrameCode.Day1);
 
     private static OhlcBar Bar(long openTimeMs)
     {
@@ -230,6 +231,14 @@ public sealed class Usdm1dBackfillOrchestratorTests
 
         public Task<IReadOnlyList<OhlcBar>> GetDailyKlinesPageAsync(
             BrokerFetchHandle handle,
+            DateTimeOffset startTimeInclusive,
+            DateTimeOffset endTimeInclusive,
+            CancellationToken cancellationToken = default) =>
+            OnGetDailyKlinesPageAsync(handle);
+
+        public Task<IReadOnlyList<OhlcBar>> GetKlinesPageAsync(
+            BrokerFetchHandle handle,
+            TimeFrameCode timeFrame,
             DateTimeOffset startTimeInclusive,
             DateTimeOffset endTimeInclusive,
             CancellationToken cancellationToken = default) =>

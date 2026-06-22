@@ -9,6 +9,7 @@ public sealed class DefaultTradingStrategyFactory : ITradingStrategyFactory
         vector.StrategyKind switch
         {
             "FixedWindow" => new FixedWindowStrategy(),
+            "Rsi5Extreme" => new Rsi5ExtremeStrategy(),
             _ => throw new NotSupportedException($"Unknown strategy kind: {vector.StrategyKind}")
         };
 }

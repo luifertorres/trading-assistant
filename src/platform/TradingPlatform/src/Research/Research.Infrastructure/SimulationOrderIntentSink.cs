@@ -29,7 +29,7 @@ public sealed class SimulationOrderIntentSink : ISimulationOrderIntentSink
 
     public void OnIntent(in OrderIntent intent, in OhlcBar signalBar)
     {
-        var price = signalBar.Close;
+        var price = intent.ExitPrice ?? signalBar.Close;
         switch (intent.Kind)
         {
             case OrderIntentKind.OpenLong when _side == PositionSide.Long && _entryPrice is null:

@@ -14,6 +14,14 @@ public interface IUsdM1dBackfillExchange
         DateTimeOffset endTimeInclusive,
         CancellationToken cancellationToken = default);
 
+    /// <summary>One page of bars for the given timeframe, ascending open time, at most 1500 rows.</summary>
+    Task<IReadOnlyList<OhlcBar>> GetKlinesPageAsync(
+        BrokerFetchHandle handle,
+        TimeFrameCode timeFrame,
+        DateTimeOffset startTimeInclusive,
+        DateTimeOffset endTimeInclusive,
+        CancellationToken cancellationToken = default);
+
     Task WriteExchangeInfoSnapshotAsync(
         string dataRoot,
         Guid runId,

@@ -19,13 +19,15 @@ internal static class BacktestCommand
         BacktestArgs args,
         CancellationToken cancellationToken = default)
     {
-        if (!args.StrategyKind.Equals("FixedWindow", StringComparison.OrdinalIgnoreCase))
+        if (!IsSupportedStrategy(args.StrategyKind))
         {
-            Console.Error.WriteLine($"Unsupported strategy kind '{args.StrategyKind}'. Only FixedWindow is supported.");
+            Console.Error.WriteLine($"Unsupported strategy kind '{args.StrategyKind}'.");
             return new BacktestCommandOutcome(1, null);
         }
 
         Directory.CreateDirectory(Path.GetDirectoryName(args.ResearchDatabasePath)!);
+        if (!string.IsNullOrWhiteSpace(args.VerdictDirectory))
+            Directory.CreateDirectory(args.VerdictDirectory);
 
         var services = new ServiceCollection();
         services.AddLogging(b => b.AddSimpleConsole(o =>
@@ -39,7 +41,6 @@ internal static class BacktestCommand
         await using var provider = services.BuildServiceProvider();
         var log = provider.GetRequiredService<ILoggerFactory>().CreateLogger("backtest");
         var registry = provider.GetRequiredService<IInstrumentRegistry>();
-        var candles = provider.GetRequiredService<ICandleSeriesReader>();
         var runner = provider.GetRequiredService<IBacktestRunner>();
 
         var instrument = await registry.GetByExchangeSymbolAsync(
@@ -48,40 +49,31 @@ internal static class BacktestCommand
         {
             Console.Error.WriteLine(
                 $"Instrument '{args.Symbol}' not found in registry at {args.MarketDatabasePath}. " +
-                "Run 'backfill-1d' first to populate instruments and Day1 candles.");
+                "Run backfill first to populate instruments and candles.");
             return new BacktestCommandOutcome(1, null);
         }
 
-        var series = new SeriesDescriptor(instrument.Id, TimeFrameCode.Day1);
-        var bars = await candles.ReadAsync(series, args.From, args.To, cancellationToken).ConfigureAwait(false);
+        var timeFrame = TimeFrameCode.Parse(args.TimeFrame);
+        var series = new SeriesDescriptor(instrument.Id, timeFrame);
+        var cfg = new SimulationConfiguration(args.InitialCapital, args.FeeBpsPerSide, args.PositionNotionalFraction);
+        var vector = BuildVector(args, instrument.Id, timeFrame);
+
+        // Quick bar count check via runner's empty path — read candles first for explicit CLI error
+        var candleReader = provider.GetRequiredService<ICandleSeriesReader>();
+        var bars = await candleReader.ReadAsync(series, args.From, args.To, cancellationToken).ConfigureAwait(false);
         if (bars.Count == 0)
         {
             Console.Error.WriteLine(
-                $"No Day1 bars for {args.Symbol} (instrument {instrument.Id.Value}) in the requested range. " +
-                "Run 'backfill-1d' or widen --from/--to.");
+                $"No {timeFrame.Value} bars for {args.Symbol} in the requested range. Run backfill or widen --from/--to.");
             return new BacktestCommandOutcome(1, null);
         }
 
-        var cfg = new SimulationConfiguration(args.InitialCapital, args.FeeBpsPerSide, args.PositionNotionalFraction);
-        var vector = new TradingVectorSpec(
-            TradingVectorId.New(),
-            instrument.Id,
-            TimeFrameCode.Day1,
-            PositionSide.Long,
-            "FixedWindow",
-            new Dictionary<string, string>
-            {
-                ["enterBar"] = args.EnterBar.ToString(),
-                ["exitBar"] = args.ExitBar.ToString()
-            });
-
         log.LogInformation(
-            "Running backtest: instrument {InstrumentId}, symbol {Symbol}, bars {BarCount}, range {From}..{To}",
-            instrument.Id.Value,
+            "Running backtest: {Symbol} {TimeFrame} {Strategy} capital {Capital}",
             args.Symbol,
-            bars.Count,
-            args.From?.ToString("O") ?? "(all)",
-            args.To?.ToString("O") ?? "(all)");
+            timeFrame.Value,
+            args.StrategyKind,
+            args.InitialCapital);
 
         var result = await runner.RunAsync(
             new BacktestRequest(vector, cfg, args.From, args.To),
@@ -101,6 +93,52 @@ internal static class BacktestCommand
             log.LogInformation("Saved run to research database: {Path}", args.ResearchDatabasePath);
         }
 
+        if (!string.IsNullOrWhiteSpace(args.VerdictDirectory))
+        {
+            var verdict = BacktestVerdictEvaluator.Evaluate(
+                args.Symbol,
+                args.StrategyKind,
+                timeFrame.Value,
+                result);
+            var store = new JsonBacktestVerdictStore(args.VerdictDirectory);
+            await store.SaveAsync(verdict, cancellationToken).ConfigureAwait(false);
+            Console.WriteLine($"VERDICT: {(verdict.Pass ? "PASS" : "FAIL")} — {verdict.FailReason ?? "ok"}");
+        }
+
         return new BacktestCommandOutcome(0, result);
+    }
+
+    private static bool IsSupportedStrategy(string kind) =>
+        kind.Equals("FixedWindow", StringComparison.OrdinalIgnoreCase) ||
+        kind.Equals("Rsi5Extreme", StringComparison.OrdinalIgnoreCase);
+
+    private static TradingVectorSpec BuildVector(BacktestArgs args, InstrumentId instrumentId, TimeFrameCode timeFrame)
+    {
+        if (args.StrategyKind.Equals("Rsi5Extreme", StringComparison.OrdinalIgnoreCase))
+        {
+            return new TradingVectorSpec(
+                TradingVectorId.New(),
+                instrumentId,
+                timeFrame,
+                PositionSide.Long,
+                "Rsi5Extreme",
+                new Dictionary<string, string>
+                {
+                    ["takeProfitPct"] = args.TakeProfitPct.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    ["rsiExit"] = args.RsiExit.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                });
+        }
+
+        return new TradingVectorSpec(
+            TradingVectorId.New(),
+            instrumentId,
+            timeFrame,
+            PositionSide.Long,
+            "FixedWindow",
+            new Dictionary<string, string>
+            {
+                ["enterBar"] = args.EnterBar.ToString(),
+                ["exitBar"] = args.ExitBar.ToString()
+            });
     }
 }

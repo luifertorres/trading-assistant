@@ -28,6 +28,7 @@ Human documentation: [docs/README.md](docs/README.md).
 | `[.cursor/context/trading-domain.md](.cursor/context/trading-domain.md)`                 | Product scope, vocabulary pointers, operational risk stance.                          |
 | `[.cursor/context/refactor-ledger.md](.cursor/context/refactor-ledger.md)`               | Migration story: what is greenfield vs frozen legacy.                                 |
 | `[.cursor/context/routing-overrides.md](.cursor/context/routing-overrides.md)`           | Log routing corrections; promote patterns after three similar overrides.              |
+| `[.cursor/context/delivery-principles.md](.cursor/context/delivery-principles.md)`     | Same-session wins, ship-a-slice ritual, token-lean scoped context.                    |
 
 
 ## Architecture

@@ -49,15 +49,25 @@ public sealed class BinanceUsdM1dBackfillExchange(IBinanceRestClient rest) : IUs
         BrokerFetchHandle handle,
         DateTimeOffset startTimeInclusive,
         DateTimeOffset endTimeInclusive,
+        CancellationToken cancellationToken = default) =>
+        await GetKlinesPageAsync(handle, TimeFrameCode.Day1, startTimeInclusive, endTimeInclusive, cancellationToken)
+            .ConfigureAwait(false);
+
+    public async Task<IReadOnlyList<OhlcBar>> GetKlinesPageAsync(
+        BrokerFetchHandle handle,
+        TimeFrameCode timeFrame,
+        DateTimeOffset startTimeInclusive,
+        DateTimeOffset endTimeInclusive,
         CancellationToken cancellationToken = default)
     {
         var symbol = BrokerFetchHandleUnwrap.Symbol(handle);
+        var interval = BackfillKlineIntervalMapping.ToBinance(timeFrame);
         var start = startTimeInclusive.UtcDateTime;
         var end = endTimeInclusive.UtcDateTime;
 
         var result = await rest.UsdFuturesApi.ExchangeData.GetKlinesAsync(
             symbol,
-            KlineInterval.OneDay,
+            interval,
             start,
             end,
             MaxKlinesPerRequest,

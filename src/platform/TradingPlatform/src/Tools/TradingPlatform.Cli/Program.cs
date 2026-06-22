@@ -16,71 +16,70 @@ using Research.Infrastructure;
 using TradingPlatform.Kernel;
 
 var cmd = args.Length > 0 ? args[0] : "demo";
-if (cmd.Equals("backfill-1d", StringComparison.OrdinalIgnoreCase))
-{
-    await RunBackfill1dAsync(args).ConfigureAwait(false);
-    return;
-}
 
-if (cmd.Equals("backtest", StringComparison.OrdinalIgnoreCase))
+try
 {
-    try
+    switch (cmd.ToLowerInvariant())
     {
-        var outcome = await BacktestCommand.RunAsync(BacktestArgs.Parse(args)).ConfigureAwait(false);
-        Environment.Exit(outcome.ExitCode);
+        case "backfill-1d":
+            await RunBackfillAsync(args, TimeFrameCode.Day1, null, "backfill-1d-checkpoint.json").ConfigureAwait(false);
+            return;
+        case "backfill-4h":
+        {
+            var symbols = ParseSymbolsArg(args) ?? CohortSymbols.Default;
+            await RunBackfillAsync(args, TimeFrameCode.Hour4, symbols, "backfill-4h-checkpoint.json").ConfigureAwait(false);
+            return;
+        }
+        case "backtest":
+        {
+            var outcome = await BacktestCommand.RunAsync(BacktestArgs.Parse(args)).ConfigureAwait(false);
+            Environment.Exit(outcome.ExitCode);
+            return;
+        }
+        case "cohort-backtest":
+            Environment.Exit(await CohortBacktestCommand.RunAsync(CohortBacktestArgs.Parse(args)).ConfigureAwait(false));
+            return;
+        case "cohort-compose":
+            Environment.Exit(await CohortComposeCommand.RunAsync(CohortComposeArgs.Parse(args)).ConfigureAwait(false));
+            return;
+        case "fire-test-order":
+            Environment.Exit(await FireTestOrderCommand.RunAsync(FireTestOrderArgs.Parse(args)).ConfigureAwait(false));
+            return;
+        case "demo":
+            await RunDemoAsync().ConfigureAwait(false);
+            return;
+        default:
+            PrintUsage();
+            return;
     }
-    catch (ArgumentException ex)
-    {
-        Console.Error.WriteLine(ex.Message);
-        Environment.Exit(1);
-    }
-
-    return;
+}
+catch (ArgumentException ex)
+{
+    Console.Error.WriteLine(ex.Message);
+    Environment.Exit(1);
 }
 
-var services = new ServiceCollection();
-services.AddLogging(b => b.AddSimpleConsole(o =>
+static void PrintUsage()
 {
-    o.SingleLine = true;
-    o.TimestampFormat = "HH:mm:ss ";
-}));
-
-var dataRoot = Path.Combine(Environment.CurrentDirectory, ".trading-platform-data");
-Directory.CreateDirectory(dataRoot);
-var marketDb = Path.Combine(dataRoot, "market.sqlite");
-var researchDb = Path.Combine(dataRoot, "research.sqlite");
-var portfolioDir = Path.Combine(dataRoot, "portfolios");
-
-services.AddMarketDataSqlite(marketDb);
-services.AddResearchInfrastructure(researchDb);
-services.AddAnalyticsInfrastructure();
-services.AddPortfolioInfrastructure(portfolioDir);
-services.AddExecutionInfrastructure();
-
-await using var provider = services.BuildServiceProvider();
-var log = provider.GetRequiredService<ILoggerFactory>().CreateLogger("Cli");
-
-switch (cmd.ToLowerInvariant())
-{
-    case "demo":
-        await RunDemoAsync(provider, log).ConfigureAwait(false);
-        break;
-    default:
-        log.LogInformation(
-            "Usage: TradingPlatform.Cli [demo|backfill-1d|backtest] … — " +
-            "backtest: {BacktestUsage}",
-            BacktestArgs.Usage);
-        break;
+    Console.WriteLine(
+        "Usage: TradingPlatform.Cli <command>\n" +
+        "  demo\n" +
+        "  backfill-1d --market-db <path> --data-root <path> [--checkpoint <path>] [--snapshot]\n" +
+        "  backfill-4h --market-db <path> --data-root <path> [--symbols A,B,C] [--checkpoint <path>]\n" +
+        $"  {BacktestArgs.Usage}\n" +
+        $"  {CohortBacktestArgs.Usage}\n" +
+        $"  {CohortComposeArgs.Usage}\n" +
+        $"  {FireTestOrderArgs.Usage}");
 }
 
-static async Task RunBackfill1dAsync(string[] args)
+static async Task RunBackfillAsync(string[] args, TimeFrameCode timeFrame, IReadOnlyList<string>? symbolFilter, string defaultCheckpointName)
 {
-    var parsed = Backfill1dArgs.Parse(args);
+    var parsed = BackfillArgs.Parse(args);
     var dataRoot = Path.GetFullPath(parsed.DataRoot);
     Directory.CreateDirectory(dataRoot);
     var marketDb = Path.GetFullPath(parsed.MarketDatabasePath);
     var checkpointPath = string.IsNullOrWhiteSpace(parsed.CheckpointPath)
-        ? Path.Combine(dataRoot, "backfill-1d-checkpoint.json")
+        ? Path.Combine(dataRoot, defaultCheckpointName)
         : Path.GetFullPath(parsed.CheckpointPath);
 
     var services = new ServiceCollection();
@@ -93,21 +92,51 @@ static async Task RunBackfill1dAsync(string[] args)
     services.AddMarketDataBinanceUsdM1dBackfill(checkpointPath);
 
     await using var provider = services.BuildServiceProvider();
-    var log = provider.GetRequiredService<ILoggerFactory>().CreateLogger("backfill-1d");
-    var runner = provider.GetRequiredService<Usdm1dBackfillOrchestrator>();
+    var log = provider.GetRequiredService<ILoggerFactory>().CreateLogger("backfill");
+    var runner = provider.GetRequiredService<UsdmBackfillOrchestrator>();
 
-    log.LogInformation("Market DB: {Path}", marketDb);
-    log.LogInformation("Data root: {Path}", dataRoot);
-    log.LogInformation("Checkpoint: {Path}", checkpointPath);
-
+    log.LogInformation("Market DB: {Path} TimeFrame: {Tf}", marketDb, timeFrame.Value);
     await runner.RunAsync(
-            new Usdm1dBackfillRunOptions(marketDb, dataRoot, checkpointPath, parsed.WriteSnapshot),
+            new UsdmBackfillRunOptions(marketDb, dataRoot, checkpointPath, parsed.WriteSnapshot, timeFrame, symbolFilter),
             CancellationToken.None)
         .ConfigureAwait(false);
 }
 
-static async Task RunDemoAsync(ServiceProvider provider, ILogger log)
+static IReadOnlyList<string>? ParseSymbolsArg(string[] args)
 {
+    for (var i = 1; i < args.Length - 1; i++)
+    {
+        if (args[i].Equals("--symbols", StringComparison.OrdinalIgnoreCase))
+            return args[i + 1].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
+    return null;
+}
+
+static async Task RunDemoAsync()
+{
+    var services = new ServiceCollection();
+    services.AddLogging(b => b.AddSimpleConsole(o =>
+    {
+        o.SingleLine = true;
+        o.TimestampFormat = "HH:mm:ss ";
+    }));
+
+    var dataRoot = Path.Combine(Environment.CurrentDirectory, ".trading-platform-data");
+    Directory.CreateDirectory(dataRoot);
+    var marketDb = Path.Combine(dataRoot, "market.sqlite");
+    var researchDb = Path.Combine(dataRoot, "research.sqlite");
+    var portfolioDir = Path.Combine(dataRoot, "portfolios");
+
+    services.AddMarketDataSqlite(marketDb);
+    services.AddResearchInfrastructure(researchDb);
+    services.AddAnalyticsInfrastructure();
+    services.AddPortfolioInfrastructure(portfolioDir);
+    services.AddExecutionInfrastructure();
+
+    await using var provider = services.BuildServiceProvider();
+    var log = provider.GetRequiredService<ILoggerFactory>().CreateLogger("Cli");
+
     var writer = provider.GetRequiredService<ICandleSeriesWriter>();
     var registry = provider.GetRequiredService<IInstrumentRegistry>();
     var runner = provider.GetRequiredService<IBacktestRunner>();
@@ -116,49 +145,30 @@ static async Task RunDemoAsync(ServiceProvider provider, ILogger log)
     var composer = provider.GetRequiredService<IPortfolioComposer>();
     var filePortfolios = provider.GetRequiredService<FilePortfolioRepository>();
     var router = provider.GetRequiredService<PortfolioExecutionRouter>();
-    var candles = provider.GetRequiredService<ICandleSeriesReader>();
 
     var instrumentId = await registry.UpsertAsync(new InstrumentUpsert(
         "binance", "usdm", "perpetual", "BTCUSDT",
         "BTC", "USDT", "BTCUSDT", 2, 3, "[]", "TRADING", DateTimeOffset.UtcNow)).ConfigureAwait(false);
-    var series = new SeriesDescriptor(instrumentId, TimeFrameCode.Min1);
     var bars = SyntheticBars(count: 40, start: new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
-    await writer.UpsertAsync(series, bars).ConfigureAwait(false);
-    log.LogInformation("Seeded {Count} bars for instrument {InstrumentId}.", bars.Count, instrumentId);
+    await writer.UpsertAsync(new SeriesDescriptor(instrumentId, TimeFrameCode.Min1), bars).ConfigureAwait(false);
 
     var cfg = new SimulationConfiguration(InitialCapital: 10_000m, FeeBpsPerSide: 4m, PositionNotionalFraction: 0.1m);
     var v1 = new TradingVectorSpec(
-        TradingVectorId.New(),
-        instrumentId,
-        TimeFrameCode.Min1,
-        PositionSide.Long,
-        "FixedWindow",
+        TradingVectorId.New(), instrumentId, TimeFrameCode.Min1, PositionSide.Long, "FixedWindow",
         new Dictionary<string, string> { ["enterBar"] = "3", ["exitBar"] = "12" });
     var v2 = new TradingVectorSpec(
-        TradingVectorId.New(),
-        instrumentId,
-        TimeFrameCode.Min1,
-        PositionSide.Long,
-        "FixedWindow",
+        TradingVectorId.New(), instrumentId, TimeFrameCode.Min1, PositionSide.Long, "FixedWindow",
         new Dictionary<string, string> { ["enterBar"] = "5", ["exitBar"] = "18" });
 
     var r1 = await runner.RunAsync(new BacktestRequest(v1, cfg, null, null)).ConfigureAwait(false);
     var r2 = await runner.RunAsync(new BacktestRequest(v2, cfg, null, null)).ConfigureAwait(false);
     await runRepo.SaveAsync(r1).ConfigureAwait(false);
     await runRepo.SaveAsync(r2).ConfigureAwait(false);
-    log.LogInformation("Backtests: run {A} final {Eq1:F2}; run {B} final {Eq2:F2}", r1.RunId, r1.FinalEquity, r2.RunId, r2.FinalEquity);
-
-    var ranked = analytics.RankByReturn([r1, r2]);
-    log.LogInformation("Ranked by return: {R}", string.Join(", ", ranked.Select(x => $"{x.RunId}:{x.TotalReturnFraction:P2}")));
 
     var portfolio = composer.ComposeDrawdownUncorrelated([r1, r2], maxPairwiseCorrelation: 0.99, "demo-portfolio");
     await filePortfolios.SaveAsync(portfolio).ConfigureAwait(false);
-    log.LogInformation("Portfolio {Name} with {N} members.", portfolio.Name, portfolio.Members.Count);
-
-    var vectorMap = new Dictionary<TradingVectorId, TradingVectorSpec> { [v1.Id] = v1, [v2.Id] = v2 };
-    var active = portfolio.Members[0].VectorId;
-    await router.ExecuteOneShotAsync(portfolio, vectorMap, bars, active).ConfigureAwait(false);
-    log.LogInformation("Execution router (live sink stub) completed for vector {V}.", active.Value);
+    await router.ExecuteOneShotAsync(portfolio, new Dictionary<TradingVectorId, TradingVectorSpec> { [v1.Id] = v1, [v2.Id] = v2 }, bars, v1.Id).ConfigureAwait(false);
+    log.LogInformation("Demo complete: portfolio {Name} members {N}", portfolio.Name, portfolio.Members.Count);
 }
 
 static IReadOnlyList<OhlcBar> SyntheticBars(int count, DateTimeOffset start)
@@ -183,9 +193,9 @@ static IReadOnlyList<OhlcBar> SyntheticBars(int count, DateTimeOffset start)
     return list;
 }
 
-internal sealed record Backfill1dArgs(string MarketDatabasePath, string DataRoot, string? CheckpointPath, bool WriteSnapshot)
+internal sealed record BackfillArgs(string MarketDatabasePath, string DataRoot, string? CheckpointPath, bool WriteSnapshot)
 {
-    public static Backfill1dArgs Parse(string[] args)
+    public static BackfillArgs Parse(string[] args)
     {
         string? marketDb = null;
         string? dataRoot = null;
@@ -198,6 +208,12 @@ internal sealed record Backfill1dArgs(string MarketDatabasePath, string DataRoot
             if (a.Equals("--snapshot", StringComparison.OrdinalIgnoreCase))
             {
                 snapshot = true;
+                continue;
+            }
+
+            if (a.Equals("--symbols", StringComparison.OrdinalIgnoreCase))
+            {
+                i++;
                 continue;
             }
 
@@ -221,9 +237,9 @@ internal sealed record Backfill1dArgs(string MarketDatabasePath, string DataRoot
         if (string.IsNullOrWhiteSpace(marketDb) || string.IsNullOrWhiteSpace(dataRoot))
         {
             throw new ArgumentException(
-                "Usage: TradingPlatform.Cli backfill-1d --market-db <path> --data-root <path> [--checkpoint <path>] [--snapshot]");
+                "Usage: backfill-1d|backfill-4h --market-db <path> --data-root <path> [--checkpoint <path>] [--symbols A,B] [--snapshot]");
         }
 
-        return new Backfill1dArgs(marketDb, dataRoot, checkpoint, snapshot);
+        return new BackfillArgs(marketDb, dataRoot, checkpoint, snapshot);
     }
 }

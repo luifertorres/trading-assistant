@@ -8,4 +8,10 @@ public enum OrderIntentKind
 }
 
 /// <summary>Strategy output: execution/simulation maps this to fills or live orders.</summary>
-public readonly record struct OrderIntent(OrderIntentKind Kind, decimal Quantity, string? Tag);
+public readonly record struct OrderIntent(
+    OrderIntentKind Kind,
+    decimal Quantity,
+    string? Tag,
+    decimal? StopLossPrice = null,
+    decimal? TakeProfitPrice = null,
+    decimal? ExitPrice = null);

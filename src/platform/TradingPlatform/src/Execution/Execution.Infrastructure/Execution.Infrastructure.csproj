@@ -1,9 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <PackageReference Include="Binance.Net" Version="12.11.3" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.1" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\MarketData\MarketData.Application\MarketData.Application.csproj" />
     <ProjectReference Include="..\Execution.Application\Execution.Application.csproj" />
   </ItemGroup>
 </Project>

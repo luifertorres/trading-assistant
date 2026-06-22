@@ -27,5 +27,6 @@ Single place to record **where new work should go** and what is frozen or legacy
 
 ## Open migration notes
 
-- **Done on Platform:** MarketData instrument registry, canonical candles store, USD-M 1d backfill (main specs `trading-platform-marketdata-*`); Research backtest CLI (`trading-platform-research-backtest-cli`).
+- **Done on Platform:** MarketData instrument registry, canonical candles store, USD-M 1d backfill (main specs `trading-platform-marketdata-*`); Research backtest CLI (`trading-platform-research-backtest-cli`); dopamine delivery guardrails; first-vector cohort pipeline (Rsi5Extreme / 4H).
+- **Port map:** [src/platform/TradingPlatform/docs/legacy-port-map.md](../../src/platform/TradingPlatform/docs/legacy-port-map.md) — feature → context → priority → reward.
 - **Frozen on legacy:** OpenSpec proposals for clean-architecture, multi-broker, event-driven-dca, risk-v2, backtesting-module (archived with `LEGACY.md`).

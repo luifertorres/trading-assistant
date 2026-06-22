@@ -25,7 +25,15 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IBackfillCheckpointStore>(sp =>
             new BackfillCheckpointJsonStore(checkpointFilePath, sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<BackfillCheckpointJsonStore>>()));
         services.AddSingleton<IUsdM1dBackfillExchange, BinanceUsdM1dBackfillExchange>();
-        services.AddSingleton<Usdm1dBackfillOrchestrator>();
+        services.AddSingleton<UsdmBackfillOrchestrator>();
+        return services;
+    }
+
+    /// <summary>Multi-symbol live kline feed via Binance.Net socket.</summary>
+    public static IServiceCollection AddMarketDataBinanceLiveFeed(this IServiceCollection services)
+    {
+        services.AddBinance();
+        services.AddSingleton<ILiveCandleFeed, BinanceLiveCandleFeed>();
         return services;
     }
 }
