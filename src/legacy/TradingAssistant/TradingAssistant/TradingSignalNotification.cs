@@ -3,10 +3,10 @@ using MediatR;
 
 namespace TradingAssistant
 {
-    public record TradeRequest(string Symbol,
+    public record TradingSignalNotification(string Symbol,
         KlineInterval TimeFrame,
         DateTime Time,
         PositionSide Direction,
         OrderSide Side,
-        decimal EntryPrice) : IRequest<bool>;
+        decimal EntryPrice) : INotification;
 }

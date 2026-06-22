@@ -1,44 +1,24 @@
 ---
-description: Clean Architecture rules for the trading-assistant solution
+description: Legacy monolith maintenance rules for TradingAssistant
 globs: src/legacy/TradingAssistant/**/*.cs
 alwaysApply: false
 ---
 
-# Clean Architecture Rules
+# Legacy monolith rules
 
-## Layer Dependency Rule
+Single-project Worker Service under `src/legacy/TradingAssistant/TradingAssistant/`. **Maintenance only** — new features belong in Platform.
 
-The dependency direction is strictly **inward**:
+## Structure
 
-```
-Host → Infrastructure → Application → Domain
-```
+- **Program.cs** — composition root: `AddBinance`, `AddDbContext`, `AddHostedService`, FASTER singleton.
+- **BinanceService.cs** — Binance.Net REST/WebSocket; use `BinanceCredentials` (12.11+).
+- **Strategies / handlers** — MediatR `INotificationHandler` / `IRequestHandler` in this assembly.
+- **Workers / managers** — `BackgroundService` subclasses; register in `Program.cs`.
+- **TradingContext** — EF Core SQLite; migrations in `Migrations/`.
 
-### What this means in practice
+## Conventions
 
-- **Domain** (`TradingAssistant.Domain`): Must NOT reference any other project. Must NOT reference infrastructure NuGet packages (EF Core, Binance.Net, FASTER, HTTP clients).
-- **Application** (`TradingAssistant.Application`): May reference Domain only. Must NOT reference Infrastructure or Host. Only allowed NuGet: MediatR, DI abstractions.
-- **Infrastructure** (`TradingAssistant.Infrastructure`): May reference Application and Domain. Must NOT reference Host. All infrastructure NuGet packages live here. **Binance.Net** is the framework for Binance REST/WebSocket and API models in adapter code (see `.cursor/rules/binance-net.mdc`).
-- **Host** (`TradingAssistant`): May reference Application and Infrastructure. This is the composition root.
-
-## Adding New Features
-
-When adding a cross-cutting feature:
-
-1. **Domain types first** — entities, value objects, domain events in `TradingAssistant.Domain`.
-2. **Application interfaces** — abstractions in `TradingAssistant.Application` (e.g., `IMyService`).
-3. **Infrastructure implementation** — concrete classes in `TradingAssistant.Infrastructure`.
-4. **Host registration** — wire up DI in `Program.cs` or `ServiceCollectionExtensions`.
-
-## DI Registration Pattern
-
-- `AddApplication()` in Application's `ServiceCollectionExtensions` — registers MediatR.
-- `AddInfrastructure(IConfiguration)` in Infrastructure's `ServiceCollectionExtensions` — registers all infra services.
-- `AddBinance(Action<BinanceRestOptions>)` in Infrastructure — registers Binance-specific services.
-- Host's `Program.cs` calls all three and adds `HostedService<T>` registrations.
-
-## File Organization
-
-- Group by feature/concern, not by type (prefer `Binance/BinanceService.cs` over `Services/BinanceService.cs`).
-- One public type per file (matching filename).
-- Use subdirectories for cohesive groups in Infrastructure (e.g., `Binance/`, `Faster/`).
+- Keep changes minimal and localized — no new project layers.
+- Prefer extending existing types over introducing abstractions unless porting to Platform.
+- One public type per file; group by feature (`BinanceService.cs`, not `Services/BinanceService.cs`).
+- When porting behavior to Platform, use [legacy-port-map.md](../../src/platform/TradingPlatform/docs/legacy-port-map.md).

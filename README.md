@@ -7,7 +7,7 @@ Three .NET solutions live under `src/`:
 | Bucket | Solution | Role |
 |--------|----------|------|
 | `platform/` | TradingPlatform | DDD modular monolith (primary development) |
-| `legacy/` | TradingAssistant | Live bot + CandlestickData (maintenance) |
+| `legacy/` | TradingAssistant | Frozen single-project live bot (maintenance) |
 | `mvp/` | Backtesting | Isolated backtest MVP |
 
 **Full documentation:** [docs/README.md](docs/README.md)

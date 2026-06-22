@@ -2,8 +2,6 @@
 using Binance.Net.Enums;
 using Binance.Net.Objects.Models.Futures.Socket;
 using CryptoExchange.Net.Objects.Sockets;
-using TradingAssistant.Application;
-using TradingAssistant.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace TradingAssistant
@@ -13,23 +11,23 @@ namespace TradingAssistant
         private readonly ILogger<SteppedTrailingStopManager> _logger;
         private readonly IConfiguration _configuration;
         private readonly IServiceScopeFactory _factory;
-        private readonly IExchangeService _exchange;
+        private readonly BinanceService _binance;
         private readonly ConcurrentDictionary<string, UpdatePriceTask> _updateTakeProfitTasks = [];
 
         public SteppedTrailingStopManager(ILogger<SteppedTrailingStopManager> logger,
             IConfiguration configuration,
             IServiceScopeFactory factory,
-            IExchangeService exchange)
+            BinanceService binance)
         {
             _logger = logger;
             _configuration = configuration;
             _factory = factory;
-            _exchange = exchange;
+            _binance = binance;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _exchange.SubscribeToAccountUpdates(@event => HandleAccountUpdate(@event, stoppingToken));
+            _binance.SubscribeToAccountUpdates(@event => HandleAccountUpdate(@event, stoppingToken));
 
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
@@ -40,7 +38,7 @@ namespace TradingAssistant
             {
                 if (position.EntryPrice != 0 && position.Quantity != 0)
                 {
-                    if (!_exchange.TryGetLeverage(position.Symbol, out var leverage))
+                    if (!_binance.TryGetLeverage(position.Symbol, out var leverage))
                     {
                         continue;
                     }
@@ -70,7 +68,7 @@ namespace TradingAssistant
                         continue;
                     }
 
-                    await _exchange.TrySubscribeToPriceAsync(position.Symbol,
+                    await _binance.TrySubscribeToPriceAsync(position.Symbol,
                         action: candle =>
                         {
                             if (position.Quantity.AsOrderSide() == OrderSide.Buy)
@@ -91,7 +89,7 @@ namespace TradingAssistant
                         updateTakeProfitTask.Stop();
                     }
 
-                    await _exchange.TryUnsubscribeFromPriceAsync(position.Symbol);
+                    await _binance.TryUnsubscribeFromPriceAsync(position.Symbol);
                 }
             }
         }
@@ -108,7 +106,7 @@ namespace TradingAssistant
 
             _logger.LogDebug("{Symbol} Trailing Stop advanced due to current price: {Price}", position.Symbol, currentPrice);
 
-            var isTrailingPlaced = await _exchange.TryPlaceTakeProfitBehindAsync(position.Symbol,
+            var isTrailingPlaced = await _binance.TryPlaceTakeProfitBehindAsync(position.Symbol,
                     stopPrice,
                     position.Quantity,
                     position.Quantity.AsOrderSide().Reverse(),
@@ -116,8 +114,8 @@ namespace TradingAssistant
 
             if (!isTrailingPlaced)
             {
-                await _exchange.TryCancelSteppedTrailingAsync(position.Symbol, cancellationToken);
-                await _exchange.TryPlaceTakeProfitBehindAsync(position.Symbol,
+                await _binance.TryCancelSteppedTrailingAsync(position.Symbol, cancellationToken);
+                await _binance.TryPlaceTakeProfitBehindAsync(position.Symbol,
                     stopPrice,
                     position.Quantity,
                     position.Quantity.AsOrderSide().Reverse(),

@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using TradingAssistant.Application;
 
 namespace TradingAssistant
 {
@@ -16,6 +15,6 @@ namespace TradingAssistant
 
         public bool TryDequeue(out TradingSignalNotification signal) => _signals.TryDequeue(out signal!);
 
-        public void Clear() => _signals.Clear();
+        public void ClearQueue() => _signals.Clear();
     }
 }

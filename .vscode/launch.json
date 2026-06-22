@@ -10,7 +10,7 @@
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/src/legacy/TradingAssistant/TradingAssistant/bin/Debug/net9.0/TradingAssistant.dll",
+            "program": "${workspaceFolder}/src/legacy/TradingAssistant/TradingAssistant/bin/Debug/net10.0/TradingAssistant.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/legacy/TradingAssistant/TradingAssistant",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console

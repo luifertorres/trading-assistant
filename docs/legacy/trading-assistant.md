@@ -1,6 +1,6 @@
 # Legacy Trading Assistant — operations guide
 
-Operational guide for the **legacy live bot** under `src/legacy/TradingAssistant/`. For architecture and agent routing, see layer [AGENTS.md](../../src/legacy/TradingAssistant/TradingAssistant/AGENTS.md) files and [OpenSpec legacy specs](../../openspec/README.md).
+Operational guide for the **legacy live bot** under `src/legacy/TradingAssistant/`. For agent routing, see [AGENTS.md](../../src/legacy/TradingAssistant/TradingAssistant/AGENTS.md). For porting behavior to Platform, see [legacy-port-map.md](../../src/platform/TradingPlatform/docs/legacy-port-map.md).
 
 ## Features
 
@@ -17,7 +17,7 @@ Operational guide for the **legacy live bot** under `src/legacy/TradingAssistant
 | Component | Technology |
 |-----------|------------|
 | Language | C# / .NET 10.0 |
-| Application type | Worker Service |
+| Application type | Worker Service (single project) |
 | Exchange API | Binance.Net 12.11.x (REST + WebSockets) |
 | Mediator/CQRS | MediatR 14.0 |
 | Technical indicators | Skender.Stock.Indicators 2.7.1 |
@@ -28,14 +28,17 @@ Operational guide for the **legacy live bot** under `src/legacy/TradingAssistant
 
 ## Architecture
 
-Simplified Clean Architecture with DDD:
+Single-project monolith — all code in `TradingAssistant/`:
 
 ```
 src/legacy/TradingAssistant/
-├── TradingAssistant/                 # Host / Worker Service
-├── TradingAssistant.Domain/          # Entities and domain logic
-├── TradingAssistant.Application/     # Use cases and interfaces
-└── TradingAssistant.Infrastructure/  # Binance, EF Core, FASTER
+├── TradingAssistant.sln
+└── TradingAssistant/
+    ├── Program.cs
+    ├── BinanceService.cs
+    ├── *Strategy.cs, *Worker.cs, *Manager.cs
+    ├── TradingContext.cs + Migrations/
+    └── appsettings*.json
 ```
 
 ## Requirements
@@ -140,9 +143,6 @@ docker run -d \
 | `MeanReversion1mOr15mStrategy` | Mean reversion on short timeframes |
 | `MeanReversion5mStrategy` | Mean reversion on 5-minute bars |
 | `TrendFollowing1mOr15mStrategy` | Trend following |
-| `Rsi5Below10On1mStrategy` | Extreme RSI (&lt;10) on 1-minute |
-| `Rsi5Below10On1dStrategy` | Extreme RSI (&lt;10) on daily |
-| `Rsi5ExtremeStrategy` | RSI at extreme levels |
 
 ## Risk management
 
@@ -152,37 +152,13 @@ docker run -d \
 - **Trailing Stop** — dynamic stop-loss following price
 - **Stepped Trailing Stop** — trailing stop with ROI steps
 
-## Project layout
-
-```
-src/legacy/TradingAssistant/
-├── TradingAssistant/
-│   ├── Program.cs
-│   ├── *Strategy.cs
-│   ├── *Worker.cs
-│   ├── *Manager.cs
-│   └── appsettings.json
-├── TradingAssistant.Domain/
-│   ├── Candle.cs, Rsi.cs
-│   ├── StopLossPrice.cs, TakeProfitPrice.cs
-│   └── OpenPosition.cs
-├── TradingAssistant.Application/
-│   ├── IExchangeService.cs, ICandleRepository.cs
-│   ├── CandleClosedNotification.cs
-│   └── TradingSignalNotification.cs
-└── TradingAssistant.Infrastructure/
-    ├── Binance/BinanceService.cs
-    ├── Faster/FasterCandleRepository.cs
-    └── TradingContext.cs
-```
-
 ## EF migrations
 
-From `src/legacy/TradingAssistant/`:
+From repo root:
 
 ```bash
-dotnet ef migrations add <Name> --project TradingAssistant.Infrastructure --startup-project TradingAssistant --output-dir Migrations
-dotnet ef database update --project TradingAssistant.Infrastructure --startup-project TradingAssistant
+dotnet ef migrations add <Name> --project src/legacy/TradingAssistant/TradingAssistant
+dotnet ef database update --project src/legacy/TradingAssistant/TradingAssistant
 ```
 
 Never edit migration files manually.
@@ -191,7 +167,7 @@ Never edit migration files manually.
 
 - [Documentation index](../README.md)
 - [Source tree build/run](../../src/README.md)
-- OpenSpec legacy capabilities: `architecture`, `trading-strategies`, `risk-management`, `candlestick-data-service` — see [openspec/README.md](../../openspec/README.md)
+- [Legacy port map](../../src/platform/TradingPlatform/docs/legacy-port-map.md)
 
 ## Warning
 

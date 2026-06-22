@@ -11,7 +11,7 @@ Three .NET solutions live under `src/`:
 | Bucket | Path | Role |
 |--------|------|------|
 | **platform** | [`src/platform/TradingPlatform/`](../src/platform/TradingPlatform/) | Greenfield DDD modular monolith (primary development) |
-| **legacy** | [`src/legacy/TradingAssistant/`](../src/legacy/TradingAssistant/) | Live bot + CandlestickData (maintenance) |
+| **legacy** | [`src/legacy/TradingAssistant/`](../src/legacy/TradingAssistant/) | Frozen single-project live bot (maintenance) |
 | **mvp** | [`src/mvp/Backtesting/`](../src/mvp/Backtesting/) | Isolated backtest MVP |
 
 Build, test, and run commands: [`src/README.md`](../src/README.md).
@@ -31,8 +31,7 @@ Build, test, and run commands: [`src/README.md`](../src/README.md).
 | Doc | Description |
 |-----|-------------|
 | [Trading Assistant operations](legacy/trading-assistant.md) | Configuration, strategies, Docker, risk management |
-| [Host AGENTS.md](../src/legacy/TradingAssistant/TradingAssistant/AGENTS.md) | Legacy host agent instructions |
-| Layer AGENTS | [Domain](../src/legacy/TradingAssistant/TradingAssistant.Domain/AGENTS.md), [Application](../src/legacy/TradingAssistant/TradingAssistant.Application/AGENTS.md), [Infrastructure](../src/legacy/TradingAssistant/TradingAssistant.Infrastructure/AGENTS.md) |
+| [Host AGENTS.md](../src/legacy/TradingAssistant/TradingAssistant/AGENTS.md) | Legacy monolith agent instructions |
 
 ## MVP backtesting
 
@@ -40,7 +39,7 @@ Build, test, and run commands: [`src/README.md`](../src/README.md).
 
 ## Specifications (OpenSpec)
 
-[`openspec/README.md`](../openspec/README.md) — capability specs, change workflow, Platform vs legacy tracks.
+[`openspec/README.md`](../openspec/README.md) — TradingPlatform capability specs and change workflow.
 
 ## Archive
 

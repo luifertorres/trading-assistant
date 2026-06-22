@@ -1,25 +1,24 @@
 ---
 description: Binance.Net as the .NET framework for Binance APIs (REST, WebSocket, API-shaped models)
-globs: "**/Binance/**/*.cs,src/mvp/Backtesting/**/*.cs,**/CandlestickData.Infrastructure/**/*.cs"
+globs: "**/Binance/**/*.cs,src/mvp/Backtesting/**/*.cs,src/legacy/TradingAssistant/TradingAssistant/BinanceService.cs,src/legacy/TradingAssistant/TradingAssistant/BinanceExtensions.cs"
 alwaysApply: false
 ---
 
 # Binance.Net in this repo
 
-Treat **[Binance.Net](https://github.com/JKorf/Binance.Net)** as the **framework** for Binance-facing .NET code: `IBinanceRestClient` / `IBinanceSocketClient`, USD-M Futures APIs under `UsdFuturesApi`, and **models as returned by the API** (e.g. `BinanceFuturesUsdtSymbol`, filters, klines). Prefer library types and client methods over re-modeling exchange payloads unless the code is translating **into Domain** or **through Application interfaces** (there use domain types).
+Treat **[Binance.Net](https://github.com/JKorf/Binance.Net)** as the **framework** for Binance-facing .NET code: `IBinanceRestClient` / `IBinanceSocketClient`, USD-M Futures APIs under `UsdFuturesApi`, and **models as returned by the API** (e.g. `BinanceFuturesUsdtSymbol`, filters, klines). Prefer library types and client methods over re-modeling exchange payloads unless the code is translating **into Platform Domain** or **through Application interfaces** (there use domain types).
 
 ## Where this applies
 
-- **Infrastructure** (`TradingAssistant.Infrastructure` / `CandlestickData.Infrastructure`): primary home for clients, options, and Binance-specific logic.
-- **Host**: composition and workers may use Binance types only where still coupled to infrastructure (goal: prefer `IExchangeService` at boundaries).
-- **Backtesting MVP** (`src/mvp/Backtesting/`): isolated tools may reference Binance.Net directly for klines, `KlineInterval`, exchange info, and filters (speed over extra mapping layers).
+- **Platform Infrastructure** (MarketData, Execution): primary home for clients, options, and Binance-specific logic.
+- **Legacy monolith** (`src/legacy/TradingAssistant/TradingAssistant/BinanceService.cs`): direct Binance.Net usage; use `BinanceCredentials` (12.11+).
+- **Backtesting MVP** (`src/mvp/Backtesting/`): isolated tools may reference Binance.Net directly for klines, `KlineInterval`, exchange info, and filters.
 
 ## Where it does not
 
-- **Domain** and **Application** must remain **free of Binance.Net in public contracts** (interfaces, entities, VOs). Adapters in Infrastructure translate Binance.Net models to domain types where the architecture requires it.
-- Do not add Binance.Net to Domain; existing references are **legacy** and scheduled for removal (see Domain `AGENTS.md`).
+- **Platform Domain and Application** must remain **free of Binance.Net in public contracts**. Adapters in Infrastructure translate Binance.Net models to domain types.
 
 ## Practices
 
-- Use official client surfaces (`ExchangeData`, `Account`, etc.) and **CryptoExchange.Net** patterns (e.g. `GetResultOrError`) consistent with existing `BinanceService` code.
+- Use official client surfaces (`ExchangeData`, `Account`, etc.) and **CryptoExchange.Net** patterns consistent with existing `BinanceService` code.
 - Keep **version alignment**: solution projects referencing Binance.Net should use the **same package version** (see root `AGENTS.md` technology table).

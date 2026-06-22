@@ -1,12 +1,12 @@
 # OpenSpec in this repository
 
-Two tracks share one `openspec/` tree (required by the OpenSpec CLI). **New features belong on TradingPlatform**; legacy specs document the live-bot reference implementation.
+OpenSpec documents **TradingPlatform** capabilities under `src/platform/TradingPlatform/`. Legacy live-bot code under `src/legacy/TradingAssistant/` is a frozen single-project reference with no OpenSpec track.
 
-## Active track — TradingPlatform
+## Main specs — TradingPlatform
 
-| Main spec capability | Codebase |
-|----------------------|----------|
-| `trading-platform-marketdata-instrument-registry` | [`src/platform/TradingPlatform/`](../src/platform/TradingPlatform/) MarketData |
+| Capability | Codebase |
+|------------|----------|
+| `trading-platform-marketdata-instrument-registry` | MarketData |
 | `trading-platform-marketdata-candles-store` | MarketData |
 | `trading-platform-marketdata-binance-1d-backfill` | MarketData + Cli |
 | `trading-platform-research-backtest-cli` | Research + Cli |
@@ -15,46 +15,17 @@ Two tracks share one `openspec/` tree (required by the OpenSpec CLI). **New feat
 
 **Shipped changes** live under [`openspec/changes/archive/`](changes/archive/) with date prefixes.
 
-## Legacy reference — TradingAssistant / CandlestickData
-
-| Main spec capability | Codebase |
-|----------------------|----------|
-| `architecture` | [`src/legacy/TradingAssistant/`](../src/legacy/TradingAssistant/) |
-| `exchange-integration` | TradingAssistant.Infrastructure |
-| `market-data` | TradingAssistant + CandlestickData integration |
-| `trading-strategies` | TradingAssistant Host strategies |
-| `risk-management` | TradingAssistant Host managers |
-| `candlestick-data-service` | [`CandlestickData.*`](../src/legacy/TradingAssistant/) |
-| `candlestick-gap-governance` | CandlestickData |
-
-These specs are **reference only** for real-time multi-strategy trading. Do not extend them for greenfield Platform work; port intent into new `trading-platform-*` capabilities instead.
-
-**Archived legacy proposals** are under [`openspec/changes/archive/`](changes/archive/) with `LEGACY.md` where applicable.
-
 ## Naming rules
 
 | Intent | Convention |
 |--------|------------|
 | Platform feature | `trading-platform-<context>-<feature>` change + matching main spec |
-| Legacy reference | Existing capability names above; archived changes keep original names |
 | Do not | Create `openspec-legacy/` at repo root (CLI will not discover it) |
-| Do not | Apply archived legacy changes to TradingPlatform via `/opsx:apply` |
-
-## Supersession map (legacy → Platform)
-
-| Legacy change / spec area | Platform carry-forward |
-|---------------------------|------------------------|
-| `backtesting-module` | Research `IBacktestRunner`, simulation models, future `trading-platform-research-*` |
-| `multi-broker-support` | Execution broker ACL (future) |
-| `event-driven-dca` | Execution event/intent model (future) |
-| `risk-management-v2` | Execution / Portfolio risk (future) |
-| `clean-architecture-refactor` | Platform DDD slices; only relevant for legacy bot maintenance |
-| `cqrs-candle-repository` | Shipped in CandlestickData; Platform uses canonical `candles` store instead |
 
 ## Agent routing
 
 - New feature → [`src/platform/TradingPlatform/AGENTS.md`](../src/platform/TradingPlatform/AGENTS.md), then `/opsx:new`
-- Legacy bugfix → matching `TradingAssistant/**/AGENTS.md`, read archived change if needed
+- Legacy bugfix → [`src/legacy/TradingAssistant/TradingAssistant/AGENTS.md`](../src/legacy/TradingAssistant/TradingAssistant/AGENTS.md); port map at [`legacy-port-map.md`](../src/platform/TradingPlatform/docs/legacy-port-map.md)
 - Full routing → [`.cursor/context/routing-map.md`](../.cursor/context/routing-map.md), [`.cursor/context/refactor-ledger.md`](../.cursor/context/refactor-ledger.md)
 
 ## Workflow commands

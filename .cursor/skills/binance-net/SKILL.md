@@ -12,7 +12,7 @@ description: Use Binance.Net as the .NET framework for Binance APIs in this repo
 ## Where to look
 
 - Root [AGENTS.md](mdc:AGENTS.md) — **Binance.Net framework (.NET)** section, stack table, layer rules.
-- [Infrastructure AGENTS.md](mdc:src/legacy/TradingAssistant/TradingAssistant.Infrastructure/AGENTS.md) — `Binance/` layout, framework stance, adapters.
+- [TradingAssistant AGENTS.md](mdc:src/legacy/TradingAssistant/TradingAssistant/AGENTS.md) — legacy monolith Binance usage.
 - [Backtesting README](mdc:src/mvp/Backtesting/README.md) — isolated MVP using Binance.Net directly.
 - `.cursor/rules/binance-net.mdc` — same boundaries with path globs for Cursor.
 

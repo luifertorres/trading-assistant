@@ -9,20 +9,20 @@ For **fast / routine** work, **bypass** this document: go straight to the right 
 | Situation | Bucket | Read first | Notes |
 |-----------|--------|------------|--------|
 | New feature, new module, DDD/context work | `platform` | `src/platform/TradingPlatform/AGENTS.md`, `src/platform/TradingPlatform/README.md` | No references to legacy solutions. |
-| Bugfix or small change in existing bot | `legacy` | Matching layer under `src/legacy/TradingAssistant/**/AGENTS.md` | Legacy path; see root `AGENTS.md` for EF and Binance boundaries. |
+| Bugfix or small change in existing bot | `legacy` | `src/legacy/TradingAssistant/TradingAssistant/AGENTS.md` | Single-project monolith; EF and Binance in same assembly. |
 | Backtesting CLI / MVP only | `mvp` | `src/mvp/Backtesting/README.md` | Isolated from main host. |
 | OpenSpec change already named and scoped | — | `openspec/changes/<name>/` artifacts | Use bypass commands; do not re-plan from scratch unless blocked. |
-| **New** OpenSpec feature (greenfield) | `platform` | [openspec/README.md](../../openspec/README.md), `openspec/specs/trading-platform-*` | `/opsx:new` with `trading-platform-…` prefix; never `/opsx:apply` archived legacy changes to Platform. |
-| Legacy behavior reference (strategies, risk, CandlestickData) | `legacy` | Archived change under `openspec/changes/archive/`, legacy main specs | `src/legacy/TradingAssistant/`; specs marked **Legacy reference** in `openspec/specs/`. |
+| **New** OpenSpec feature (greenfield) | `platform` | [openspec/README.md](../../openspec/README.md), `openspec/specs/trading-platform-*` | `/opsx:new` with `trading-platform-…` prefix. |
+| Legacy behavior reference (strategies, risk) | `legacy` | `src/legacy/TradingAssistant/TradingAssistant/*.cs`, [legacy-port-map.md](../../src/platform/TradingPlatform/docs/legacy-port-map.md) | No OpenSpec track for legacy. |
 
 ## Cross-cutting “paired change” hints
 
 | You touch | Also consider |
 |-----------|----------------|
-| Binance REST/WS or exchange DTOs | `.cursor/rules/binance-net.mdc`, `TradingAssistant.Infrastructure/AGENTS.md` (legacy) or Platform Execution/MarketData infra |
-| Domain public types or invariants | Same layer `AGENTS.md`; broker-agnostic contracts |
-| EF schema or persistence | Migrations policy in root `AGENTS.md`; context-owned persistence in Platform |
-| OpenSpec capability wording | `openspec/specs/<capability>/spec.md` plus the active change delta specs |
+| Binance REST/WS or exchange DTOs | `.cursor/rules/binance-net.mdc`, Platform MarketData/Execution infra, or legacy `BinanceService.cs` |
+| Domain public types or invariants | Platform context `AGENTS.md`; broker-agnostic contracts |
+| EF schema or persistence | Migrations in legacy project or Platform context-owned persistence |
+| OpenSpec capability wording | `openspec/specs/trading-platform-*/spec.md` plus the active change delta specs |
 
 ## Modular context pack (rate of change)
 

@@ -1,14 +1,13 @@
 ﻿using MediatR;
-using TradingAssistant.Application;
 
 namespace TradingAssistant
 {
     public class TradingSignalHandler : INotificationHandler<TradingSignalNotification>
     {
         private readonly ILogger<TradingSignalHandler> _logger;
-        private readonly ITradingSignalQueue _service;
+        private readonly TradingSignalQueueService _service;
 
-        public TradingSignalHandler(ILogger<TradingSignalHandler> logger, ITradingSignalQueue service)
+        public TradingSignalHandler(ILogger<TradingSignalHandler> logger, TradingSignalQueueService service)
         {
             _logger = logger;
             _service = service;

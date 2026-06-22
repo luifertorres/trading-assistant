@@ -1,27 +1,25 @@
 ﻿using Binance.Net.Enums;
 using Binance.Net.Objects.Models.Futures.Socket;
 using CryptoExchange.Net.Objects.Sockets;
-using TradingAssistant.Application;
-using TradingAssistant.Infrastructure;
 
 namespace TradingAssistant
 {
     public class TakeProfitManager : BackgroundService
     {
-        private readonly IExchangeService _exchange;
+        private readonly BinanceService _binance;
         private readonly IConfiguration _configuration;
         private readonly IServiceScopeFactory _factory;
 
-        public TakeProfitManager(IConfiguration configuration, IServiceScopeFactory factory, IExchangeService exchange)
+        public TakeProfitManager(IConfiguration configuration, IServiceScopeFactory factory, BinanceService binance)
         {
             _configuration = configuration;
             _factory = factory;
-            _exchange = exchange;
+            _binance = binance;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _exchange.SubscribeToAccountUpdates(HandleAccountUpdate);
+            _binance.SubscribeToAccountUpdates(HandleAccountUpdate);
             //_binance.SubscribeToOrderUpdates(HandleOrderUpdate);
 
             await Task.Delay(Timeout.Infinite, stoppingToken);
@@ -33,7 +31,7 @@ namespace TradingAssistant
             {
                 if (position.EntryPrice == 0 || position.Quantity == 0)
                 {
-                    _ = _exchange.CancelAllOrdersAsync(position.Symbol);
+                    _ = _binance.CancelAllOrdersAsync(position.Symbol);
                 }
             }
         }
@@ -70,7 +68,7 @@ namespace TradingAssistant
         private async Task UpdateTakeProfitAsync(BinanceFuturesStreamOrderUpdateData order, CancellationToken cancellationToken = default)
         {
             var roi = _configuration.GetValue<decimal>("Binance:RiskManagement:TakeProfitRoi");
-            var isTakeProfitPlaced = await _exchange.TryPlaceTakeProfitAsync(order.Symbol,
+            var isTakeProfitPlaced = await _binance.TryPlaceTakeProfitAsync(order.Symbol,
                 order.AveragePrice,
                 order.Quantity,
                 roi,
@@ -79,8 +77,8 @@ namespace TradingAssistant
 
             if (!isTakeProfitPlaced)
             {
-                await _exchange.TryCancelTakeProfitAsync(order.Symbol, cancellationToken);
-                await _exchange.TryPlaceTakeProfitAsync(order.Symbol,
+                await _binance.TryCancelTakeProfitAsync(order.Symbol, cancellationToken);
+                await _binance.TryPlaceTakeProfitAsync(order.Symbol,
                     order.AveragePrice,
                     order.Quantity,
                     roi,

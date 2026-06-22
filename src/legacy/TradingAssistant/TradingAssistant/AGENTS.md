@@ -1,88 +1,44 @@
-# Host Layer - Agent Instructions
+# Legacy TradingAssistant — Agent Instructions
 
 ## Purpose
 
-Composition root and entry point. This is a **Worker Service** that wires up DI, configures services, and runs background workers. It should contain minimal business logic — only DI registration and BackgroundService orchestration.
+Single-project **Worker Service** live bot for Binance USD-M Futures. All code lives in this project — strategies, workers, managers, `BinanceService`, EF Core, and FASTER cache. **Maintenance only**; new features belong in [`src/platform/TradingPlatform/`](../../../../platform/TradingPlatform/).
 
-## Rules
-
-### Dependency Constraints
-
-- **MAY** reference `TradingAssistant.Application` and `TradingAssistant.Infrastructure`.
-- **NEVER** reference `TradingAssistant.Domain` directly for business logic (go through Application interfaces).
-- Infrastructure types are only used here for DI registration, not for business logic.
-
-### Binance
-
-- Binance connectivity is implemented with **Binance.Net** in Infrastructure; the host wires `AddBinance()` and should prefer **`IExchangeService`** in new code over leaking `BinanceService` details into workers.
-
-### Program.cs (Composition Root)
-
-- `AddApplication()` — registers MediatR from the Application assembly.
-- `AddMediatR()` — also scans the Host assembly for handlers (temporary, until handlers move to Application).
-- `AddBinance()` — configures Binance API credentials.
-- `AddInfrastructure()` — registers all infrastructure services.
-- Hosted services are registered individually via `AddHostedService<T>()`.
-
-### Strategies (pending migration to Application)
-
-Strategies implement `INotificationHandler<SmasAndRsisCalculatedEvent>`:
-
-| Strategy | Description |
-|----------|-------------|
-| `MeanReversion1mStrategy` | Mean reversion on 1-minute candles |
-| `MeanReversion1mOr15mStrategy` | Mean reversion on 1m or 15m candles |
-| `MeanReversion5mStrategy` | Mean reversion on 5-minute candles |
-| `TrendFollowing1mOr15mStrategy` | Trend following on 1m/15m candles |
-| `Rsi5Below10On1mStrategy` | RSI(5) < 10 on 1-minute candles |
-| `Rsi5Below10On1dStrategy` | RSI(5) < 10 on daily candles |
-| `Rsi5ExtremeStrategy` | RSI(5) extreme levels (IRequestHandler) |
-
-### Workers (BackgroundServices)
-
-| Worker | Purpose |
-|--------|---------|
-| `TradingSignalWorker` | Dequeues and processes trading signals |
-| `PositionWriterWorker` | Persists open positions to SQLite |
-| `Rsi5RealtimeIndicatorWorker` | Real-time RSI(5) calculation |
-| `Ema5ClosePositionWorker` | EMA(5)-based position closing |
-| `Rsi200ClosePositionWorker` | RSI(200)-based position closing |
-| `BreakEvenWorker` | Break-even management (currently disabled) |
-
-### Managers (BackgroundServices)
-
-| Manager | Purpose |
-|---------|---------|
-| `StopLossManager` | Monitors and triggers stop-loss orders |
-| `TakeProfitManager` | Monitors and triggers take-profit orders (currently disabled) |
-| `TrailingStopManager` | Dynamic trailing stop management (currently disabled) |
-| `SteppedTrailingStopManager` | Stepped trailing stop management (currently disabled) |
-
-### Handlers
-
-| Handler | Handles | Purpose |
-|---------|---------|---------|
-| `TradeHandler` | `TradeRequest` | Executes trades via exchange |
-| `ClosePositionHandler` | `ClosePositionRequest` | Closes positions |
-| `RsiCandleClosedHandler` | `CandleClosedNotification` | RSI calculation on candle close |
-| `TradingSignalHandler` | `TradingSignalNotification` | Processes trading signals |
-| `RsiIndicatorConditionDispatcher` | — | Dispatches indicator threshold events |
-
-### Configuration
-
-Configuration is in `appsettings.json` with environment overrides in `appsettings.Development.json`:
+## Layout
 
 ```
-Binance:Futures:ApiKey / ApiSecret   → API credentials (use User Secrets in dev)
-Binance:Service:TimeFrameSeconds     → Candle timeframe
-Binance:Service:CandlestickSize      → Historical candle count
-Binance:Strategy:LengthA-D           → Indicator lengths
-Binance:RiskManagement:*             → Stop-loss, take-profit, trailing stop settings
-Binance:Indicators:*                 → Per-timeframe indicator lengths
+src/legacy/TradingAssistant/
+├── TradingAssistant.sln
+└── TradingAssistant/          ← this project (everything)
+    ├── Program.cs             ← composition root
+    ├── BinanceService.cs
+    ├── *Strategy.cs, *Worker.cs, *Manager.cs, *Handler.cs
+    ├── TradingContext.cs + Migrations/
+    └── appsettings*.json
 ```
+
+## Binance
+
+Use **Binance.Net** directly (`AddBinance`, `BinanceCredentials`, `IBinanceRestClient` / `IBinanceSocketClient`). Keep package version aligned with Platform and MVP (12.11.x).
 
 ## Conventions
 
-- New workers/managers: register in `Program.cs` via `AddHostedService<T>()`.
-- Disabled services: comment out the registration line (do not delete).
-- Logging: use `ILogger<T>` injected via constructor. Telegram logging is configured for production.
+- **MediatR**: notifications and requests; handlers in this assembly.
+- **BackgroundService**: workers and risk managers; register in `Program.cs` via `AddHostedService<T>()`.
+- **EF Core**: migrations live in `Migrations/` inside this project.
+- Disabled services: comment out registration in `Program.cs` (do not delete).
+
+## EF migrations
+
+From repo root:
+
+```bash
+dotnet ef migrations add <Name> --project src/legacy/TradingAssistant/TradingAssistant
+dotnet ef database update --project src/legacy/TradingAssistant/TradingAssistant
+```
+
+Never edit migration files manually.
+
+## Porting to Platform
+
+See [`legacy-port-map.md`](../../../../platform/TradingPlatform/docs/legacy-port-map.md) for behavior → bounded context mapping.

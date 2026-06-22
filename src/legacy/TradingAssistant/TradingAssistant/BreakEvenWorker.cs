@@ -2,7 +2,6 @@
 using Binance.Net.Enums;
 using Binance.Net.Objects.Models.Futures.Socket;
 using CryptoExchange.Net.Objects.Sockets;
-using TradingAssistant.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace TradingAssistant
