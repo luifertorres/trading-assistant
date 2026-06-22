@@ -6,7 +6,7 @@ Canonical agent specs are **not** in `.cursor/`. The entire `.cursor/` directory
 
 | Layer | Path | Role |
 |-------|------|------|
-| Repo-native devkit | [`ai/`](ai/) | Skills, commands, rule templates, routing context |
+| Repo-native devkit | [`ai/`](ai/) | Skills, commands, rule templates, routing context, [`onboard manifest`](ai/onboard/manifest.yaml) |
 | OpenSpec vendor | [`openspec/agent/`](openspec/agent/) | `opsx-*` commands and `openspec-*` skills (external framework) |
 | Specs | [`openspec/`](openspec/) | Platform capabilities and changes |
 | Index | [`AGENTS.md`](AGENTS.md) | Task routing |

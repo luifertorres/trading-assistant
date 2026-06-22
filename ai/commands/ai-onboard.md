@@ -13,7 +13,7 @@ Use when setting up a new clone, after changing files under `ai/`, `openspec/age
 ## Steps
 
 1. **Detect `editorRoot`** — Default: `.cursor/` at repo root when using Cursor. Use one target unless the user asks to refresh all editor roots.
-2. **Read** [`ai/bootstrap/manifest.yaml`](../bootstrap/manifest.yaml).
+2. **Read** [`ai/onboard/manifest.yaml`](../onboard/manifest.yaml).
 3. **Context** — Copy every file from `ai/context/` to `{editorRoot}/context/` (overwrite).
 4. **Rules** — Copy every `*.mdc` from `ai/templates/rules/` to `{editorRoot}/rules/` (overwrite).
 5. **OpenSpec vendor commands** — Copy every `*.md` from `openspec/agent/commands/` to `{editorRoot}/commands/` (overwrite). Preserve CLI preflight blocks in those files.
