@@ -17,19 +17,11 @@ Forces **one visible win per session** aligned with the dopamine delivery plan.
 
 ### 1. Pick ONE slice
 
-Choose exactly one item from the active plan or [legacy-port-map.md](../../../src/platform/TradingPlatform/docs/legacy-port-map.md). Examples:
-
-- Guardrails only (docs + WINS entry)
-- Single-symbol 4H backtest with PASS/FAIL verdict
-- Portfolio compose for cohort
-- Live feed logging closed 4H candles
-- One armed fire-test order (only if backtest PASS + in portfolio)
+Choose exactly one item from the active plan or [legacy-port-map.md](../../../src/platform/TradingPlatform/docs/legacy-port-map.md).
 
 **Reject** slices that cannot be demo'd in the same session.
 
 ### 2. State proof up front
-
-Write two lines before coding:
 
 - **Visible artifact:** what the user will see (CLI output, file, Binance UI, etc.)
 - **Proof command:** exact command to run (copy-paste ready)
@@ -38,9 +30,9 @@ Write two lines before coding:
 
 Read only:
 
-- [.cursor/context/delivery-principles.md](../../context/delivery-principles.md)
-- Scoped `AGENTS.md` for contexts you touch (`MarketData`, `Research`, `Execution`, `Hosts`)
-- [.cursor/rules/live-trading-safety.mdc](../../rules/live-trading-safety.mdc) if touching live orders
+- `.cursor/context/delivery-principles.md`
+- Scoped `AGENTS.md` for contexts you touch
+- `.cursor/rules/live-trading-safety.mdc` if touching live orders
 
 ### 4. Execute smallest steps
 
@@ -71,3 +63,5 @@ Before any `--arm` or real order:
 - `LiveTradingOptions.Armed` explicitly set
 - Kill-switch file absent
 - Build succeeded
+
+Workflow command: [`ai/commands/slice.md`](../../commands/slice.md).

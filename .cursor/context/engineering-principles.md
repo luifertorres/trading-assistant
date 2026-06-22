@@ -19,4 +19,5 @@ Non-negotiables for agents working in this repository. Prefer updating the narro
 
 - Match existing naming, file layout, and patterns in the touched area.
 - Use `CancellationToken` on async APIs.
-- Run or add tests appropriate to the change (see `.cursor/skills/dotnet-test/SKILL.md`).
+- **Strict TDD** for new/changed Domain and Application behavior: failing unit test first (`ai/skills/test-driven-development/SKILL.md`).
+- Verify with build + unit tests; integration last when Infrastructure changed (`ai/skills/dotnet-verification/SKILL.md`).

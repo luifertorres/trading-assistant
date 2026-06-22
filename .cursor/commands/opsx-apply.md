@@ -11,6 +11,20 @@ Implement tasks from an OpenSpec change.
 
 **Steps**
 
+0. **Preflight — OpenSpec CLI**
+
+   ```bash
+   openspec --version 2>&1 || echo "CLI_NOT_INSTALLED"
+   ```
+
+   **If CLI not installed**, use **markdown fallback** (Tier 1 — see `openspec/SETUP.md`):
+   - List active changes: subdirectories of `openspec/changes/` excluding `archive/`
+   - If ambiguous, use **AskUserQuestion** to pick a change name
+   - Read directly: `openspec/changes/<name>/tasks.md`, `proposal.md`, `design.md`, and `specs/**/*.md`
+   - Apply [`ai/skills/implementation-planning/SKILL.md`](../../ai/skills/implementation-planning/SKILL.md) and [`ai/skills/test-driven-development/SKILL.md`](../../ai/skills/test-driven-development/SKILL.md) for each pending task (`*-test-red` before `*-impl` for behavior)
+   - Skip steps 2–3 below; proceed from step 4 using those files as context (tasks artifact = `tasks.md`)
+   - Tell the user: install CLI for status/archive/sync — `npm i -g @fission-ai/openspec` (`openspec/SETUP.md`)
+
 1. **Select the change**
 
    If a name is provided, use it. Otherwise:

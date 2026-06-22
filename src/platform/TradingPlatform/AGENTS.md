@@ -44,7 +44,20 @@ Read the two-track map: [openspec/README.md](../../../openspec/README.md).
 - **Active changes:** `openspec/changes/<name>/` — use names prefixed `trading-platform-…` for new work.
 - **Legacy specs** (`architecture`, `trading-strategies`, etc.) document `src/legacy/TradingAssistant/` only; do not extend them for Platform features.
 
-Use `/opsx:new` to start Platform changes, then `/opsx:apply`, `/opsx:sync`, `/opsx:archive` as usual. Archived legacy proposals live under `openspec/changes/archive/` with `LEGACY.md`.
+Use `/opsx:new` to start Platform changes, then `/opsx:apply`, `/opsx:sync`, `/opsx:archive` as usual. Archived legacy proposals live under `openspec/changes/archive/` with `LEGACY.md`. Setup: [`openspec/SETUP.md`](../../../openspec/SETUP.md).
+
+## Test projects
+
+| Kind | Path |
+|------|------|
+| MarketData Domain (unit) | `tests/MarketData.Domain.Tests/MarketData.Domain.Tests.csproj` |
+| MarketData Application (unit) | `tests/MarketData.Application.Tests/MarketData.Application.Tests.csproj` |
+| Cli (unit) | `tests/TradingPlatform.Cli.Tests/TradingPlatform.Cli.Tests.csproj` |
+| MarketData Infrastructure (integration) | `tests/MarketData.Infrastructure.IntegrationTests/MarketData.Infrastructure.IntegrationTests.csproj` |
+
+Full suite: `dotnet test TradingPlatform.slnx` from this directory. Patterns and verify order: [`ai/skills/dotnet-verification/SKILL.md`](../../../ai/skills/dotnet-verification/SKILL.md). Strict TDD: [`ai/skills/test-driven-development/SKILL.md`](../../../ai/skills/test-driven-development/SKILL.md).
+
+**Verify order:** `dotnet build TradingPlatform.slnx` → affected unit csproj → `MarketData.Infrastructure.IntegrationTests` **last** when persistence/Binance adapter changed.
 
 ## Repo-wide agent context
 

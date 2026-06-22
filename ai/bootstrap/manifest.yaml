@@ -1,0 +1,23 @@
+# Bootstrap manifest for editor agent devkit. See ai/commands/synchronize-editor-devkit.md.
+
+commands:
+  test-driven-implementation:
+    slim_sections: [title, constraints, steps]
+  commit:
+    slim_sections: [title, constraints, steps, message_style]
+  slice:
+    slim_sections: [title, steps]
+
+rules:
+  - test-driven-development-enforcement.mdc
+  - implementation-plan-granularity.mdc
+
+skill_stubs:
+  - test-driven-development
+  - dotnet-verification
+  - implementation-planning
+  - binance-net
+  - chief-of-staff
+  - commit
+  - pr
+  - ship-a-slice

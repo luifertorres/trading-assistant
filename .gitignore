@@ -408,13 +408,28 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 
-# Cursor - track rules, skills, and commands for sharing
+# Cursor — generated devkit (bootstrap); vendor + domain committed via exceptions
 .cursor/*
-!.cursor/rules/
-!.cursor/rules/**
-!.cursor/skills/
-!.cursor/skills/**
-!.cursor/commands/
-!.cursor/commands/**
 !.cursor/context/
 !.cursor/context/**
+!.cursor/plans/
+!.cursor/plans/**
+
+# OpenSpec external framework (committed vendor)
+!.cursor/commands/
+.cursor/commands/*
+!.cursor/commands/opsx-*.md
+
+!.cursor/skills/
+.cursor/skills/*
+!.cursor/skills/openspec-*/
+!.cursor/skills/openspec-*/
+
+# Domain rules (repo-owned; not bootstrap output)
+!.cursor/rules/
+.cursor/rules/*
+!.cursor/rules/architecture.mdc
+!.cursor/rules/binance-net.mdc
+!.cursor/rules/ddd.mdc
+!.cursor/rules/dotnet.mdc
+!.cursor/rules/live-trading-safety.mdc

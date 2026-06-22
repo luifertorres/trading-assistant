@@ -26,6 +26,8 @@ OpenSpec documents **TradingPlatform** capabilities under `src/platform/TradingP
 
 - New feature → [`src/platform/TradingPlatform/AGENTS.md`](../src/platform/TradingPlatform/AGENTS.md), then `/opsx:new`
 - Legacy bugfix → [`src/legacy/TradingAssistant/TradingAssistant/AGENTS.md`](../src/legacy/TradingAssistant/TradingAssistant/AGENTS.md); port map at [`legacy-port-map.md`](../src/platform/TradingPlatform/docs/legacy-port-map.md)
+- Editor bootstrap → [`EDITOR-AGENTS.md`](../EDITOR-AGENTS.md)
+- OpenSpec CLI setup → [`SETUP.md`](SETUP.md)
 - Full routing → [`.cursor/context/routing-map.md`](../.cursor/context/routing-map.md), [`.cursor/context/refactor-ledger.md`](../.cursor/context/refactor-ledger.md)
 
 ## Workflow commands

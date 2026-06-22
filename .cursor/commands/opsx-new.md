@@ -11,6 +11,19 @@ Start a new change using the experimental artifact-driven approach.
 
 **Steps**
 
+0. **Preflight — OpenSpec CLI (required for scaffold)**
+
+   ```bash
+   openspec --version 2>&1 || echo "CLI_NOT_INSTALLED"
+   ```
+
+   **If CLI not installed**, stop and tell the user:
+   > OpenSpec CLI is required to scaffold a new change. Install: `npm i -g @fission-ai/openspec` — see `openspec/SETUP.md`.
+   >
+   > **Without CLI:** implement from an existing change via `/opsx:apply` markdown fallback, or use Plan Mode with `ai/skills/implementation-planning/SKILL.md` (no OpenSpec scaffold).
+
+   Do not proceed with steps 1+ until CLI is available.
+
 1. **If no input provided, ask what they want to build**
 
    Use the **AskUserQuestion tool** (open-ended, no preset options) to ask:

@@ -1,0 +1,15 @@
+---
+description: Strict TDD — failing unit test before production code; Red-Green-Refactor.
+alwaysApply: true
+---
+
+# Strict TDD (hard mode)
+
+Before implementing or changing **behavior** in Domain, Application use cases, or deterministic mappers:
+
+1. Read and follow [`ai/skills/test-driven-development/SKILL.md`](ai/skills/test-driven-development/SKILL.md).
+2. Do **not** add or edit production behavior until a **failing** unit test exists in the matching test csproj (see dotnet-verification skill for paths).
+3. After implementation, run `dotnet test` on that test project before marking the task complete.
+4. In **Plan Mode** / **CreatePlan**: for each behavior slice, emit a `*-test-red` todo **before** the matching `*-impl` todo.
+
+Specs and plans define acceptance criteria; unit tests prove done — with or without OpenSpec.

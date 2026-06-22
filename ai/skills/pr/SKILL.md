@@ -1,3 +1,8 @@
+---
+name: pr
+description: Create a GitHub pull request with standardized format for the trading-assistant project.
+---
+
 # Skill: Create Pull Request
 
 ## Description
@@ -12,12 +17,10 @@ Use this skill when the user asks to create a PR, open a pull request, or submit
 
 ### 1. Gather Context
 
-Run these commands to understand the full scope of changes:
-
 ```bash
-git log main..HEAD --oneline        # or develop..HEAD depending on base branch
-git diff main..HEAD --stat          # summary of files changed
-git status                          # any uncommitted changes
+git log main..HEAD --oneline
+git diff main..HEAD --stat
+git status
 ```
 
 ### 2. Determine Base Branch
@@ -27,8 +30,6 @@ git status                          # any uncommitted changes
 - For hotfixes: base on `main`.
 
 ### 3. PR Title Format
-
-Use the same Conventional Commits format as commit messages:
 
 ```
 type(scope): short description
@@ -60,13 +61,12 @@ Examples:
 ## Test Plan
 
 - [ ] Build succeeds (`dotnet build`)
-- [ ] Application starts and connects to Binance WebSocket
-- [ ] Relevant strategies fire signals correctly
-- [ ] Risk management workers function as expected
+- [ ] Unit tests pass (`dotnet test` on affected csproj)
+- [ ] Integration tests when Infrastructure changed
 
 ## Related
 
-- Link to any related issues, specs, or planning documents
+- Link to OpenSpec change or planning documents
 ```
 
 ### 5. Execute
@@ -79,6 +79,5 @@ gh pr create --base develop --title "type(scope): description" --body "..."
 ### Rules
 
 - Always push the branch before creating the PR.
-- Include the `Architecture Impact` checklist — it enforces Clean Architecture compliance.
-- Reference specs from the `specs/` folder when the PR implements a spec.
+- Reference OpenSpec specs when the PR implements a Platform change.
 - Never force-push to `main` or `develop`.

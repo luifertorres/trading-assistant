@@ -16,7 +16,26 @@ Human documentation: [docs/README.md](docs/README.md).
 
 **Source tree index:** [`src/README.md`](src/README.md).
 
-**Routing protocol:** infer **intent and blast radius**, not keywords. If the task is cross-cutting, multi-context, or unclear on OpenSpec vs direct implementation, read `[.cursor/context/routing-map.md](.cursor/context/routing-map.md)` first. For a short preflight only, use the **chief-of-staff** skill (`.cursor/skills/chief-of-staff/SKILL.md`).
+**Routing protocol:** infer **intent and blast radius**, not keywords. If the task is cross-cutting, multi-context, or unclear on OpenSpec vs direct implementation, read `[.cursor/context/routing-map.md](.cursor/context/routing-map.md)` first. For a short preflight only, use the **chief-of-staff** skill (`ai/skills/chief-of-staff/SKILL.md`).
+
+**Editor setup after clone:** [`EDITOR-AGENTS.md`](EDITOR-AGENTS.md) — run `ai/commands/synchronize-editor-devkit.md` (Tier 0).
+
+### Task routing (read matching skill before coding)
+
+| Task | Skill / command |
+|------|-----------------|
+| Strict TDD / test-first | `ai/skills/test-driven-development/SKILL.md` |
+| Tests / verify order | `ai/skills/dotnet-verification/SKILL.md` |
+| Plan Mode / CreatePlan | `ai/skills/implementation-planning/SKILL.md` |
+| Editor bootstrap | `ai/commands/synchronize-editor-devkit.md` |
+| Binance.Net usage | `ai/skills/binance-net/SKILL.md` |
+| Commit / PR | `ai/skills/commit/SKILL.md`, `ai/skills/pr/SKILL.md` |
+| Session slice | `/slice` → `ai/skills/ship-a-slice/SKILL.md` |
+| OpenSpec workflows | `.cursor/commands/opsx-*.md` ([`openspec/SETUP.md`](openspec/SETUP.md)) |
+
+### Done checklist
+
+Failing unit test first for behavior changes (strict TDD per `ai/skills/test-driven-development/SKILL.md`), then green implementation, `dotnet build`, unit test csproj, integration csproj last when Infrastructure changed.
 
 ### Modular context (by rate of change)
 
@@ -114,4 +133,4 @@ This project uses [OpenSpec](https://github.com/Fission-AI/OpenSpec) for **Tradi
 - **Main specs:** `openspec/specs/trading-platform-*`
 - **Changes:** `openspec/changes/<change-name>/` with artifacts: proposal, specs, design, tasks
 
-Use `/opsx:apply <change-name>` to implement a change, or `/opsx:new` to start a new one.
+Use `/opsx:apply <change-name>` to implement a change, or `/opsx:new` to start a new one. Setup and CLI-less fallback: [`openspec/SETUP.md`](openspec/SETUP.md).

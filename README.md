@@ -12,6 +12,8 @@ Three .NET solutions live under `src/`:
 
 **Full documentation:** [docs/README.md](docs/README.md)
 
+**Agent / editor setup after clone:** [EDITOR-AGENTS.md](EDITOR-AGENTS.md)
+
 ## Quick start
 
 Build all solutions from the repo root:

@@ -50,6 +50,9 @@ Use a **direct command** when you already know the workflow—**zero extra routi
 | `/opsx:bulk-archive` | Archiving **multiple** completed changes. |
 | `/opsx:explore` | **Thinking / clarification only**—no implementation; optional OpenSpec capture. |
 | `/opsx:onboard` | Guided OpenSpec onboarding cycle. |
+| `/test-driven-implementation` | Strict TDD implementation (unit tests first). |
+| `/commit` | Commit staged changes (≤50 char subject). |
+| `/slice` | Ship one visible win; append WINS.md. |
 
 **Sequencing (typical):** explore or spec → apply → verify → (sync if needed) → archive.
 
@@ -57,11 +60,13 @@ Use a **direct command** when you already know the workflow—**zero extra routi
 
 ## Bypass: skills (direct invocation)
 
-Invoke by name when the task clearly matches (see each `SKILL.md`):
+Invoke by name when the task clearly matches (see each skill; repo-native canonical under `ai/skills/`):
 
+- `test-driven-development` — strict TDD, red-green-refactor.
+- `dotnet-verification` — running / fixing .NET tests, verify order.
+- `implementation-planning` — granular CreatePlan todos.
 - `binance-net` — USD-M Binance.Net usage and boundaries.
-- `dotnet-test` — running / fixing .NET tests.
-- `openspec-*` — new/continue/apply/verify/archive/sync/ff/onboard/explore/bulk-archive per description.
+- `openspec-*` — OpenSpec vendor under `.cursor/skills/openspec-*/` (requires CLI or manual fallback).
 - `commit` / `pr` — git hygiene when requested.
 - `chief-of-staff` — short **preflight** only (goal, audience, sequence, stop conditions); not for bulk implementation.
 - `ship-a-slice` — pick one visible win, proof command, append WINS.md; use `/slice` at session start.

@@ -11,6 +11,20 @@ Verify that an implementation matches the change artifacts (specs, tasks, design
 
 **Steps**
 
+0. **Preflight — OpenSpec CLI**
+
+   ```bash
+   openspec --version 2>&1 || echo "CLI_NOT_INSTALLED"
+   ```
+
+   **If CLI not installed**, use **markdown fallback**:
+   - List `openspec/changes/` (exclude `archive/`); let user pick change name
+   - Read `openspec/changes/<name>/tasks.md` — confirm `[x]` vs `[ ]` checkboxes
+   - Read delta specs in `openspec/changes/<name>/specs/` and compare to `openspec/specs/` main specs manually
+   - Run verify commands from [`ai/skills/dotnet-verification/SKILL.md`](../../ai/skills/dotnet-verification/SKILL.md)
+   - Report gaps; suggest install CLI for formal status — `openspec/SETUP.md`
+   - Skip CLI steps 2–3 below when using fallback
+
 1. **If no change name provided, prompt for selection**
 
    Run `openspec list --json` to get available changes. Use the **AskUserQuestion tool** to let the user select.
