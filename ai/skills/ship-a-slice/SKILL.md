@@ -30,9 +30,9 @@ Choose exactly one item from the active plan or [legacy-port-map.md](../../../sr
 
 Read only:
 
-- `.cursor/context/delivery-principles.md`
+- `ai/context/delivery-principles.md`
 - Scoped `AGENTS.md` for contexts you touch
-- `.cursor/rules/live-trading-safety.mdc` if touching live orders
+- `ai/templates/rules/live-trading-safety.mdc` if touching live orders
 
 ### 4. Execute smallest steps
 

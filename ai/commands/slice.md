@@ -6,7 +6,7 @@ Run the **ship-a-slice** ritual. Full skill: `ai/skills/ship-a-slice/SKILL.md`.
 
 ## Steps
 
-1. Read `.cursor/context/delivery-principles.md`
+1. Read `ai/context/delivery-principles.md`
 2. Pick **one** slice with a concrete visible artifact and proof command
 3. Load only scoped context (`AGENTS.md` for touched contexts; live-trading-safety rule if orders)
 4. Implement minimal steps, run the proof command, append `WINS.md`

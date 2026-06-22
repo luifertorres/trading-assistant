@@ -19,7 +19,7 @@ For **fast / routine** work, **bypass** this document: go straight to the right 
 
 | You touch | Also consider |
 |-----------|----------------|
-| Binance REST/WS or exchange DTOs | `.cursor/rules/binance-net.mdc`, Platform MarketData/Execution infra, or legacy `BinanceService.cs` |
+| Binance REST/WS or exchange DTOs | `ai/templates/rules/binance-net.mdc`, Platform MarketData/Execution infra, or legacy `BinanceService.cs` |
 | Domain public types or invariants | Platform context `AGENTS.md`; broker-agnostic contracts |
 | EF schema or persistence | Migrations in legacy project or Platform context-owned persistence |
 | OpenSpec capability wording | `openspec/specs/trading-platform-*/spec.md` plus the active change delta specs |
@@ -56,7 +56,7 @@ Use a **direct command** when you already know the workflow—**zero extra routi
 
 **Sequencing (typical):** explore or spec → apply → verify → (sync if needed) → archive.
 
-**Ambiguous?** If you are unsure whether to use OpenSpec at all, read `.cursor/commands/opsx-explore.md` stance or run `/opsx:explore` before `/opsx:apply`.
+**Ambiguous?** If you are unsure whether to use OpenSpec at all, read `/opsx:explore` stance in `openspec/agent/commands/opsx-explore.md` or run `/opsx:explore` after bootstrap.
 
 ## Bypass: skills (direct invocation)
 
@@ -66,7 +66,7 @@ Invoke by name when the task clearly matches (see each skill; repo-native canoni
 - `dotnet-verification` — running / fixing .NET tests, verify order.
 - `implementation-planning` — granular CreatePlan todos.
 - `binance-net` — USD-M Binance.Net usage and boundaries.
-- `openspec-*` — OpenSpec vendor under `.cursor/skills/openspec-*/` (requires CLI or manual fallback).
+- `openspec-*` — OpenSpec vendor (bootstrap copies from `openspec/agent/skills/`; requires CLI or manual fallback).
 - `commit` / `pr` — git hygiene when requested.
 - `chief-of-staff` — short **preflight** only (goal, audience, sequence, stop conditions); not for bulk implementation.
 - `ship-a-slice` — pick one visible win, proof command, append WINS.md; use `/slice` at session start.

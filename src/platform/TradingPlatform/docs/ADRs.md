@@ -81,4 +81,4 @@ Short-lived notes for the parallel `src/platform/TradingPlatform` tree. Revise a
 - Host still uses logging live sink by default; CLI opts into Binance adapter for `fire-test-order`.
 - **Deferred** (plan todo #12 `slice-management`): user-data stream, SL/TP follow-up managers, Telegram — see legacy port map P1 items.
 
-**References:** ADR-003, [legacy-port-map.md](./legacy-port-map.md), `.cursor/rules/live-trading-safety.mdc`.
+**References:** ADR-003, [legacy-port-map.md](./legacy-port-map.md), `ai/templates/rules/live-trading-safety.mdc`.

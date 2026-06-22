@@ -1,46 +1,42 @@
 # AI editor setup
 
-Canonical **repo-native** agent specs live under [`ai/`](ai/) (skills, commands, rule templates). Root [`AGENTS.md`](AGENTS.md) is the routing index.
+Canonical agent specs are **not** in `.cursor/`. The entire `.cursor/` directory is **local-only** (gitignored). Run bootstrap after every clone.
 
-**OpenSpec** workflows are a separate external layer — committed vendor under `.cursor/commands/opsx-*` and `.cursor/skills/openspec-*`. See [`openspec/SETUP.md`](openspec/SETUP.md).
+## Committed sources
 
-## Cursor (required after clone)
+| Layer | Path | Role |
+|-------|------|------|
+| Repo-native devkit | [`ai/`](ai/) | Skills, commands, rule templates, routing context |
+| OpenSpec vendor | [`openspec/agent/`](openspec/agent/) | `opsx-*` commands and `openspec-*` skills (external framework) |
+| Specs | [`openspec/`](openspec/) | Platform capabilities and changes |
+| Index | [`AGENTS.md`](AGENTS.md) | Task routing |
 
-Generated slash commands, always-on TDD/plan rules, and repo-native skill stubs are **not** in git. Generate them locally:
+## Required after clone
 
 1. Open an agent session in Cursor.
-2. Run bootstrap: paste/run the workflow in [`ai/commands/synchronize-editor-devkit.md`](ai/commands/synchronize-editor-devkit.md).
-3. Bootstrap writes to `.cursor/` (rules, commands, skill stubs pointing at `ai/skills/`).
+2. Run [`ai/commands/synchronize-editor-devkit.md`](ai/commands/synchronize-editor-devkit.md) (or `/synchronize-editor-devkit` if already bootstrapped once on this machine).
 
-Re-run bootstrap after any change under `ai/commands/`, `ai/skills/`, or `ai/templates/`.
+Bootstrap writes the full local editor tree:
 
-### Tier 0 — always (required)
+```
+.cursor/
+├── context/     ← from ai/context/
+├── rules/       ← from ai/templates/rules/
+├── commands/    ← openspec/agent/commands/ + slim repo-native commands
+└── skills/      ← openspec/agent/skills/ + repo-native stubs → ai/skills/
+```
 
-`synchronize-editor-devkit` → repo-native TDD, planning, verification, `/commit`, `/slice`, `/test-driven-implementation`.
+Re-run bootstrap after changes under `ai/`, `ai/context/`, `ai/templates/`, or `openspec/agent/`.
 
-### Tier 1 — Platform work without OpenSpec CLI
+### OpenSpec CLI (optional Tier 2)
 
-Read `openspec/changes/<name>/` artifacts directly (`tasks.md`, `proposal.md`, `design.md`). Use `implementation-planning` + `test-driven-development` skills. No `/opsx:*` required.
+Not installed by bootstrap. Install when you need `/opsx:new`, archive, or sync — see [`openspec/SETUP.md`](openspec/SETUP.md). `/opsx:*` commands recommend install on first use if CLI is missing.
 
-### Tier 2 — full OpenSpec (change authors)
+### Work without OpenSpec CLI (Tier 1)
 
-Install CLI per [`openspec/SETUP.md`](openspec/SETUP.md).
+Read `openspec/changes/<name>/` markdown directly; use `ai/skills/implementation-planning` and `ai/skills/test-driven-development`.
 
-## What is committed vs generated
+## Maintainer notes
 
-| Path | In git | Notes |
-|------|--------|--------|
-| `ai/` | Yes | Repo-native canonical devkit |
-| `EDITOR-AGENTS.md` | Yes | This file |
-| `.cursor/context/`, `.cursor/plans/` | Yes | Routing and session plans |
-| `.cursor/commands/opsx-*.md` | Yes | OpenSpec vendor |
-| `.cursor/skills/openspec-*/` | Yes | OpenSpec vendor |
-| `.cursor/rules/{architecture,binance-net,ddd,dotnet,live-trading-safety}.mdc` | Yes | Domain rules |
-| `.cursor/rules/test-driven-development-enforcement.mdc` | No | Bootstrap from `ai/templates/rules/` |
-| `.cursor/rules/implementation-plan-granularity.mdc` | No | Bootstrap from `ai/templates/rules/` |
-| `.cursor/commands/{commit,slice,test-driven-implementation}.md` | No | Bootstrap slim commands |
-| `.cursor/skills/{test-driven-development,dotnet-verification,...}/` | No | Bootstrap stubs → `ai/skills/` |
-
-When repo-native workflow behavior changes, edit `ai/commands/` or `ai/skills/` and re-run bootstrap.
-
-When OpenSpec vendor changes, run upstream `openspec update` and commit only `.cursor/opsx*` + `openspec-*` — never merge into `ai/`.
+- **Repo-native changes:** edit `ai/` → re-run bootstrap.
+- **OpenSpec vendor refresh:** update `openspec/agent/` (from upstream `openspec update`) → re-run bootstrap → commit `openspec/agent/` only — never commit `.cursor/`.

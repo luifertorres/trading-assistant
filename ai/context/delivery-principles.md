@@ -10,11 +10,11 @@ Norms for agent sessions on this repo. Goal: **one visible, same-session win** p
 4. **Timebox** — Prefer the smallest slice that ships today. Defer "later" items explicitly (e.g. position management, Telegram).
 5. **Stop-and-show** — After the proof command passes, stop and show output; append WINS.md; do not silently continue to the next phase unless asked.
 6. **Token economy** — Load only the scoped `AGENTS.md` and rules for the context you touch (MarketData, Research, Execution, Hosts). Do not re-read the whole monolith each turn.
-7. **Real-money safety** — Live order code follows [.cursor/rules/live-trading-safety.mdc](../rules/live-trading-safety.mdc). Disarmed by default; arming is explicit per session.
+7. **Real-money safety** — Live order code follows [`ai/templates/rules/live-trading-safety.mdc`](../templates/rules/live-trading-safety.mdc). Disarmed by default; arming is explicit per session.
 
 ## Session ritual
 
-Use the **ship-a-slice** skill (`.cursor/skills/ship-a-slice/SKILL.md`) or `/slice` command to pick one slice, list minimal steps, run the demo, and log the win.
+Use the **ship-a-slice** skill ([`ai/skills/ship-a-slice/SKILL.md`](../skills/ship-a-slice/SKILL.md)) or `/slice` command to pick one slice, list minimal steps, run the demo, and log the win.
 
 ## What counts as a win
 

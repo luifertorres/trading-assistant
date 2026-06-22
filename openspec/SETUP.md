@@ -1,19 +1,19 @@
 # OpenSpec setup
 
-OpenSpec is an **external framework** ([`@fission-ai/openspec`](https://github.com/Fission-AI/OpenSpec)). Agent slash commands and skills for OpenSpec live in **committed vendor paths**:
+OpenSpec is an **external framework** ([`@fission-ai/openspec`](https://github.com/Fission-AI/OpenSpec)). Agent slash commands and skills live in **committed vendor sources**:
 
-- `.cursor/commands/opsx-*.md`
-- `.cursor/skills/openspec-*/SKILL.md`
+- `openspec/agent/commands/opsx-*.md`
+- `openspec/agent/skills/openspec-*/SKILL.md`
 
-They are **not** part of the repo-native `ai/` devkit. See [`EDITOR-AGENTS.md`](../EDITOR-AGENTS.md).
+Bootstrap copies them into local `.cursor/` (not in git). See [`EDITOR-AGENTS.md`](../EDITOR-AGENTS.md).
 
 ## Three tiers
 
 | Tier | Requirement | What you get |
 |------|-------------|--------------|
-| **0** | Run [`ai/commands/synchronize-editor-devkit.md`](../ai/commands/synchronize-editor-devkit.md) | TDD, planning, verification, `/commit`, `/slice` |
-| **1** | None (markdown only) | Read `openspec/changes/<name>/` and implement with TDD skills |
-| **2** | OpenSpec CLI | Full `/opsx:*` workflows |
+| **0** | Run [`ai/commands/synchronize-editor-devkit.md`](../ai/commands/synchronize-editor-devkit.md) | Full `.cursor/` including `/opsx:*`, TDD, `/commit`, `/slice` |
+| **1** | Bootstrap only (no CLI) | Read `openspec/changes/<name>/`; `/opsx:apply` markdown fallback |
+| **2** | Bootstrap + OpenSpec CLI | Full CLI workflows (`openspec new`, archive, sync) |
 
 ## Install CLI (Tier 2)
 
@@ -22,30 +22,30 @@ npm i -g @fission-ai/openspec
 openspec --version
 ```
 
-Optional future: repo-pinned `npx openspec` via root `package.json` (not configured today).
+Optional future: repo-pinned `npx openspec` via root `package.json`.
 
 ### Bracket-only task lines
 
-This repo uses checkbox lines in `tasks.md` that **start with `[ ]` or `[x]`** (no leading list hyphen). See [`patches/README-fission-openspec-bracket-tasks.md`](patches/README-fission-openspec-bracket-tasks.md) if you patch a global CLI install.
+Checkbox lines in `tasks.md` **start with `[ ]` or `[x]`** (no leading list hyphen). See [`patches/README-fission-openspec-bracket-tasks.md`](patches/README-fission-openspec-bracket-tasks.md).
 
 ## Tier 1 — work without CLI
 
-When `openspec --version` fails:
+When `openspec --version` fails after bootstrap:
 
-1. List active changes: directories under `openspec/changes/` **excluding** `archive/`.
-2. Read `openspec/changes/<name>/tasks.md`, `proposal.md`, `design.md`, and `specs/` directly.
-3. Follow [`ai/skills/implementation-planning/SKILL.md`](../ai/skills/implementation-planning/SKILL.md) and [`ai/skills/test-driven-development/SKILL.md`](../ai/skills/test-driven-development/SKILL.md).
-4. Install CLI when you need `openspec new`, status graphs, archive, or sync.
+1. List active changes under `openspec/changes/` (exclude `archive/`).
+2. Read `tasks.md`, `proposal.md`, `design.md`, `specs/` directly.
+3. Use [`ai/skills/implementation-planning/SKILL.md`](../ai/skills/implementation-planning/SKILL.md) and [`ai/skills/test-driven-development/SKILL.md`](../ai/skills/test-driven-development/SKILL.md).
+4. Install CLI when you need scaffold, status graphs, archive, or sync.
 
-Committed `/opsx:*` commands include CLI-less fallback where practical — see `.cursor/commands/opsx-apply.md`.
+`/opsx:*` commands include CLI preflight — see `openspec/agent/commands/opsx-apply.md`.
 
-## Refresh vendor files
+## Refresh vendor sources
 
 After upgrading `@fission-ai/openspec`:
 
-1. Run upstream `openspec update` (or reinstall per OpenSpec docs).
-2. Commit only changed files under `.cursor/commands/opsx-*` and `.cursor/skills/openspec-*`.
-3. **Do not** copy OpenSpec skills into `ai/`.
+1. Run upstream `openspec update` into a temp tree or manually merge into `openspec/agent/`.
+2. Commit changes under `openspec/agent/` only.
+3. Re-run bootstrap locally. **Do not** commit `.cursor/`.
 
 ## Workflow commands
 

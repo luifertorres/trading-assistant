@@ -10,15 +10,15 @@ Human documentation: [docs/README.md](docs/README.md).
 
 **Default for new work:** [`src/platform/TradingPlatform/`](src/platform/TradingPlatform/) — modular monolith by bounded context; **no references** to legacy solutions. Start with [`src/platform/TradingPlatform/AGENTS.md`](src/platform/TradingPlatform/AGENTS.md) and [`src/platform/TradingPlatform/README.md`](src/platform/TradingPlatform/README.md).
 
-**Legacy reference:** [`src/legacy/TradingAssistant/`](src/legacy/TradingAssistant/) — frozen **single-project** live bot (maintenance only). Avoid growing it when the same capability belongs in TradingPlatform (see [`.cursor/context/refactor-ledger.md`](.cursor/context/refactor-ledger.md)).
+**Legacy reference:** [`src/legacy/TradingAssistant/`](src/legacy/TradingAssistant/) — frozen **single-project** live bot (maintenance only). Avoid growing it when the same capability belongs in TradingPlatform (see [`ai/context/refactor-ledger.md`](ai/context/refactor-ledger.md)).
 
 **MVP tooling:** [`src/mvp/Backtesting/`](src/mvp/Backtesting/) — isolated backtest CLI.
 
 **Source tree index:** [`src/README.md`](src/README.md).
 
-**Routing protocol:** infer **intent and blast radius**, not keywords. If the task is cross-cutting, multi-context, or unclear on OpenSpec vs direct implementation, read `[.cursor/context/routing-map.md](.cursor/context/routing-map.md)` first. For a short preflight only, use the **chief-of-staff** skill (`ai/skills/chief-of-staff/SKILL.md`).
+**Routing protocol:** infer **intent and blast radius**, not keywords. If the task is cross-cutting, multi-context, or unclear on OpenSpec vs direct implementation, read [`ai/context/routing-map.md`](ai/context/routing-map.md) first. For a short preflight only, use the **chief-of-staff** skill (`ai/skills/chief-of-staff/SKILL.md`).
 
-**Editor setup after clone:** [`EDITOR-AGENTS.md`](EDITOR-AGENTS.md) — run `ai/commands/synchronize-editor-devkit.md` (Tier 0).
+**Editor setup after clone:** [`EDITOR-AGENTS.md`](EDITOR-AGENTS.md) — run `ai/commands/synchronize-editor-devkit.md` (**required**; entire `.cursor/` is local-only).
 
 ### Task routing (read matching skill before coding)
 
@@ -31,7 +31,7 @@ Human documentation: [docs/README.md](docs/README.md).
 | Binance.Net usage | `ai/skills/binance-net/SKILL.md` |
 | Commit / PR | `ai/skills/commit/SKILL.md`, `ai/skills/pr/SKILL.md` |
 | Session slice | `/slice` → `ai/skills/ship-a-slice/SKILL.md` |
-| OpenSpec workflows | `.cursor/commands/opsx-*.md` ([`openspec/SETUP.md`](openspec/SETUP.md)) |
+| OpenSpec workflows | `/opsx:*` after bootstrap ([`openspec/SETUP.md`](openspec/SETUP.md); vendor in `openspec/agent/`) |
 
 ### Done checklist
 
@@ -42,12 +42,12 @@ Failing unit test first for behavior changes (strict TDD per `ai/skills/test-dri
 
 | File                                                                                     | Purpose                                                                               |
 | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `[.cursor/context/routing-map.md](.cursor/context/routing-map.md)`                       | Paired-change hints, OpenSpec **bypass** command matrix, Platform vs legacy defaults. |
-| `[.cursor/context/engineering-principles.md](.cursor/context/engineering-principles.md)` | Dependency direction, broker boundaries, migrations/testing bar.                      |
-| `[.cursor/context/trading-domain.md](.cursor/context/trading-domain.md)`                 | Product scope, vocabulary pointers, operational risk stance.                          |
-| `[.cursor/context/refactor-ledger.md](.cursor/context/refactor-ledger.md)`               | Migration story: what is greenfield vs frozen legacy.                                 |
-| `[.cursor/context/routing-overrides.md](.cursor/context/routing-overrides.md)`           | Log routing corrections; promote patterns after three similar overrides.              |
-| `[.cursor/context/delivery-principles.md](.cursor/context/delivery-principles.md)`     | Same-session wins, ship-a-slice ritual, token-lean scoped context.                    |
+| `[ai/context/routing-map.md](ai/context/routing-map.md)`                       | Paired-change hints, OpenSpec **bypass** command matrix, Platform vs legacy defaults. |
+| `[ai/context/engineering-principles.md](ai/context/engineering-principles.md)` | Dependency direction, broker boundaries, migrations/testing bar.                      |
+| `[ai/context/trading-domain.md](ai/context/trading-domain.md)`                 | Product scope, vocabulary pointers, operational risk stance.                          |
+| `[ai/context/refactor-ledger.md](ai/context/refactor-ledger.md)`               | Migration story: what is greenfield vs frozen legacy.                                 |
+| `[ai/context/routing-overrides.md](ai/context/routing-overrides.md)`           | Log routing corrections; promote patterns after three similar overrides.              |
+| `[ai/context/delivery-principles.md](ai/context/delivery-principles.md)`     | Same-session wins, ship-a-slice ritual, token-lean scoped context.                    |
 
 
 ## Architecture
@@ -82,7 +82,7 @@ Treat **[Binance.Net](https://github.com/JKorf/Binance.Net)** as the **framework
 
 **Practices:** Keep **Binance.Net package versions aligned** across projects (12.11.x). Legacy uses `BinanceCredentials` for API keys (Binance.Net 12.11+).
 
-Cursor rule: `.cursor/rules/binance-net.mdc`.
+Cursor rule (after bootstrap): `ai/templates/rules/binance-net.mdc` → `.cursor/rules/`.
 
 ## Solution Structure
 

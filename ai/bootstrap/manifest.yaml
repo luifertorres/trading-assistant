@@ -8,9 +8,15 @@ commands:
   slice:
     slim_sections: [title, steps]
 
-rules:
-  - test-driven-development-enforcement.mdc
-  - implementation-plan-granularity.mdc
+# All files under ai/templates/rules/ are copied to {editorRoot}/rules/
+rules_glob: ai/templates/rules/*.mdc
+
+# OpenSpec external vendor — copied as-is (not slimmed). Source: openspec/agent/
+openspec_commands_dir: openspec/agent/commands
+openspec_skills_dir: openspec/agent/skills
+
+# Modular routing context — copied to {editorRoot}/context/
+context_dir: ai/context
 
 skill_stubs:
   - test-driven-development

@@ -2,7 +2,7 @@
 
 Documentation index: [docs/README.md](../docs/README.md).
 
-Three .NET solutions live under categorized buckets. See [refactor-ledger](../.cursor/context/refactor-ledger.md) for where new work should go.
+Three .NET solutions live under categorized buckets. See [refactor-ledger](../ai/context/refactor-ledger.md) for where new work should go.
 
 | Bucket | Path | Role | Solution | Docs |
 |--------|------|------|----------|------|

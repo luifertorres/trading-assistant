@@ -1,35 +1,38 @@
 # Synchronize editor devkit
 
-Use when setting up a new clone, after changing files under `ai/commands/`, `ai/skills/`, or `ai/templates/`, or when editor workflow commands or rules are out of date.
+Use when setting up a new clone, after changing files under `ai/`, `openspec/agent/`, or when editor workflow commands or rules are out of date.
+
+**Required after every clone** — the entire `.cursor/` directory is local-only (not in git).
 
 ## Constraints
 
-- Canonical specs live only under `ai/` (commands, skills, templates, this manifest).
+- Canonical specs live under `ai/` (commands, skills, templates, context) and `openspec/agent/` (OpenSpec vendor).
 - Do not add editor product names or editor config folder paths into any file under `ai/`, `AGENTS.md`, `src/**/AGENTS.md`, `docs/`, or `.github/`.
-- Generated files belong only under the detected editor config root at repo root (dot-prefixed folder).
-- OpenSpec vendor files (`.cursor/commands/opsx-*`, `.cursor/skills/openspec-*`) are **not** managed by this bootstrap — see `openspec/SETUP.md`.
+- Generated files belong only under the detected editor config root at repo root (dot-prefixed folder, typically `.cursor/`).
 
 ## Steps
 
-1. **Detect `editorRoot`** — Use **one** target unless the user explicitly asks to refresh all editor roots:
-   - **Default:** the active IDE's config folder at repo root (e.g. `.cursor/` when the session is Cursor).
-   - **Explicit override:** use the folder the user names.
-   - **Refresh all:** only when the user requests every dot-prefixed directory that already has `commands/`, `rules/`, or `skills/` — update each in turn; do not create extra roots unless asked.
-   - If no folder exists and the IDE is unknown, ask which dot-prefixed folder to create (typically `.cursor/`).
+1. **Detect `editorRoot`** — Default: `.cursor/` at repo root when using Cursor. Use one target unless the user asks to refresh all editor roots.
 2. **Read** [`ai/bootstrap/manifest.yaml`](../bootstrap/manifest.yaml).
-3. **Rules** — Copy each file from `ai/templates/rules/` listed under `rules:` to `{editorRoot}/rules/` (overwrite).
-4. **Commands** — For each command in `manifest.commands` except `synchronize-editor-devkit`:
-   - Write `{editorRoot}/commands/<name>.md` as a slim workflow file per `slim_sections` and the canonical [`ai/commands/<name>.md`](.) content.
-   - When a section is not inlined, add a pointer: "See `ai/commands/<name>.md`" (and the section name when helpful).
-5. **Skill stubs** — For each entry under `skill_stubs:` in the manifest, write `{editorRoot}/skills/<name>/SKILL.md` with YAML frontmatter (`name`, `description` from canonical `ai/skills/<name>/SKILL.md` if present) and body: `Read and follow ai/skills/<name>/SKILL.md`.
-6. **Report** — List `{editorRoot}/` files created/updated (overwrite each run is fine).
+3. **Context** — Copy every file from `ai/context/` to `{editorRoot}/context/` (overwrite).
+4. **Rules** — Copy every `*.mdc` from `ai/templates/rules/` to `{editorRoot}/rules/` (overwrite).
+5. **OpenSpec vendor commands** — Copy every `*.md` from `openspec/agent/commands/` to `{editorRoot}/commands/` (overwrite). Preserve CLI preflight blocks in those files.
+6. **OpenSpec vendor skills** — For each `openspec/agent/skills/<name>/SKILL.md`, copy to `{editorRoot}/skills/<name>/SKILL.md` (overwrite).
+7. **Repo-native commands** — For each entry under `manifest.commands`, write slim `{editorRoot}/commands/<name>.md` per `slim_sections` and canonical [`ai/commands/<name>.md`](.).
+8. **Repo-native skill stubs** — For each entry under `skill_stubs:`, write `{editorRoot}/skills/<name>/SKILL.md` with YAML frontmatter from `ai/skills/<name>/SKILL.md` and body: `Read and follow ai/skills/<name>/SKILL.md`.
+9. **OpenSpec CLI (report only)** — Run `openspec --version 2>&1` or echo missing. Do **not** install automatically. If missing, report: install via [`openspec/SETUP.md`](../../openspec/SETUP.md); `/opsx:*` commands will recommend install on first use.
+10. **Report** — List `{editorRoot}/` areas updated: context, rules, openspec commands/skills, repo-native commands, skill stubs; note OpenSpec CLI status.
+
+Do not emit a slim copy of `synchronize-editor-devkit` into `{editorRoot}/commands/`.
 
 ## Slim command recipes
 
 | Command | Slim file must include |
 |---------|-------------------------|
 | `commit` | Constraints, Steps, Message style |
-| `test-driven-implementation` | Constraints (incl. no secrets), Steps (read `ai/skills/test-driven-development` + `ai/skills/dotnet-verification`, integration csproj last) |
+| `test-driven-implementation` | Constraints (incl. no secrets), Steps |
 | `slice` | Title, Steps, pointer to ship-a-slice skill |
 
-Do not emit a slim copy of `synchronize-editor-devkit` into `{editorRoot}/commands/`.
+## Maintainer: refresh OpenSpec vendor
+
+When upgrading `@fission-ai/openspec`, update committed sources under `openspec/agent/` (not `{editorRoot}/`), then re-run this bootstrap. See [`openspec/SETUP.md`](../../openspec/SETUP.md).

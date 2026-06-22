@@ -62,7 +62,7 @@ alwaysApply: false
 
 ## Binance integrations
 
-When implementing or changing Binance USD-M (or related) code, use **Binance.Net** clients and types consistently; do not introduce parallel DTO layers unless translating for Domain/Application. See `.cursor/rules/binance-net.mdc` and repo `AGENTS.md`.
+When implementing or changing Binance USD-M (or related) code, use **Binance.Net** clients and types consistently; do not introduce parallel DTO layers unless translating for Domain/Application. See `.cursor/rules/binance-net.mdc` and repo `AGENTS.md` (canonical: `ai/templates/rules/binance-net.mdc`).
 
 ## Testing (when adding tests)
 

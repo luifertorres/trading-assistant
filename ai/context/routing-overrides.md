@@ -7,7 +7,7 @@ Log **routing corrections** so the repo’s instructions can compound. This file
 When the assistant picked the wrong workflow, wrong tree (Platform vs legacy), wrong layer, or wrong OpenSpec command:
 
 1. Append a row under **Log** with date, short request summary, what was tried, and what you wanted instead.
-2. If **three** similar mistakes occur for the same pattern, add **one** consolidated bullet to `routing-map.md` (or a scoped `.cursor/rules/*.mdc` change) and link it here under **Promoted rules**.
+2. If **three** similar mistakes occur for the same pattern, add **one** consolidated bullet to `routing-map.md` (or a scoped `ai/templates/rules/*.mdc` change) and link it here under **Promoted rules**.
 
 ## Promotion rule (manual)
 

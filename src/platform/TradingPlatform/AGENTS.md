@@ -63,5 +63,5 @@ Full suite: `dotnet test TradingPlatform.slnx` from this directory. Patterns and
 
 For **routing** (Platform vs legacy), slash-command bypasses, and paired-change hints, read:
 
-- [.cursor/context/routing-map.md](../../../.cursor/context/routing-map.md)
-- [.cursor/context/refactor-ledger.md](../../../.cursor/context/refactor-ledger.md)
+- [ai/context/routing-map.md](../../../ai/context/routing-map.md)
+- [ai/context/refactor-ledger.md](../../../ai/context/refactor-ledger.md)

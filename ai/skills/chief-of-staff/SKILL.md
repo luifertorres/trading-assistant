@@ -18,11 +18,11 @@ This skill is **not** for implementing features. It produces a **small routing d
 1. **Intent** — What outcome and constraints (risk, deadline, "do not migrate legacy," etc.)?
 2. **Identity / audience** — Who consumes the result (runtime operator, reviewer, future you)? What would look obviously wrong if missing?
 3. **Blast radius** — Domain-only, single BC, cross-BC, exchange boundary, persistence, or OpenSpec workflow?
-4. **Default tree** — Per `.cursor/context/refactor-ledger.md`: prefer **TradingPlatform** for new work; legacy only when explicitly scoped.
+4. **Default tree** — Per `ai/context/refactor-ledger.md`: prefer **TradingPlatform** for new work; legacy only when explicitly scoped.
 5. **Bypass vs orchestrate** — If the user named a command (`/opsx:apply …`), a folder, or a skill, **bypass** extended routing and follow that contract.
 6. **Stop condition** — If a single clarifying question removes ambiguity, ask it; otherwise state the plan in 3–7 bullets and proceed (or point to `/opsx:explore` for deep design-only mode).
 
 ## After preflight
 
-- Load `.cursor/context/routing-map.md` for paired-change hints and OpenSpec command selection.
+- Load `ai/context/routing-map.md` for paired-change hints and OpenSpec command selection.
 - Execute in the **smallest** specialist surface: path-scoped rules, layer `AGENTS.md`, or the appropriate OpenSpec command.

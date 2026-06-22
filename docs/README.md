@@ -51,9 +51,9 @@ Low-churn routing and principles for AI agents (not end-user docs):
 
 | File | Purpose |
 |------|---------|
-| [routing-map](../.cursor/context/routing-map.md) | Platform vs legacy routing, OpenSpec bypass matrix |
-| [refactor-ledger](../.cursor/context/refactor-ledger.md) | Where new work should go |
-| [engineering-principles](../.cursor/context/engineering-principles.md) | Dependency rules, broker boundaries, quality bar |
-| [trading-domain](../.cursor/context/trading-domain.md) | Product scope and vocabulary pointers |
+| [routing-map](../ai/context/routing-map.md) | Platform vs legacy routing, OpenSpec bypass matrix |
+| [refactor-ledger](../ai/context/refactor-ledger.md) | Where new work should go |
+| [engineering-principles](../ai/context/engineering-principles.md) | Dependency rules, broker boundaries, quality bar |
+| [trading-domain](../ai/context/trading-domain.md) | Product scope and vocabulary pointers |
 
 Root agent instructions: [`AGENTS.md`](../AGENTS.md).

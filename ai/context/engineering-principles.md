@@ -4,12 +4,12 @@ Non-negotiables for agents working in this repository. Prefer updating the narro
 
 ## Architecture
 
-- **Legacy monolith** (`src/legacy/TradingAssistant/`): dependency direction is strictly **Host → Infrastructure → Application → Domain**. Never reverse it. See root `AGENTS.md` and `.cursor/rules/architecture.mdc`.
+- **Legacy monolith** (`src/legacy/TradingAssistant/`): dependency direction is strictly **Host → Infrastructure → Application → Domain**. Never reverse it. See root `AGENTS.md` and `ai/templates/rules/architecture.mdc`.
 - **Greenfield platform** (`src/platform/TradingPlatform/`): modular monolith by bounded context; **no project references** to `TradingAssistant`, `CandlestickData`, or `Backtesting`. See `src/platform/TradingPlatform/AGENTS.md` and `docs/ADRs.md`.
 
 ## Broker and domain boundaries
 
-- **Binance.Net** is the supported .NET framework for exchange-facing code where applicable; **Domain and Application public contracts** stay broker-agnostic. Do not add new broker dependencies in Domain (legacy removal in progress). See root `AGENTS.md` and `.cursor/rules/binance-net.mdc`.
+- **Binance.Net** is the supported .NET framework for exchange-facing code where applicable; **Domain and Application public contracts** stay broker-agnostic. Do not add new broker dependencies in Domain (legacy removal in progress). See root `AGENTS.md` and `ai/templates/rules/binance-net.mdc`.
 
 ## Data and migrations
 

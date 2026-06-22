@@ -16,7 +16,7 @@ Route portfolio vectors to a live order sink; Binance USD-M adapter with real-mo
 
 ## Do
 
-- Enforce [.cursor/rules/live-trading-safety.mdc](../../../../.cursor/rules/live-trading-safety.mdc) in every order path.
+- Enforce [`ai/templates/rules/live-trading-safety.mdc`](../../../../ai/templates/rules/live-trading-safety.mdc) in every order path.
 - Size via `MARKET_LOT_SIZE`; reject over-cap notional.
 - Require PASS backtest verdict + portfolio membership before arming.
 
