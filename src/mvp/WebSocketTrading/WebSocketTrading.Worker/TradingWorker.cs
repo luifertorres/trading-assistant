@@ -640,27 +640,45 @@ public sealed class TradingWorker(
 
                 {
 
-                    TradeAction followUp;
+                    PositionState positionAfterExit;
 
                     lock (_gate)
 
                     {
 
-                        var buffer = _buffers[interval];
-
-                        followUp = runtime.Logic.Evaluate(buffer.Candles, PositionState.OutOfMarket);
+                        positionAfterExit = runtime.Position;
 
                     }
 
 
 
-                    if (followUp is TradeAction.EnterShort or TradeAction.EnterLong)
+                    if (positionAfterExit == PositionState.OutOfMarket)
 
                     {
 
-                        await ExecuteActionAsync(runtime, symbol, candle.Close, followUp, cancellationToken)
+                        TradeAction followUp;
 
-                            .ConfigureAwait(false);
+                        lock (_gate)
+
+                        {
+
+                            var buffer = _buffers[interval];
+
+                            followUp = runtime.Logic.Evaluate(buffer.Candles, PositionState.OutOfMarket);
+
+                        }
+
+
+
+                        if (followUp is TradeAction.EnterShort or TradeAction.EnterLong)
+
+                        {
+
+                            await ExecuteActionAsync(runtime, symbol, candle.Close, followUp, cancellationToken)
+
+                                .ConfigureAwait(false);
+
+                        }
 
                     }
 
@@ -904,7 +922,7 @@ public sealed class TradingWorker(
 
                     positionSide: binanceSide,
 
-                    reduceOnly: true,
+                    reduceOnly: BinanceUsdMOrderRules.ReduceOnlyParameter(hedgeMode: true),
 
                     ct: cancellationToken)
 

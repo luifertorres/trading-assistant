@@ -137,7 +137,7 @@ On startup the worker:
 **Order sizing:**
 
 - **Enter:** `NotionalUsd / price`, rounded up to `stepSize`, respecting `minQuantity` and `minNotional` — adds to vector inventory (pyramiding)
-- **Exit:** vector's tracked quantity (`min(tracked, exchangeSide)`), `reduceOnly: true`
+- **Exit:** vector's tracked quantity (`min(tracked, exchangeSide)`), `positionSide` only — omit `reduceOnly` in hedge mode
 
 ## Architecture
 
