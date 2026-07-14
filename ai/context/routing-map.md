@@ -11,6 +11,7 @@ For **fast / routine** work, **bypass** this document: go straight to the right 
 | New feature, new module, DDD/context work | `platform` | `src/platform/TradingPlatform/AGENTS.md`, `src/platform/TradingPlatform/README.md` | No references to legacy solutions. |
 | Bugfix or small change in existing bot | `legacy` | `src/legacy/TradingAssistant/TradingAssistant/AGENTS.md` | Single-project monolith; EF and Binance in same assembly. |
 | Backtesting CLI / MVP only | `mvp` | `src/mvp/Backtesting/README.md` | Isolated from main host. |
+| WebSocketTrading live worker / MVP only | `mvp` | `src/mvp/WebSocketTrading/README.md` | Live USD-M orders via WS API; 1D vector default, 1m in Development; Binance.Net 13.1.1; no Platform/legacy refs. |
 | OpenSpec change already named and scoped | — | `openspec/changes/<name>/` artifacts | Use bypass commands; do not re-plan from scratch unless blocked. |
 | **New** OpenSpec feature (greenfield) | `platform` | [openspec/README.md](../../openspec/README.md), `openspec/specs/trading-platform-*` | `/opsx:new` with `trading-platform-…` prefix. |
 | Legacy behavior reference (strategies, risk) | `legacy` | `src/legacy/TradingAssistant/TradingAssistant/*.cs`, [legacy-port-map.md](../../src/platform/TradingPlatform/docs/legacy-port-map.md) | No OpenSpec track for legacy. |

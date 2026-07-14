@@ -2,13 +2,14 @@
 
 Automated trading bot for **Binance Futures (USDT Perpetual)**. Monitors the market in real-time, detects technical signals, and executes trades with integrated risk management.
 
-Three .NET solutions live under `src/`:
+Four .NET solutions live under `src/`:
 
 | Bucket | Solution | Role |
 |--------|----------|------|
 | `platform/` | TradingPlatform | DDD modular monolith (primary development) |
 | `legacy/` | TradingAssistant | Frozen single-project live bot (maintenance) |
 | `mvp/` | Backtesting | Isolated backtest MVP |
+| `mvp/` | WebSocketTrading | Live WS kline + SMA short worker (real orders) |
 
 **Full documentation:** [docs/README.md](docs/README.md)
 
@@ -22,6 +23,7 @@ Build all solutions from the repo root:
 dotnet build src/platform/TradingPlatform/TradingPlatform.slnx
 dotnet build src/legacy/TradingAssistant/TradingAssistant.sln
 dotnet build src/mvp/Backtesting/Backtesting.sln
+dotnet build src/mvp/WebSocketTrading/WebSocketTrading.slnx
 ```
 
 **Platform CLI** (demo, backfill, backtest):
@@ -43,6 +45,14 @@ dotnet run
 dotnet run --project src/mvp/Backtesting/Backtesting.Mvp.Cli/Backtesting.Mvp.Cli.csproj
 ```
 
+**WebSocketTrading MVP** (live orders — configure [credentials](src/mvp/WebSocketTrading/README.md#credentials) first):
+
+```bash
+dotnet run --project src/mvp/WebSocketTrading/WebSocketTrading.Worker/WebSocketTrading.Worker.csproj
+```
+
+Local `dotnet run` uses **1m** (Development override). Non-Development runs use the **1D** vector from `appsettings.json`.
+
 More commands (test, EF migrations): [src/README.md](src/README.md).
 
 ## Stack
@@ -50,7 +60,7 @@ More commands (test, EF migrations): [src/README.md](src/README.md).
 | Component | Technology |
 |-----------|------------|
 | Runtime | .NET 10.0 / C# 13 |
-| Exchange API | Binance.Net 12.11.x |
+| Exchange API | Binance.Net 12.11.x (WebSocketTrading MVP uses 13.1.1) |
 | Mediator | MediatR 14.0 |
 | Indicators | Skender.Stock.Indicators 2.7.1 |
 | Cache | Microsoft FASTER |

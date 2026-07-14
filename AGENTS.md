@@ -12,7 +12,7 @@ Human documentation: [docs/README.md](docs/README.md).
 
 **Legacy reference:** [`src/legacy/TradingAssistant/`](src/legacy/TradingAssistant/) — frozen **single-project** live bot (maintenance only). Avoid growing it when the same capability belongs in TradingPlatform (see [`ai/context/refactor-ledger.md`](ai/context/refactor-ledger.md)).
 
-**MVP tooling:** [`src/mvp/Backtesting/`](src/mvp/Backtesting/) — isolated backtest CLI.
+**MVP tooling:** [`src/mvp/Backtesting/`](src/mvp/Backtesting/) — isolated backtest CLI; [`src/mvp/WebSocketTrading/`](src/mvp/WebSocketTrading/) — live WS kline + SMA short worker (Binance.Net 13.1.1).
 
 **Source tree index:** [`src/README.md`](src/README.md).
 
@@ -62,7 +62,10 @@ Single **Worker Service** project under `src/legacy/TradingAssistant/TradingAssi
 
 ### MVP
 
-Isolated backtest CLI under `src/mvp/Backtesting/`.
+Isolated tooling under `src/mvp/`:
+
+- **Backtesting** — offline backtest CLI ([`Backtesting/README.md`](src/mvp/Backtesting/README.md))
+- **WebSocketTrading** — live Worker that streams klines and places orders via Binance WS API ([`WebSocketTrading/README.md`](src/mvp/WebSocketTrading/README.md)); uses Binance.Net **13.1.1** (MVP-only pin)
 
 ## Key Conventions (Platform)
 
@@ -78,9 +81,9 @@ Isolated backtest CLI under `src/mvp/Backtesting/`.
 
 Treat **[Binance.Net](https://github.com/JKorf/Binance.Net)** as the **framework** for Binance-facing .NET code: `IBinanceRestClient` / `IBinanceSocketClient`, USD-M APIs under `UsdFuturesApi`, and **models as returned by the API**. Prefer library types over re-modeling exchange payloads unless translating into Platform Domain or Application interfaces.
 
-**Where it applies:** Platform Infrastructure (MarketData, Execution), legacy monolith (`BinanceService`), and **Backtesting MVP**.
+**Where it applies:** Platform Infrastructure (MarketData, Execution), legacy monolith (`BinanceService`), **Backtesting MVP**, and **WebSocketTrading MVP** (13.1.1 only in that solution).
 
-**Practices:** Keep **Binance.Net package versions aligned** across projects (12.11.x). Legacy uses `BinanceCredentials` for API keys (Binance.Net 12.11+).
+**Practices:** Keep **Binance.Net package versions aligned** across Platform and legacy (12.11.x). WebSocketTrading MVP pins 13.1.1 independently. Legacy uses `BinanceCredentials` for API keys (Binance.Net 12.11+).
 
 Cursor rule (after `/ai-onboard`): `ai/templates/rules/binance-net.mdc` → `.cursor/rules/`.
 
@@ -98,9 +101,13 @@ src/
 │   ├── TradingAssistant.sln
 │   └── TradingAssistant/            → Single-project live bot (see AGENTS.md)
 │
-└── mvp/Backtesting/
-    ├── Backtesting.sln
-    └── …                            → See Backtesting/README.md
+└── mvp/
+    ├── Backtesting/
+    │   ├── Backtesting.sln
+    │   └── …                        → See Backtesting/README.md
+    └── WebSocketTrading/
+        ├── WebSocketTrading.slnx
+        └── …                        → See WebSocketTrading/README.md
 ```
 
 ## Technology Stack
@@ -109,7 +116,7 @@ src/
 | Component       | Technology                                                 |
 | --------------- | ---------------------------------------------------------- |
 | Runtime         | .NET 10.0                                                  |
-| Exchange API    | Binance.Net 12.11.x (keep versions aligned across projects) |
+| Exchange API    | Binance.Net 12.11.x (Platform + legacy); WebSocketTrading MVP pins 13.1.1 |
 | Mediator/CQRS   | MediatR 14.0                                               |
 | Indicators      | Skender.Stock.Indicators 2.7.1                             |
 | In-memory cache | Microsoft FASTER (FasterKV) — legacy monolith              |

@@ -14,3 +14,4 @@
 
 - Treat trading, position, and API-key paths as **high impact**: prefer explicit validation, logging, and clear failure modes over silent defaults.
 - When behavior touches **real money or live orders**, require explicit user confirmation in the chat before assuming automation is desired.
+- **WebSocketTrading MVP** (`src/mvp/WebSocketTrading/`) always sends live USD-M orders when running — no dry-run. See its README for config (1D vector default; 1m in Development).

@@ -1,6 +1,6 @@
 ---
 description: Binance.Net as the .NET framework for Binance APIs (REST, WebSocket, API-shaped models)
-globs: "**/Binance/**/*.cs,src/mvp/Backtesting/**/*.cs,src/legacy/TradingAssistant/TradingAssistant/BinanceService.cs,src/legacy/TradingAssistant/TradingAssistant/BinanceExtensions.cs"
+globs: "**/Binance/**/*.cs,src/mvp/Backtesting/**/*.cs,src/mvp/WebSocketTrading/**/*.cs,src/legacy/TradingAssistant/TradingAssistant/BinanceService.cs,src/legacy/TradingAssistant/TradingAssistant/BinanceExtensions.cs"
 alwaysApply: false
 ---
 
@@ -13,6 +13,7 @@ Treat **[Binance.Net](https://github.com/JKorf/Binance.Net)** as the **framework
 - **Platform Infrastructure** (MarketData, Execution): primary home for clients, options, and Binance-specific logic.
 - **Legacy monolith** (`src/legacy/TradingAssistant/TradingAssistant/BinanceService.cs`): direct Binance.Net usage; use `BinanceCredentials` (12.11+).
 - **Backtesting MVP** (`src/mvp/Backtesting/`): isolated tools may reference Binance.Net directly for klines, `KlineInterval`, exchange info, and filters.
+- **WebSocketTrading MVP** (`src/mvp/WebSocketTrading/`): live Worker; REST warmup/account setup + WS kline stream + WS API orders. Pins Binance.Net **13.1.1** (MVP-only).
 
 ## Where it does not
 
@@ -21,4 +22,4 @@ Treat **[Binance.Net](https://github.com/JKorf/Binance.Net)** as the **framework
 ## Practices
 
 - Use official client surfaces (`ExchangeData`, `Account`, etc.) and **CryptoExchange.Net** patterns consistent with existing `BinanceService` code.
-- Keep **version alignment**: solution projects referencing Binance.Net should use the **same package version** (see root `AGENTS.md` technology table).
+- Keep **version alignment**: Platform and legacy use the **same** Binance.Net version (12.11.x). WebSocketTrading MVP is an exception (13.1.1).

@@ -19,7 +19,7 @@ src/legacy/TradingAssistant/
 
 ## Binance
 
-Use **Binance.Net** directly (`AddBinance`, `BinanceCredentials`, `IBinanceRestClient` / `IBinanceSocketClient`). Keep package version aligned with Platform and MVP (12.11.x).
+Use **Binance.Net** directly (`AddBinance`, `BinanceCredentials`, `IBinanceRestClient` / `IBinanceSocketClient`). Keep package version aligned with Platform and Backtesting MVP (**12.11.x**). WebSocketTrading MVP is a separate solution on **13.1.1** — do not bump legacy when changing that project.
 
 ## Conventions
 

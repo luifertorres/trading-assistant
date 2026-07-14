@@ -40,7 +40,8 @@ triggers: [TDD, test first, red green refactor, strict TDD, write test before, t
 | Platform — MarketData Application | `src/platform/TradingPlatform/tests/MarketData.Application.Tests/` | Handlers, orchestrators, use cases |
 | Platform — Cli | `src/platform/TradingPlatform/tests/TradingPlatform.Cli.Tests/` | CLI parsing/smoke |
 | Platform — Infrastructure | `src/platform/TradingPlatform/tests/MarketData.Infrastructure.IntegrationTests/` | **After** unit green only |
-| MVP Backtesting | `src/mvp/Backtesting/Backtesting.Mvp.Tests/` | MVP-only changes |
+| MVP Backtesting | `src/mvp/Backtesting/Backtesting.Mvp.Tests/` | Backtesting MVP changes |
+| MVP WebSocketTrading | `src/mvp/WebSocketTrading/WebSocketTrading.Tests/` | WebSocketTrading MVP changes |
 | Legacy | `src/legacy/TradingAssistant/` | Maintenance only; no new feature TDD unless explicit bugfix |
 
 Pick the project that references the layer you are changing.

@@ -53,13 +53,14 @@ Run red, implement, run green. Full templates below.
 | Platform — Cli | Unit | `src/platform/TradingPlatform/tests/TradingPlatform.Cli.Tests/` |
 | Platform — MarketData Infrastructure | Integration | `src/platform/TradingPlatform/tests/MarketData.Infrastructure.IntegrationTests/` |
 | MVP Backtesting | Unit | `src/mvp/Backtesting/Backtesting.Mvp.Tests/` |
+| MVP WebSocketTrading | Unit | `src/mvp/WebSocketTrading/WebSocketTrading.Tests/` |
 | Legacy | Unit (maintenance) | `src/legacy/TradingAssistant/CandlestickData.Tests/` if present |
 
 Run all Platform tests: `dotnet test src/platform/TradingPlatform/TradingPlatform.slnx`. Module-scoped: `dotnet test <path-to-csproj>`.
 
 ## Verify order (Definition of Done)
 
-1. `dotnet build src/platform/TradingPlatform/TradingPlatform.slnx` (or `Backtesting.sln` for MVP)
+1. `dotnet build src/platform/TradingPlatform/TradingPlatform.slnx` (or `Backtesting.sln` / `WebSocketTrading.slnx` for MVP)
 2. `dotnet test` on affected **unit** csproj(s) with `--filter` when possible
 3. **Last** — when Infrastructure persistence, Binance adapter, SQLite store, or instrument registry behavior changed: `dotnet test src/platform/TradingPlatform/tests/MarketData.Infrastructure.IntegrationTests/MarketData.Infrastructure.IntegrationTests.csproj`
 
@@ -119,9 +120,18 @@ dotnet test --collect:"XPlat Code Coverage" --results-directory ./coverage
 
 ## MVP verify
 
+**Backtesting:**
+
 ```bash
 dotnet build src/mvp/Backtesting/Backtesting.sln
 dotnet test src/mvp/Backtesting/Backtesting.Mvp.Tests/Backtesting.Mvp.Tests.csproj
+```
+
+**WebSocketTrading:**
+
+```bash
+dotnet build src/mvp/WebSocketTrading/WebSocketTrading.slnx
+dotnet test src/mvp/WebSocketTrading/WebSocketTrading.Tests/WebSocketTrading.Tests.csproj
 ```
 
 ## Related routing

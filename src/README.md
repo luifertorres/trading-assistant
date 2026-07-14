@@ -2,7 +2,7 @@
 
 Documentation index: [docs/README.md](../docs/README.md).
 
-Three .NET solutions live under categorized buckets. See [refactor-ledger](../ai/context/refactor-ledger.md) for where new work should go.
+Four .NET solutions live under categorized buckets. See [refactor-ledger](../ai/context/refactor-ledger.md) for where new work should go.
 
 | Bucket | Path | Role | Solution | Docs |
 |--------|------|------|----------|------|
@@ -53,11 +53,15 @@ dotnet run
 dotnet run --project src/mvp/Backtesting/Backtesting.Mvp.Cli/Backtesting.Mvp.Cli.csproj
 ```
 
-**WebSocketTrading MVP (live orders):**
+**WebSocketTrading MVP (live orders — real money):**
+
+Configure [Binance credentials](mvp/WebSocketTrading/README.md#credentials) first, then:
 
 ```bash
 dotnet run --project src/mvp/WebSocketTrading/WebSocketTrading.Worker/WebSocketTrading.Worker.csproj
 ```
+
+Local `dotnet run` sets `DOTNET_ENVIRONMENT=Development` → **1m** interval (`appsettings.Development.json`). Non-Development runs use the **1D** vector from `appsettings.json`.
 
 ## EF migrations (legacy only)
 

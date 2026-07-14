@@ -46,3 +46,7 @@ dotnet test src/mvp/Backtesting/Backtesting.Mvp.Tests/Backtesting.Mvp.Tests.cspr
 ## Strategy (MVP)
 
 Long-only: RSI(14) with **entry** when RSI crosses **up through 30** and **exit** when RSI crosses **up through 70**. Market fill at bar **close**; fees in **basis points per side** on notional.
+
+## Related MVP
+
+Live trading worker (separate solution): [`../WebSocketTrading/README.md`](../WebSocketTrading/README.md) — SMA200/SMA5 short vector on USD-M Futures.

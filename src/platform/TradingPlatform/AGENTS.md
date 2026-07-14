@@ -4,7 +4,7 @@
 
 **Greenfield** modular monolith for trading: bounded contexts with **Domain / Application / Infrastructure** slices, plus **TradingPlatform.Kernel** building blocks and **delivery** apps (Host, Cli).
 
-This tree is the **intended future primary** codebase. It must **not** reference `TradingAssistant`, `CandlestickData`, or `Backtesting` projects.
+This tree is the **intended future primary** codebase. It must **not** reference `TradingAssistant`, `CandlestickData`, `Backtesting`, or `WebSocketTrading` projects.
 
 ## Entry points
 

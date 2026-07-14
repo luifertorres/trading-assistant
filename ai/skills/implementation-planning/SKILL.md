@@ -52,7 +52,7 @@ Examples:
 
 - MarketData Application work: build → `MarketData.Application.Tests.csproj` → `MarketData.Infrastructure.IntegrationTests.csproj` only if infra changed
 - Domain-only: build → `MarketData.Domain.Tests.csproj`
-- MVP: build `Backtesting.sln` → `Backtesting.Mvp.Tests.csproj`
+- MVP: build `Backtesting.sln` → `Backtesting.Mvp.Tests.csproj`; or `WebSocketTrading.slnx` → `WebSocketTrading.Tests.csproj`
 
 Scope gate: [`ai/skills/dotnet-verification/SKILL.md`](../dotnet-verification/SKILL.md). Never use only "run tests" or "build project".
 

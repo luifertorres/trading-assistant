@@ -5,7 +5,7 @@ Non-negotiables for agents working in this repository. Prefer updating the narro
 ## Architecture
 
 - **Legacy monolith** (`src/legacy/TradingAssistant/`): dependency direction is strictly **Host → Infrastructure → Application → Domain**. Never reverse it. See root `AGENTS.md` and `ai/templates/rules/architecture.mdc`.
-- **Greenfield platform** (`src/platform/TradingPlatform/`): modular monolith by bounded context; **no project references** to `TradingAssistant`, `CandlestickData`, or `Backtesting`. See `src/platform/TradingPlatform/AGENTS.md` and `docs/ADRs.md`.
+- **Greenfield platform** (`src/platform/TradingPlatform/`): modular monolith by bounded context; **no project references** to `TradingAssistant`, `CandlestickData`, `Backtesting`, or `WebSocketTrading`. See `src/platform/TradingPlatform/AGENTS.md` and `docs/ADRs.md`.
 
 ## Broker and domain boundaries
 

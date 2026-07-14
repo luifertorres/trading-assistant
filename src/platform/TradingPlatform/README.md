@@ -1,6 +1,6 @@
 # TradingPlatform (greenfield)
 
-Parallel DDD modular monolith under `src/platform/TradingPlatform`. **No project references** to legacy `TradingAssistant`, `CandlestickData`, or `Backtesting` solutions.
+Parallel DDD modular monolith under `src/platform/TradingPlatform`. **No project references** to legacy `TradingAssistant`, `CandlestickData`, or MVP solutions (`Backtesting`, `WebSocketTrading`).
 
 **Agent instructions:** [AGENTS.md](./AGENTS.md).
 
