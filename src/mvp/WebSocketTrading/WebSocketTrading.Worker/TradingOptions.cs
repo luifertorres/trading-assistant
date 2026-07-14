@@ -17,7 +17,7 @@ public sealed class TradingOptions
             Asset = "DOGEUSDT",
             Direction = WebSocketTrading.Direction.Short,
             Timeframe = "OneDay",
-            TradingLogic = WebSocketTrading.TradingLogicKind.Sma200Sma5
+            TradingLogic = WebSocketTrading.TradingLogic.Sma200Sma5
         }
     ];
 }
@@ -30,8 +30,8 @@ public sealed class TradingVectorOptions
 
     public string Timeframe { get; init; } = "OneDay";
 
-    public WebSocketTrading.TradingLogicKind TradingLogic { get; init; } =
-        WebSocketTrading.TradingLogicKind.Sma200Sma5;
+    public WebSocketTrading.TradingLogic TradingLogic { get; init; } =
+        WebSocketTrading.TradingLogic.Sma200Sma5;
 
     public KlineInterval GetKlineInterval() =>
         Enum.Parse<KlineInterval>(Timeframe, ignoreCase: true);

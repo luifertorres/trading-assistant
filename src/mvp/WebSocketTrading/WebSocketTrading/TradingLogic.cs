@@ -1,6 +1,6 @@
 namespace WebSocketTrading;
 
-public enum TradingLogicKind
+public enum TradingLogic
 {
     Sma200Sma5
 }

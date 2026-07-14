@@ -12,7 +12,7 @@ Documentation hub: [docs/README.md](../../../docs/README.md).
 
 | Project | Role |
 |---------|------|
-| [`WebSocketTrading/`](WebSocketTrading/) | Pure trading-logic lib: `Sma200Sma5TradingLogic`, `CandleBuffer`, `QuantitySizer` (no Binance types) |
+| [`WebSocketTrading/`](WebSocketTrading/) | Pure trading-logic lib: `Sma200Sma5TradingLogic`, `CandleBuffer`, `QuantitySizer`, `TradingVectorCatalog`, `VectorInventory` (no Binance types) |
 | [`WebSocketTrading.Worker/`](WebSocketTrading.Worker/) | `BackgroundService` host; Binance.Net REST + WebSocket wiring |
 | [`WebSocketTrading.Tests/`](WebSocketTrading.Tests/) | xUnit + FluentAssertions (trading logic, buffer, sizing) |
 
@@ -26,7 +26,11 @@ A **trading vector** is `(Asset, Direction, Timeframe, TradingLogic)`.
 | **Trading logic** | Entry/exit rules (e.g. `Sma200Sma5`) |
 | **Position state** | `OutOfMarket` (no open qty for that vector), `Long`, or `Short` |
 
-The worker runs **multiple vectors** concurrently when they share the same **Asset + Timeframe**. Default config runs **Short + Long** `Sma200Sma5` on `DOGEUSDT`.
+Each vector identity must be **unique** — duplicate `(Asset, Direction, Timeframe, TradingLogic)` tuples are rejected. Vectors may use **different Timeframes** on the same Asset; the worker subscribes to one kline stream per distinct timeframe. Default config runs **Short + Long** `Sma200Sma5` on `DOGEUSDT` / `OneDay`.
+
+**Per-vector inventory:** Binance hedge mode exposes one Long and one Short position per symbol. When multiple vectors share Asset + Direction (e.g. Long on `OneDay` and Long on `OneMinute`), each vector tracks its own fill quantity via `VectorInventory`. Exits close only that vector's tracked quantity (`min(tracked, exchangeSide)`), not the full exchange side.
+
+**Startup seed:** On restart, if multiple vectors share a Direction and the exchange side has open quantity, the **first configured** vector of that Direction receives the full side quantity; others start at zero. A warning is logged. Per-vector fill history is not persisted across restarts.
 
 ## Trading logic (`Sma200Sma5`)
 
@@ -35,7 +39,7 @@ Source Pine vectors:
 - Short: [`docs/pine-scripts/es1!-short-1d-sma200sma5.pinescript`](../../../docs/pine-scripts/es1!-short-1d-sma200sma5.pinescript)
 - Long: [`docs/pine-scripts/es1!-long-1d-sma200sma5.pinescript`](../../../docs/pine-scripts/es1!-long-1d-sma200sma5.pinescript)
 
-Evaluated on each **closed** candle only (`kline.Final == true`). **Pyramiding:** enter fires whenever signal conditions hold, even if already in market; each enter adds another `NotionalUsd` fill. Exit closes the **full** side quantity.
+Evaluated on each **closed** candle only (`kline.Final == true`). **Pyramiding:** enter fires whenever signal conditions hold, even if already in market; each enter adds another `NotionalUsd` fill to that vector's inventory. Exit closes only that vector's tracked quantity.
 
 | Direction | Enter (pyramiding) | Exit |
 |-----------|-------------------|------|
@@ -76,7 +80,16 @@ Example:
 | [`appsettings.json`](WebSocketTrading.Worker/appsettings.json) | Production / base | Both on `OneDay` |
 | [`appsettings.Development.json`](WebSocketTrading.Worker/appsettings.Development.json) | `DOTNET_ENVIRONMENT=Development` | Both on `OneMinute` — faster smoke test |
 
-All vectors must share the same **Asset** and **Timeframe**. The worker enables **hedge (dual-side) position mode** at startup so long and short can both be open on the same symbol. Switching to hedge mode may fail if conflicting one-way positions are open — close them first in the Binance UI.
+All vectors must share the same **Asset**; **Timeframe** may differ per vector. The worker enables **hedge (dual-side) position mode** at startup so long and short can both be open on the same symbol. Switching to hedge mode may fail if conflicting one-way positions are open — close them first in the Binance UI.
+
+Mixed-timeframe example:
+
+```json
+"Vectors": [
+  { "Asset": "DOGEUSDT", "Direction": "Short", "Timeframe": "OneDay", "TradingLogic": "Sma200Sma5" },
+  { "Asset": "DOGEUSDT", "Direction": "Long", "Timeframe": "OneMinute", "TradingLogic": "Sma200Sma5" }
+]
+```
 
 Binance credentials (required):
 
@@ -103,7 +116,7 @@ dotnet build src/mvp/WebSocketTrading/WebSocketTrading.slnx
 dotnet test src/mvp/WebSocketTrading/WebSocketTrading.Tests/WebSocketTrading.Tests.csproj
 ```
 
-Unit tests cover trading-logic signals (short, long, pyramiding), ring-buffer eviction, and notional→quantity rounding. No live-exchange integration tests.
+Unit tests cover trading-logic signals (short, long, pyramiding), ring-buffer eviction, notional→quantity rounding, vector catalog validation, and per-vector inventory. No live-exchange integration tests.
 
 ## Run
 
@@ -116,25 +129,26 @@ On startup the worker:
 1. Loads `MARKET_LOT_SIZE` / `MIN_NOTIONAL` filters via REST `GetExchangeInfoAsync`
 2. Enables **hedge mode** via REST `ModifyPositionModeAsync(true)` when needed
 3. Sets **isolated** margin and leverage via REST
-4. Syncs open long/short positions per vector via REST `GetPositionInformationAsync`
-5. Warms up with the last 201 **closed** klines via REST `GetKlinesAsync`
-6. Subscribes to one kline WebSocket stream; processes only **final** bars
+4. Seeds per-vector inventory from exchange positions (first vector per Direction gets full side qty)
+5. Warms up with the last 201 **closed** klines per distinct timeframe via REST `GetKlinesAsync`
+6. Subscribes to one kline WebSocket stream per distinct timeframe; processes only **final** bars
 7. On signal: places market orders via **`socket.UsdFuturesApi.Trading.PlaceOrderAsync`** with `positionSide`
 
 **Order sizing:**
 
-- **Enter:** `NotionalUsd / price`, rounded up to `stepSize`, respecting `minQuantity` and `minNotional` — adds to existing side (pyramiding)
-- **Exit:** full open quantity for that `positionSide`, `reduceOnly: true`
+- **Enter:** `NotionalUsd / price`, rounded up to `stepSize`, respecting `minQuantity` and `minNotional` — adds to vector inventory (pyramiding)
+- **Exit:** vector's tracked quantity (`min(tracked, exchangeSide)`), `reduceOnly: true`
 
 ## Architecture
 
 ```
-REST  GetExchangeInfo / ModifyPositionMode / ChangeLeverage / GetPosition / GetKlines (warmup)
-  └─► CandleBuffer (201 closed bars)
+REST  GetExchangeInfo / ModifyPositionMode / ChangeLeverage / GetPosition / GetKlines (warmup per TF)
+  └─► CandleBuffer per Timeframe (201 closed bars each)
 
-WS    SubscribeToKlineUpdatesAsync (Final only)
-  └─► foreach trading vector: Sma200Sma5TradingLogic.Evaluate
-        └─► socket.UsdFuturesApi.Trading.PlaceOrderAsync (market + positionSide)
+WS    SubscribeToKlineUpdatesAsync per Timeframe (Final only)
+  └─► foreach matching-TF vector: Sma200Sma5TradingLogic.Evaluate
+        └─► VectorInventory (AddFill on enter / ConsumeForExit on exit)
+              └─► socket.UsdFuturesApi.Trading.PlaceOrderAsync (market + positionSide)
 ```
 
 | Concern | API | Binance.Net surface |
@@ -150,6 +164,7 @@ WS    SubscribeToKlineUpdatesAsync (Final only)
 - Platform / OpenSpec / legacy integration
 - Dry-run, testnet, trailing stops, multi-asset vectors, persistence
 - Production risk guardrails (kill-switch, daily caps) — see Platform Execution for that pattern
+- **Equal risk per vector** (e.g. max 2% of account per vector on a $5000 account) — pending Ivan Scherman research, including whether pyramiding remains in scope
 
 ## Related MVP
 
