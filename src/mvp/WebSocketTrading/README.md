@@ -60,6 +60,8 @@ Settings bind from the `Trading` section in `appsettings.json`, environment-spec
 | `Leverage` | `1` | Initial leverage; worker sets **isolated** margin at startup |
 | `Vectors[]` | Short + Long on `DOGEUSDT` / `OneDay` | Each item: `Asset`, `Direction`, `Timeframe`, `TradingLogic` |
 
+Do not initialize `TradingOptions.Vectors` with a non-empty C# default — the configuration binder merges into existing collection defaults instead of replacing them, which can add phantom vectors on top of appsettings.
+
 Example:
 
 ```json

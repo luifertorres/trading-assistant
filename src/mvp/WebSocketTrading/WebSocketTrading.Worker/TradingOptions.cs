@@ -10,16 +10,7 @@ public sealed class TradingOptions
 
     public int Leverage { get; init; } = 1;
 
-    public IReadOnlyList<TradingVectorOptions> Vectors { get; init; } =
-    [
-        new TradingVectorOptions
-        {
-            Asset = "DOGEUSDT",
-            Direction = WebSocketTrading.Direction.Short,
-            Timeframe = "OneDay",
-            TradingLogic = WebSocketTrading.TradingLogic.Sma200Sma5
-        }
-    ];
+    public IReadOnlyList<TradingVectorOptions> Vectors { get; init; } = [];
 }
 
 public sealed class TradingVectorOptions
