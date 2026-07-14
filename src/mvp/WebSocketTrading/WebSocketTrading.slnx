@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="WebSocketTrading.Tests/WebSocketTrading.Tests.csproj" />
+  <Project Path="WebSocketTrading.Worker/WebSocketTrading.Worker.csproj" />
+  <Project Path="WebSocketTrading/WebSocketTrading.csproj" />
+</Solution>

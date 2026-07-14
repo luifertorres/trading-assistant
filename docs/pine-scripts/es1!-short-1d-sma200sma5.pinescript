@@ -1,0 +1,24 @@
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © luifertorres
+
+//@version=6
+strategy('6 ES1! Short 1D MA200 MA5', overlay = true, initial_capital = 5000, default_qty_type = strategy.fixed, default_qty_value = 1, pyramiding = 1, commission_value = 0, commission_type = strategy.commission.percent, slippage = 2)
+
+// Cálculos de las medias móviles
+ma200 = ta.sma(close, 200)
+ma5   = ta.sma(close, 5)
+
+// Condiciones para entrada SHORT
+isMa200Downtrending = ma200[1] > ma200
+isBullishCandle     = close > open
+isAboveMa5          = low > ma5
+
+isShort = isMa200Downtrending and isBullishCandle and isAboveMa5
+
+// Entrada en corto si se cumplen las condiciones y la dirección permitida
+if isShort
+    strategy.entry('SHORT', strategy.short)
+
+// Cerrar posición corta cuando el precio cierre por debajo de MA5
+if strategy.position_size < 0 and close < ma5
+    strategy.close('SHORT')

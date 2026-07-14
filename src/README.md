@@ -9,6 +9,7 @@ Three .NET solutions live under categorized buckets. See [refactor-ledger](../ai
 | **platform** | [`platform/TradingPlatform/`](platform/TradingPlatform/) | Greenfield DDD modular monolith (primary) | `TradingPlatform.slnx` | [README](platform/TradingPlatform/README.md), [AGENTS](platform/TradingPlatform/AGENTS.md) |
 | **legacy** | [`legacy/TradingAssistant/`](legacy/TradingAssistant/) | Frozen single-project live bot (maintenance) | `TradingAssistant.sln` | [AGENTS](legacy/TradingAssistant/TradingAssistant/AGENTS.md) |
 | **mvp** | [`mvp/Backtesting/`](mvp/Backtesting/) | Isolated backtest MVP | `Backtesting.sln` | [README](mvp/Backtesting/README.md) |
+| **mvp** | [`mvp/WebSocketTrading/`](mvp/WebSocketTrading/) | Live WS kline + SMA short worker | `WebSocketTrading.slnx` | [README](mvp/WebSocketTrading/README.md) |
 
 Agent routing defaults: [AGENTS.md](../AGENTS.md).
 
@@ -20,6 +21,7 @@ From repo root:
 dotnet build src/platform/TradingPlatform/TradingPlatform.slnx
 dotnet build src/legacy/TradingAssistant/TradingAssistant.sln
 dotnet build src/mvp/Backtesting/Backtesting.sln
+dotnet build src/mvp/WebSocketTrading/WebSocketTrading.slnx
 ```
 
 ## Test
@@ -27,6 +29,7 @@ dotnet build src/mvp/Backtesting/Backtesting.sln
 ```bash
 dotnet test src/platform/TradingPlatform/TradingPlatform.slnx
 dotnet test src/mvp/Backtesting/Backtesting.sln
+dotnet test src/mvp/WebSocketTrading/WebSocketTrading.Tests/WebSocketTrading.Tests.csproj
 ```
 
 ## Run (common entry points)
@@ -48,6 +51,12 @@ dotnet run
 
 ```bash
 dotnet run --project src/mvp/Backtesting/Backtesting.Mvp.Cli/Backtesting.Mvp.Cli.csproj
+```
+
+**WebSocketTrading MVP (live orders):**
+
+```bash
+dotnet run --project src/mvp/WebSocketTrading/WebSocketTrading.Worker/WebSocketTrading.Worker.csproj
 ```
 
 ## EF migrations (legacy only)
