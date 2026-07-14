@@ -1,6 +1,7 @@
 namespace WebSocketTrading;
 
 public sealed record TradingVectorPlan(
-    string Asset,
+    IReadOnlyList<string> Assets,
     IReadOnlyList<TradingVector> Vectors,
-    IReadOnlyList<string> DistinctTimeframes);
+    IReadOnlyList<string> DistinctTimeframes,
+    IReadOnlyList<AssetTimeframe> DistinctAssetTimeframes);

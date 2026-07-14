@@ -7,14 +7,6 @@ public static class TradingVectorCatalog
         if (vectors.Count == 0)
             throw new InvalidOperationException("At least one trading vector must be configured.");
 
-        var asset = vectors[0].Asset;
-
-        foreach (var vector in vectors)
-        {
-            if (!string.Equals(vector.Asset, asset, StringComparison.Ordinal))
-                throw new InvalidOperationException("All trading vectors must share the same Asset.");
-        }
-
         var seen = new HashSet<TradingVector>();
         foreach (var vector in vectors)
         {
@@ -23,11 +15,24 @@ public static class TradingVectorCatalog
                     "Each trading vector must be unique (Asset, Direction, Timeframe, TradingLogic).");
         }
 
+        var assets = vectors
+            .Select(v => v.Asset)
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
         var distinctTimeframes = vectors
             .Select(v => v.Timeframe)
             .Distinct(StringComparer.Ordinal)
             .ToList();
 
-        return new TradingVectorPlan(asset, vectors, distinctTimeframes);
+        var distinctAssetTimeframes = vectors
+            .Select(v => new AssetTimeframe(v.Asset, v.Timeframe))
+            .Distinct()
+            .OrderBy(x => x.Asset, StringComparer.Ordinal)
+            .ThenBy(x => x.Timeframe, StringComparer.Ordinal)
+            .ToList();
+
+        return new TradingVectorPlan(assets, vectors, distinctTimeframes, distinctAssetTimeframes);
     }
 }

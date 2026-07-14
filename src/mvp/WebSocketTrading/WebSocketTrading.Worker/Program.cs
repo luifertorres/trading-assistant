@@ -1,7 +1,15 @@
 using Binance.Net;
+using Binance.Net.Clients;
 using WebSocketTrading.Worker;
 
+BinanceSocketClient.SetDefaultOptions(options =>
+{
+    options.SocketSubscriptionsCombineTarget = 200;
+});
+
 var builder = Host.CreateApplicationBuilder(args);
+
+builder.Configuration.AddUserSecrets(typeof(Program).Assembly, optional: true);
 
 builder.Services.Configure<TradingOptions>(builder.Configuration.GetSection(TradingOptions.SectionName));
 builder.Services.AddBinance(options =>

@@ -33,4 +33,25 @@ public sealed class TradingOptionsBindingTests
         options.Vectors.Should().Contain(v =>
             v.Direction == WebSocketTrading.Direction.Long && v.Timeframe == "OneMinute");
     }
+
+    [Fact]
+    public void Bind_ProductionAppsettings_EnablesUniverse()
+    {
+        var appsettingsPath = Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..",
+            "WebSocketTrading.Worker",
+            "appsettings.json");
+
+        var configuration = new ConfigurationBuilder()
+            .AddJsonFile(Path.GetFullPath(appsettingsPath), optional: false)
+            .Build();
+
+        var options = new TradingOptions();
+        configuration.GetSection(TradingOptions.SectionName).Bind(options);
+
+        options.Universe.Enabled.Should().BeTrue();
+        options.Universe.Timeframe.Should().Be("FiveMinutes");
+        options.Vectors.Should().BeEmpty();
+    }
 }

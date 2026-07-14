@@ -21,7 +21,7 @@ public sealed class TradingVectorCatalogTests
     }
 
     [Fact]
-    public void Build_WhenMultipleAssets_Throws()
+    public void Build_WhenMultipleAssets_ReturnsPlanWithDistinctAssets()
     {
         var vectors = new[]
         {
@@ -29,10 +29,28 @@ public sealed class TradingVectorCatalogTests
             V(asset: "BTCUSDT", direction: Direction.Long)
         };
 
-        var act = () => TradingVectorCatalog.Build(vectors);
+        var plan = TradingVectorCatalog.Build(vectors);
 
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*same Asset*");
+        plan.Assets.Should().BeEquivalentTo(["DOGEUSDT", "BTCUSDT"]);
+        plan.Vectors.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void Build_WhenMultipleAssets_ReturnsDistinctAssetTimeframes()
+    {
+        var vectors = new[]
+        {
+            V(asset: "DOGEUSDT", timeframe: "FiveMinutes"),
+            V(asset: "BTCUSDT", direction: Direction.Long, timeframe: "FiveMinutes")
+        };
+
+        var plan = TradingVectorCatalog.Build(vectors);
+
+        plan.DistinctAssetTimeframes.Should().BeEquivalentTo(
+        [
+            new AssetTimeframe("DOGEUSDT", "FiveMinutes"),
+            new AssetTimeframe("BTCUSDT", "FiveMinutes")
+        ]);
     }
 
     [Fact]
@@ -61,9 +79,14 @@ public sealed class TradingVectorCatalogTests
 
         var plan = TradingVectorCatalog.Build(vectors);
 
-        plan.Asset.Should().Be("DOGEUSDT");
+        plan.Assets.Should().Equal("DOGEUSDT");
         plan.Vectors.Should().HaveCount(2);
         plan.DistinctTimeframes.Should().BeEquivalentTo(["OneDay", "OneMinute"]);
+        plan.DistinctAssetTimeframes.Should().BeEquivalentTo(
+        [
+            new AssetTimeframe("DOGEUSDT", "OneDay"),
+            new AssetTimeframe("DOGEUSDT", "OneMinute")
+        ]);
     }
 
     [Fact]

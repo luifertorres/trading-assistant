@@ -8,9 +8,23 @@ public sealed class TradingOptions
 
     public decimal NotionalUsd { get; init; } = 5m;
 
+    public decimal MaxNotionalUsd { get; init; } = 5.5m;
+
     public int Leverage { get; init; } = 1;
 
+    public UniverseOptions Universe { get; init; } = new();
+
     public IReadOnlyList<TradingVectorOptions> Vectors { get; init; } = [];
+}
+
+public sealed class UniverseOptions
+{
+    public bool Enabled { get; init; }
+
+    public string Timeframe { get; init; } = "FiveMinutes";
+
+    public WebSocketTrading.TradingLogic TradingLogic { get; init; } =
+        WebSocketTrading.TradingLogic.Sma200Sma5;
 }
 
 public sealed class TradingVectorOptions
@@ -26,4 +40,13 @@ public sealed class TradingVectorOptions
 
     public KlineInterval GetKlineInterval() =>
         Enum.Parse<KlineInterval>(Timeframe, ignoreCase: true);
+
+    public static TradingVectorOptions FromVector(WebSocketTrading.TradingVector vector) =>
+        new()
+        {
+            Asset = vector.Asset,
+            Direction = vector.Direction,
+            Timeframe = vector.Timeframe,
+            TradingLogic = vector.TradingLogic
+        };
 }

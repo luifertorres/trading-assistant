@@ -3,6 +3,10 @@
   "profiles": {
     "WebSocketTrading.Worker": {
       "commandName": "Project",
+      "dotnetRunMessages": true
+    },
+    "Smoke": {
+      "commandName": "Project",
       "dotnetRunMessages": true,
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
