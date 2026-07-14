@@ -1,6 +1,6 @@
 # WebSocketTrading MVP
 
-Isolated **Worker Service** that streams Binance USD-M Futures klines over WebSocket, evaluates Ivan Scherman's short SMA200/SMA5 vector in memory, and places **live** market orders via Binance.Net's **Websocket API**.
+Isolated **Worker Service** that streams Binance USD-M Futures klines over WebSocket, evaluates Ivan Scherman **trading vectors** in memory, and places **live** market orders via Binance.Net's **Websocket API**.
 
 > **Live money:** There is no dry-run or testnet mode. Running the worker sends real orders to Binance USD-M Futures. Use a small notional and a liquid symbol with low minimum order size (e.g. `DOGEUSDT`, not `BTCUSDT`).
 
@@ -12,21 +12,35 @@ Documentation hub: [docs/README.md](../../../docs/README.md).
 
 | Project | Role |
 |---------|------|
-| [`WebSocketTrading/`](WebSocketTrading/) | Pure strategy lib: `SmaShortStrategy`, `CandleBuffer`, `QuantitySizer` (no Binance types) |
+| [`WebSocketTrading/`](WebSocketTrading/) | Pure trading-logic lib: `Sma200Sma5TradingLogic`, `CandleBuffer`, `QuantitySizer` (no Binance types) |
 | [`WebSocketTrading.Worker/`](WebSocketTrading.Worker/) | `BackgroundService` host; Binance.Net REST + WebSocket wiring |
-| [`WebSocketTrading.Tests/`](WebSocketTrading.Tests/) | xUnit + FluentAssertions (strategy, buffer, sizing) |
+| [`WebSocketTrading.Tests/`](WebSocketTrading.Tests/) | xUnit + FluentAssertions (trading logic, buffer, sizing) |
 
-## Strategy
+## Ubiquitous language
 
-Source Pine vector: [`docs/pine-scripts/es1!-short-1d-sma200sma5.pinescript`](../../../docs/pine-scripts/es1!-short-1d-sma200sma5.pinescript)
+A **trading vector** is `(Asset, Direction, Timeframe, TradingLogic)`.
 
-Evaluated on each **closed** candle only (`kline.Final == true`):
+| Term | Meaning |
+|------|---------|
+| **Direction** | `Long` or `Short` |
+| **Trading logic** | Entry/exit rules (e.g. `Sma200Sma5`) |
+| **Position state** | `OutOfMarket` (no open qty for that vector), `Long`, or `Short` |
 
-| Signal | Condition |
-|--------|-----------|
-| Enter short | Flat, `SMA200[1] > SMA200`, `close > open`, and `low > SMA5` |
-| Exit short | Short and `close < SMA5` |
-| Hold | Warmup incomplete, conditions unmet, or already in the desired state |
+The worker runs **multiple vectors** concurrently when they share the same **Asset + Timeframe**. Default config runs **Short + Long** `Sma200Sma5` on `DOGEUSDT`.
+
+## Trading logic (`Sma200Sma5`)
+
+Source Pine vectors:
+
+- Short: [`docs/pine-scripts/es1!-short-1d-sma200sma5.pinescript`](../../../docs/pine-scripts/es1!-short-1d-sma200sma5.pinescript)
+- Long: [`docs/pine-scripts/es1!-long-1d-sma200sma5.pinescript`](../../../docs/pine-scripts/es1!-long-1d-sma200sma5.pinescript)
+
+Evaluated on each **closed** candle only (`kline.Final == true`). **Pyramiding:** enter fires whenever signal conditions hold, even if already in market; each enter adds another `NotionalUsd` fill. Exit closes the **full** side quantity.
+
+| Direction | Enter (pyramiding) | Exit |
+|-----------|-------------------|------|
+| Short | `SMA200[1] > SMA200`, `close > open`, `low > SMA5` | Open short + `close < SMA5` |
+| Long | `SMA200[1] < SMA200`, `close < open`, `high < MA5` | Open long + `close > MA5` |
 
 Indicators use [Skender.Stock.Indicators](https://dotnet.stockindicators.dev/) `GetSma(200)` and `GetSma(5)` on mapped `Quote` bars.
 
@@ -34,23 +48,35 @@ Indicators use [Skender.Stock.Indicators](https://dotnet.stockindicators.dev/) `
 
 ## Configuration
 
-Settings bind from the `Trading` section in `appsettings.json`, environment-specific overrides, user secrets, or environment variables (`Trading__Symbol`, etc.).
+Settings bind from the `Trading` section in `appsettings.json`, environment-specific overrides, user secrets, or environment variables (`Trading__NotionalUsd`, etc.).
 
-| Key | Default (`appsettings.json`) | Description |
-|-----|------------------------------|-------------|
-| `Symbol` | `DOGEUSDT` | USD-M perpetual symbol |
-| `Interval` | `OneDay` | Binance `KlineInterval` name — **original 1D trading vector** |
-| `NotionalUsd` | `5` | Target entry notional in USDT (sized through exchange filters) |
+| Key | Default | Description |
+|-----|---------|-------------|
+| `NotionalUsd` | `5` | Target entry notional per fill in USDT |
 | `Leverage` | `1` | Initial leverage; worker sets **isolated** margin at startup |
+| `Vectors[]` | Short + Long on `DOGEUSDT` / `OneDay` | Each item: `Asset`, `Direction`, `Timeframe`, `TradingLogic` |
+
+Example:
+
+```json
+"Trading": {
+  "NotionalUsd": 5,
+  "Leverage": 1,
+  "Vectors": [
+    { "Asset": "DOGEUSDT", "Direction": "Short", "Timeframe": "OneDay", "TradingLogic": "Sma200Sma5" },
+    { "Asset": "DOGEUSDT", "Direction": "Long", "Timeframe": "OneDay", "TradingLogic": "Sma200Sma5" }
+  ]
+}
+```
 
 **Environment overrides:**
 
-| File | When | `Interval` |
-|------|------|------------|
-| [`appsettings.json`](WebSocketTrading.Worker/appsettings.json) | Production / base | `OneDay` |
-| [`appsettings.Development.json`](WebSocketTrading.Worker/appsettings.Development.json) | `DOTNET_ENVIRONMENT=Development` (default for `dotnet run`) | `OneMinute` — faster smoke test of kline + order flow |
+| File | When | Vectors |
+|------|------|---------|
+| [`appsettings.json`](WebSocketTrading.Worker/appsettings.json) | Production / base | Both on `OneDay` |
+| [`appsettings.Development.json`](WebSocketTrading.Worker/appsettings.Development.json) | `DOTNET_ENVIRONMENT=Development` | Both on `OneMinute` — faster smoke test |
 
-Code fallbacks in [`TradingOptions.cs`](WebSocketTrading.Worker/TradingOptions.cs) match the 1D vector (`OneDay`) when config is absent.
+All vectors must share the same **Asset** and **Timeframe**. The worker enables **hedge (dual-side) position mode** at startup so long and short can both be open on the same symbol. Switching to hedge mode may fail if conflicting one-way positions are open — close them first in the Binance UI.
 
 Binance credentials (required):
 
@@ -77,7 +103,7 @@ dotnet build src/mvp/WebSocketTrading/WebSocketTrading.slnx
 dotnet test src/mvp/WebSocketTrading/WebSocketTrading.Tests/WebSocketTrading.Tests.csproj
 ```
 
-Unit tests cover strategy signals, ring-buffer eviction, and notional→quantity rounding. No live-exchange integration tests.
+Unit tests cover trading-logic signals (short, long, pyramiding), ring-buffer eviction, and notional→quantity rounding. No live-exchange integration tests.
 
 ## Run
 
@@ -88,26 +114,27 @@ dotnet run --project src/mvp/WebSocketTrading/WebSocketTrading.Worker/WebSocketT
 On startup the worker:
 
 1. Loads `MARKET_LOT_SIZE` / `MIN_NOTIONAL` filters via REST `GetExchangeInfoAsync`
-2. Sets isolated margin and leverage via REST
-3. Syncs open short position via REST `GetPositionInformationAsync` (avoids double-entry after restart)
-4. Warms up with the last 201 **closed** klines via REST `GetKlinesAsync`
-5. Subscribes to the kline WebSocket stream; processes only **final** bars
-6. On signal: places market orders via **`socket.UsdFuturesApi.Trading.PlaceOrderAsync`** (Websocket API)
+2. Enables **hedge mode** via REST `ModifyPositionModeAsync(true)` when needed
+3. Sets **isolated** margin and leverage via REST
+4. Syncs open long/short positions per vector via REST `GetPositionInformationAsync`
+5. Warms up with the last 201 **closed** klines via REST `GetKlinesAsync`
+6. Subscribes to one kline WebSocket stream; processes only **final** bars
+7. On signal: places market orders via **`socket.UsdFuturesApi.Trading.PlaceOrderAsync`** with `positionSide`
 
 **Order sizing:**
 
-- **Enter short:** `NotionalUsd / price`, rounded up to `stepSize`, respecting `minQuantity` and `minNotional`
-- **Exit short:** full open short quantity from REST position query, `reduceOnly: true`
+- **Enter:** `NotionalUsd / price`, rounded up to `stepSize`, respecting `minQuantity` and `minNotional` — adds to existing side (pyramiding)
+- **Exit:** full open quantity for that `positionSide`, `reduceOnly: true`
 
 ## Architecture
 
 ```
-REST  GetExchangeInfo / ChangeLeverage / GetPosition / GetKlines (warmup)
+REST  GetExchangeInfo / ModifyPositionMode / ChangeLeverage / GetPosition / GetKlines (warmup)
   └─► CandleBuffer (201 closed bars)
 
 WS    SubscribeToKlineUpdatesAsync (Final only)
-  └─► SmaShortStrategy.Evaluate
-        └─► socket.UsdFuturesApi.Trading.PlaceOrderAsync (market)
+  └─► foreach trading vector: Sma200Sma5TradingLogic.Evaluate
+        └─► socket.UsdFuturesApi.Trading.PlaceOrderAsync (market + positionSide)
 ```
 
 | Concern | API | Binance.Net surface |
@@ -121,7 +148,7 @@ WS    SubscribeToKlineUpdatesAsync (Final only)
 ## Out of scope
 
 - Platform / OpenSpec / legacy integration
-- Dry-run, testnet, trailing stops, multi-symbol, persistence
+- Dry-run, testnet, trailing stops, multi-asset vectors, persistence
 - Production risk guardrails (kill-switch, daily caps) — see Platform Execution for that pattern
 
 ## Related MVP

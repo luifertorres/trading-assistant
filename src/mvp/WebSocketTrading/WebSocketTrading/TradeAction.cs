@@ -4,5 +4,7 @@ public enum TradeAction
 {
     Hold,
     EnterShort,
-    ExitShort
+    ExitShort,
+    EnterLong,
+    ExitLong
 }

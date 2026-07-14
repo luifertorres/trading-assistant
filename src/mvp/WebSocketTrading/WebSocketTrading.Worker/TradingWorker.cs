@@ -1,8 +1,10 @@
 using Binance.Net;
 using Binance.Net.Enums;
 using Binance.Net.Interfaces.Clients;
+using Binance.Net.Objects.Models.Futures;
 using Microsoft.Extensions.Options;
 using WebSocketTrading;
+using BinancePositionSide = Binance.Net.Enums.PositionSide;
 
 namespace WebSocketTrading.Worker;
 
@@ -13,29 +15,29 @@ public sealed class TradingWorker(
     ILogger<TradingWorker> log) : BackgroundService
 {
     private readonly TradingOptions _options = options.Value;
-    private readonly SmaShortStrategy _strategy = new();
-    private readonly CandleBuffer _buffer = new(SmaShortStrategy.RequiredBars);
+    private readonly CandleBuffer _buffer = new(Sma200Sma5TradingLogic.RequiredBars);
     private readonly object _gate = new();
+    private readonly List<VectorRuntime> _vectors = [];
 
-    private PositionState _position = PositionState.Flat;
     private decimal _stepSize = 1m;
     private decimal _minQuantity = 1m;
     private decimal _minNotional = 5m;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var symbol = _options.Symbol;
-        var interval = _options.GetKlineInterval();
+        var (symbol, interval) = InitializeVectors();
 
         log.LogInformation(
-            "Starting WebSocketTrading worker for {Symbol} on {Interval} with notional {NotionalUsd} USD.",
+            "Starting WebSocketTrading worker for {Symbol} on {Interval} with {VectorCount} vector(s), notional {NotionalUsd} USD.",
             symbol,
             interval,
+            _vectors.Count,
             _options.NotionalUsd);
 
         await LoadSymbolFiltersAsync(symbol, stoppingToken).ConfigureAwait(false);
+        await EnsureHedgeModeAsync(stoppingToken).ConfigureAwait(false);
         await ConfigureAccountAsync(symbol, stoppingToken).ConfigureAwait(false);
-        await SyncPositionAsync(symbol, stoppingToken).ConfigureAwait(false);
+        await SyncPositionsAsync(symbol, stoppingToken).ConfigureAwait(false);
         await WarmupAsync(symbol, interval, stoppingToken).ConfigureAwait(false);
 
         var subscription = await socket.UsdFuturesApi.ExchangeData
@@ -66,6 +68,33 @@ public sealed class TradingWorker(
         }
     }
 
+    private (string Symbol, KlineInterval Interval) InitializeVectors()
+    {
+        if (_options.Vectors.Count == 0)
+            throw new InvalidOperationException("At least one trading vector must be configured.");
+
+        var asset = _options.Vectors[0].Asset;
+        var interval = _options.Vectors[0].GetKlineInterval();
+
+        foreach (var vector in _options.Vectors)
+        {
+            if (!string.Equals(vector.Asset, asset, StringComparison.Ordinal))
+                throw new InvalidOperationException("All trading vectors must share the same Asset.");
+
+            if (vector.GetKlineInterval() != interval)
+                throw new InvalidOperationException("All trading vectors must share the same Timeframe.");
+
+            if (vector.TradingLogic != TradingLogicKind.Sma200Sma5)
+                throw new InvalidOperationException($"Unsupported TradingLogic: {vector.TradingLogic}");
+
+            _vectors.Add(new VectorRuntime(
+                vector,
+                new Sma200Sma5TradingLogic(vector.Direction)));
+        }
+
+        return (asset, interval);
+    }
+
     private async Task LoadSymbolFiltersAsync(string symbol, CancellationToken cancellationToken)
     {
         var exchangeInfo = await rest.UsdFuturesApi.ExchangeData
@@ -90,6 +119,31 @@ public sealed class TradingWorker(
             _minNotional);
     }
 
+    private async Task EnsureHedgeModeAsync(CancellationToken cancellationToken)
+    {
+        var mode = await rest.UsdFuturesApi.Account
+            .GetPositionModeAsync(ct: cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!mode.Success || mode.Data is null)
+            throw new InvalidOperationException($"Get position mode failed: {mode.Error?.Message}");
+
+        if (mode.Data.IsHedgeMode)
+        {
+            log.LogInformation("Account already in hedge (dual-side) position mode.");
+            return;
+        }
+
+        var change = await rest.UsdFuturesApi.Account
+            .ModifyPositionModeAsync(true, ct: cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!change.Success)
+            throw new InvalidOperationException($"Enable hedge mode failed: {change.Error?.Message}");
+
+        log.LogInformation("Enabled hedge (dual-side) position mode for USD-M Futures.");
+    }
+
     private async Task ConfigureAccountAsync(string symbol, CancellationToken cancellationToken)
     {
         var margin = await rest.UsdFuturesApi.Account
@@ -109,7 +163,7 @@ public sealed class TradingWorker(
         log.LogInformation("Configured {Symbol} to isolated margin at {Leverage}x leverage.", symbol, _options.Leverage);
     }
 
-    private async Task SyncPositionAsync(string symbol, CancellationToken cancellationToken)
+    private async Task SyncPositionsAsync(string symbol, CancellationToken cancellationToken)
     {
         var positions = await rest.UsdFuturesApi.Account
             .GetPositionInformationAsync(symbol, ct: cancellationToken)
@@ -118,15 +172,22 @@ public sealed class TradingWorker(
         if (!positions.Success || positions.Data is null)
             throw new InvalidOperationException($"Position sync failed: {positions.Error?.Message}");
 
-        var position = positions.Data.FirstOrDefault(p => p.Symbol == symbol);
-        var quantity = position?.Quantity ?? 0m;
-
         lock (_gate)
         {
-            _position = quantity < 0 ? PositionState.Short : PositionState.Flat;
+            foreach (var runtime in _vectors)
+            {
+                runtime.Position = ResolvePositionState(positions.Data, symbol, runtime.Options.Direction);
+            }
         }
 
-        log.LogInformation("Startup position for {Symbol}: qty={Quantity}, state={State}.", symbol, quantity, _position);
+        foreach (var runtime in _vectors)
+        {
+            log.LogInformation(
+                "Startup position for {Symbol} {Direction}: state={State}.",
+                symbol,
+                runtime.Options.Direction,
+                runtime.Position);
+        }
     }
 
     private async Task WarmupAsync(string symbol, KlineInterval interval, CancellationToken cancellationToken)
@@ -135,7 +196,7 @@ public sealed class TradingWorker(
             .GetKlinesAsync(
                 symbol,
                 interval,
-                limit: SmaShortStrategy.RequiredBars,
+                limit: Sma200Sma5TradingLogic.RequiredBars,
                 ct: cancellationToken)
             .ConfigureAwait(false);
 
@@ -168,26 +229,48 @@ public sealed class TradingWorker(
                 return;
 
             var candle = BinanceKlineMapping.ToCandle(kline);
-            TradeAction action;
+            List<(VectorRuntime Runtime, TradeAction Action)> actions;
 
             lock (_gate)
             {
                 _buffer.Add(candle);
-                action = _strategy.Evaluate(_buffer.Candles, _position);
+                actions = _vectors
+                    .Select(runtime => (runtime, runtime.Logic.Evaluate(_buffer.Candles, runtime.Position)))
+                    .ToList();
             }
 
-            log.LogInformation(
-                "Closed candle {Symbol} @ {OpenTime:u} close={Close} action={Action} position={Position}.",
-                symbol,
-                candle.Date,
-                candle.Close,
-                action,
-                _position);
+            foreach (var (runtime, action) in actions)
+            {
+                log.LogInformation(
+                    "Closed candle {Symbol} @ {OpenTime:u} close={Close} direction={Direction} action={Action} position={Position}.",
+                    symbol,
+                    candle.Date,
+                    candle.Close,
+                    runtime.Options.Direction,
+                    action,
+                    runtime.Position);
 
-            if (action == TradeAction.Hold)
-                return;
+                if (action == TradeAction.Hold)
+                    continue;
 
-            await ExecuteActionAsync(symbol, candle.Close, action, cancellationToken).ConfigureAwait(false);
+                await ExecuteActionAsync(runtime, symbol, candle.Close, action, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (action is TradeAction.ExitShort or TradeAction.ExitLong)
+                {
+                    TradeAction followUp;
+                    lock (_gate)
+                    {
+                        followUp = runtime.Logic.Evaluate(_buffer.Candles, PositionState.OutOfMarket);
+                    }
+
+                    if (followUp is TradeAction.EnterShort or TradeAction.EnterLong)
+                    {
+                        await ExecuteActionAsync(runtime, symbol, candle.Close, followUp, cancellationToken)
+                            .ConfigureAwait(false);
+                    }
+                }
+            }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -196,84 +279,118 @@ public sealed class TradingWorker(
     }
 
     private async Task ExecuteActionAsync(
+        VectorRuntime runtime,
         string symbol,
         decimal price,
         TradeAction action,
         CancellationToken cancellationToken)
     {
-        var quantity = QuantitySizer.SizeFromNotional(
-            _options.NotionalUsd,
-            price,
-            _stepSize,
-            _minQuantity,
-            _minNotional);
+        var binanceSide = ToBinancePositionSide(runtime.Options.Direction);
 
-        if (action == TradeAction.EnterShort)
+        if (action is TradeAction.EnterShort or TradeAction.EnterLong)
         {
+            var quantity = QuantitySizer.SizeFromNotional(
+                _options.NotionalUsd,
+                price,
+                _stepSize,
+                _minQuantity,
+                _minNotional);
+
+            var side = action == TradeAction.EnterLong ? OrderSide.Buy : OrderSide.Sell;
             var order = await socket.UsdFuturesApi.Trading
                 .PlaceOrderAsync(
                     symbol,
-                    OrderSide.Sell,
+                    side,
                     FuturesOrderType.Market,
                     quantity: quantity,
+                    positionSide: binanceSide,
                     ct: cancellationToken)
                 .ConfigureAwait(false);
 
             if (!order.Success)
             {
-                log.LogError("Enter short failed: {Message}", order.Error?.Message);
+                log.LogError(
+                    "Enter {Direction} failed: {Message}",
+                    runtime.Options.Direction,
+                    order.Error?.Message);
                 return;
             }
 
             lock (_gate)
             {
-                _position = PositionState.Short;
+                runtime.Position = runtime.Options.Direction == Direction.Long
+                    ? PositionState.Long
+                    : PositionState.Short;
             }
 
-            log.LogInformation("Entered SHORT {Symbol} qty={Quantity} orderId={OrderId}.", symbol, quantity, order.Data?.Id);
+            log.LogInformation(
+                "Entered {Direction} {Symbol} qty={Quantity} orderId={OrderId}.",
+                runtime.Options.Direction,
+                symbol,
+                quantity,
+                order.Data?.Id);
             return;
         }
 
-        if (action == TradeAction.ExitShort)
+        if (action is TradeAction.ExitShort or TradeAction.ExitLong)
         {
-            var positionQty = await GetShortQuantityAsync(symbol, cancellationToken).ConfigureAwait(false);
+            var positionQty = await GetSideQuantityAsync(symbol, binanceSide, cancellationToken)
+                .ConfigureAwait(false);
+
             if (positionQty <= 0)
             {
-                log.LogWarning("Exit short skipped: no open short quantity for {Symbol}.", symbol);
+                log.LogWarning(
+                    "Exit {Direction} skipped: no open quantity for {Symbol}.",
+                    runtime.Options.Direction,
+                    symbol);
+
                 lock (_gate)
                 {
-                    _position = PositionState.Flat;
+                    runtime.Position = PositionState.OutOfMarket;
                 }
 
                 return;
             }
 
+            var side = action == TradeAction.ExitLong ? OrderSide.Sell : OrderSide.Buy;
             var order = await socket.UsdFuturesApi.Trading
                 .PlaceOrderAsync(
                     symbol,
-                    OrderSide.Buy,
+                    side,
                     FuturesOrderType.Market,
                     quantity: positionQty,
+                    positionSide: binanceSide,
                     reduceOnly: true,
                     ct: cancellationToken)
                 .ConfigureAwait(false);
 
             if (!order.Success)
             {
-                log.LogError("Exit short failed: {Message}", order.Error?.Message);
+                log.LogError(
+                    "Exit {Direction} failed: {Message}",
+                    runtime.Options.Direction,
+                    order.Error?.Message);
                 return;
             }
 
             lock (_gate)
             {
-                _position = PositionState.Flat;
+                runtime.Position = PositionState.OutOfMarket;
             }
 
-            log.LogInformation("Exited SHORT {Symbol} qty={Quantity} orderId={OrderId}.", symbol, positionQty, order.Data?.Id);
+            log.LogInformation(
+                "Exited {Direction} {Symbol} qty={Quantity} orderId={OrderId}.",
+                runtime.Options.Direction,
+                symbol,
+                positionQty,
+                order.Data?.Id);
         }
     }
 
-    private async Task<decimal> GetShortQuantityAsync(string symbol, CancellationToken cancellationToken)
+    private async Task<decimal> GetSideQuantityAsync(
+        string symbol,
+        BinancePositionSide positionSide,
+        CancellationToken cancellationToken)
     {
         var positions = await rest.UsdFuturesApi.Account
             .GetPositionInformationAsync(symbol, ct: cancellationToken)
@@ -282,8 +399,36 @@ public sealed class TradingWorker(
         if (!positions.Success || positions.Data is null)
             throw new InvalidOperationException($"Position query failed: {positions.Error?.Message}");
 
-        var position = positions.Data.FirstOrDefault(p => p.Symbol == symbol);
-        var quantity = position?.Quantity ?? 0m;
-        return quantity < 0 ? Math.Abs(quantity) : 0m;
+        var position = positions.Data.FirstOrDefault(p =>
+            p.Symbol == symbol && p.PositionSide == positionSide);
+
+        return position?.Quantity is { } quantity ? Math.Abs(quantity) : 0m;
+    }
+
+    private static PositionState ResolvePositionState(
+        IEnumerable<BinancePositionDetailsUsdt> positions,
+        string symbol,
+        Direction direction)
+    {
+        var binanceSide = ToBinancePositionSide(direction);
+        var row = positions.FirstOrDefault(p => p.Symbol == symbol && p.PositionSide == binanceSide);
+        var quantity = row?.Quantity ?? 0m;
+
+        if (quantity == 0)
+            return PositionState.OutOfMarket;
+
+        return direction == Direction.Long ? PositionState.Long : PositionState.Short;
+    }
+
+    private static BinancePositionSide ToBinancePositionSide(Direction direction) =>
+        direction == Direction.Long ? BinancePositionSide.Long : BinancePositionSide.Short;
+
+    private sealed class VectorRuntime(TradingVectorOptions options, Sma200Sma5TradingLogic logic)
+    {
+        public TradingVectorOptions Options { get; } = options;
+
+        public Sma200Sma5TradingLogic Logic { get; } = logic;
+
+        public PositionState Position { get; set; } = PositionState.OutOfMarket;
     }
 }

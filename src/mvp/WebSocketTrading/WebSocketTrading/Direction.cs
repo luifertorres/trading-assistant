@@ -1,8 +1,7 @@
 namespace WebSocketTrading;
 
-public enum PositionState
+public enum Direction
 {
-    OutOfMarket,
     Long,
     Short
 }
