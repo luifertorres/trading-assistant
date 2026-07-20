@@ -7,9 +7,9 @@ namespace TradingAssistant
     {
         public Task Handle(SmasAndRsisCalculatedEvent notification, CancellationToken cancellationToken)
         {
-                return Task.CompletedTask;
             if (notification.LastCandle.Interval != KlineInterval.OneMinute)
             {
+                return Task.CompletedTask;
             }
 
             var maybeOrderSide = GetReversionSignal(notification.SmasHigherTimeFrame, notification.Smas, notification.Rsis);

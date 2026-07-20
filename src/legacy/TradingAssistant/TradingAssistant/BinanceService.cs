@@ -299,7 +299,15 @@ namespace TradingAssistant
 
             await Parallel.ForEachAsync(_symbols, cancellationToken, async (symbol, token) =>
             {
-                await account.ChangeMarginTypeAsync(symbol.Key, FuturesMarginType.Cross, ct: token);
+                var changeMarginTypeResult = await account.ChangeMarginTypeAsync(symbol.Key, FuturesMarginType.Cross, ct: token);
+                if (!changeMarginTypeResult.Success
+                    && changeMarginTypeResult.Error?.Code != -4046)
+                {
+                    _logger.LogWarning(
+                        "Change margin type for {Symbol} failed. {Error}",
+                        symbol.Key,
+                        changeMarginTypeResult.Error);
+                }
             });
 
             _logger.LogInformation("Margin type configuration finished");

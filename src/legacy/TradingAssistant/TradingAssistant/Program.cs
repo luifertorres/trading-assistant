@@ -12,8 +12,16 @@ namespace TradingAssistant
                 .ConfigureLogging((context, builder) =>
                 {
                     builder.ClearProviders()
-                        .AddTelegram(context.Configuration)
                         .AddConsole();
+
+                    var telegramToken = context.Configuration["Logging:Telegram:AccessToken"];
+                    var telegramChatId = context.Configuration["Logging:Telegram:ChatId"];
+                    if (!string.IsNullOrWhiteSpace(telegramToken)
+                        && !string.IsNullOrWhiteSpace(telegramChatId)
+                        && !string.Equals(telegramToken, "TELEGRAM_BOT_ACCESS_TOKEN", StringComparison.Ordinal))
+                    {
+                        builder.AddTelegram(context.Configuration);
+                    }
                 }).ConfigureServices((context, services) =>
                 {
                     services.AddMediatR(configuration =>
