@@ -15,7 +15,6 @@ namespace TradingAssistant
         private readonly FasterKV<CandleId, Candle> _cache;
         private readonly BinanceService _binance;
         private readonly KlineInterval _timeFrame;
-        private readonly int _candlestickSize;
 
         public TradeHandler(ILogger<TradeHandler> logger,
             IConfiguration configuration,
@@ -30,7 +29,6 @@ namespace TradingAssistant
             _binance = binance;
 
             _timeFrame = _configuration.GetValue<KlineInterval>("Binance:Service:TimeFrameSeconds");
-            _candlestickSize = _configuration.GetValue<int>("Binance:Service:CandlestickSize");
         }
 
         public async Task<bool> Handle(TradeRequest trade, CancellationToken cancellationToken)
@@ -48,8 +46,9 @@ namespace TradingAssistant
             }
 
             var lastCandleId = new CandleId(symbolToTrade, _timeFrame, trade.Time);
-            var candlestick = GetCandlestick(lastCandleId);
-            var bitcoin = GetCandlestick(lastCandleId with { Symbol = "BTCUSDT" });
+            var lookbackPeriods = Math.Max(60 * 60 * 24 / (int)trade.TimeFrame, 2);
+            var candlestick = GetCandlestick(lastCandleId, lookbackPeriods);
+            var bitcoin = GetCandlestick(lastCandleId with { Symbol = "BTCUSDT" }, lookbackPeriods);
             var withoutQuoteAsset = ..^4;
 
             if (symbolToTrade[withoutQuoteAsset] is not "BTC" && candlestick.IsCorrelatedWith(bitcoin))
@@ -66,6 +65,12 @@ namespace TradingAssistant
 
             var positions = account.Positions;
             var openPositions = positions.Where(IsPositionOpen);
+
+            if (openPositions.Any())
+            {
+                return false;
+            }
+
             var sameBaseAssetOpenPositions = openPositions.Where(p => p.Symbol[withoutQuoteAsset] == symbolToTrade[withoutQuoteAsset]);
             var newPositionSide = trade.Side;
             var sameBaseAssetSameSideOpenPositions = sameBaseAssetOpenPositions.Where(p => p.Quantity.AsOrderSide() == newPositionSide);
@@ -83,7 +88,12 @@ namespace TradingAssistant
             }
 
             var referenceStopLossRoi = _configuration.GetValue<decimal>("Binance:RiskManagement:StopLossRoi");
-            var lookbackPeriods = Math.Max(60 * 60 * 24 / (int)trade.TimeFrame, 2);
+
+            if (candlestick.Count < lookbackPeriods)
+            {
+                return false;
+            }
+
             var lookbackCandlestick = candlestick[^lookbackPeriods..];
             var last24HoursLowestPriceCandle = lookbackCandlestick.MinBy(candle => candle.LowPrice);
             var last24HoursHighestPriceCandle = lookbackCandlestick.MaxBy(candle => candle.HighPrice);
@@ -102,6 +112,7 @@ namespace TradingAssistant
             var margin = stopLossRatio * marginPercentage * availableBalance / 100;
             var notional = margin * leverage;
             var expectedQuantity = notional / entryPrice;
+
             var minNotionalFilter = information?.MinNotionalFilter;
             var marketLotSizeFilter = information?.MarketLotSizeFilter;
             var quantity = _binance.ApplyMarketQuantityFilter(expectedQuantity,
@@ -139,7 +150,7 @@ namespace TradingAssistant
             {
                 foreach (var position in openPositions)
                 {
-                    var otherCandlestick = GetCandlestick(lastCandleId with { Symbol = position.Symbol });
+                    var otherCandlestick = GetCandlestick(lastCandleId with { Symbol = position.Symbol }, lookbackPeriods);
 
                     if (candlestick.IsCorrelatedWith(otherCandlestick))
                     {
@@ -288,12 +299,12 @@ namespace TradingAssistant
             return true;
         }
 
-        private List<Candle> GetCandlestick(CandleId lastCandleId)
+        private List<Candle> GetCandlestick(CandleId lastCandleId, int candlestickSize)
         {
             var symbol = lastCandleId.Symbol;
             var timeFrame = lastCandleId.TimeFrame;
             var candlestickId = new CandlestickId(symbol, timeFrame);
-            var candlestick = new CircularTimeSeries<CandlestickId, Candle>(candlestickId, _candlestickSize);
+            var candlestick = new CircularTimeSeries<CandlestickId, Candle>(candlestickId, candlestickSize);
             var sessionBuilder = _cache.For(new SimpleFunctions<CandleId, Candle>());
 
             using (var session = sessionBuilder.NewSession<SimpleFunctions<CandleId, Candle>>())
@@ -302,9 +313,9 @@ namespace TradingAssistant
                 var lastCandleOpenTime = lastCandleId.OpenTime;
                 var lastCandleOpenTimeTotalSeconds = DateTimeConverter.ConvertToSeconds(lastCandleOpenTime) / timeFrameInSeconds;
                 var lastCandleTime = DateTimeConverter.ConvertFromSeconds((double)lastCandleOpenTimeTotalSeconds * timeFrameInSeconds);
-                var remainingCandles = _candlestickSize - 1;
+                var remainingCandles = candlestickSize - 1;
 
-                Enumerable.Repeat(lastCandleOpenTime, _candlestickSize)
+                Enumerable.Repeat(lastCandleOpenTime, candlestickSize)
                     .Select(openTime => lastCandleTime.AddSeconds(-(timeFrameInSeconds * remainingCandles--)))
                     .Select(openTime => new CandleId(symbol, timeFrame, openTime))
                     .ToList()

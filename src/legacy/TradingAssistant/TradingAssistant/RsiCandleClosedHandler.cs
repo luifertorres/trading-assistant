@@ -17,6 +17,8 @@ namespace TradingAssistant
         private readonly FasterKV<CandleId, Candle> _cache;
         private readonly KlineInterval _timeFrame;
         private readonly int _candlestickSize;
+        private readonly int[] _indicatorLengths;
+        private readonly bool _computeHigherTimeFrameSmas;
         private readonly int _rsiPatternLookbackPeriods;
 
         public RsiCandleClosedHandler(ILogger<RsiCandleClosedHandler> logger,
@@ -28,7 +30,10 @@ namespace TradingAssistant
             _publisher = publisher;
             _cache = cache;
             _timeFrame = configuration.GetValue<KlineInterval>("Binance:Service:TimeFrameSeconds");
-            _candlestickSize = configuration.GetValue<int>("Binance:Service:CandlestickSize");
+            var pipelineConfig = new IndicatorPipelineConfig(configuration, _timeFrame);
+            _candlestickSize = pipelineConfig.CandlestickSize;
+            _indicatorLengths = pipelineConfig.Lengths;
+            _computeHigherTimeFrameSmas = pipelineConfig.ComputeHigherTimeFrameSmas;
             _rsiPatternLookbackPeriods = Math.Max(60 * 60 * 24 / (int)_timeFrame, 1);
         }
 
@@ -175,33 +180,15 @@ namespace TradingAssistant
 
         private void SendIndicatorsToStrategies(List<Candle> candlestick)
         {
-            var smaLengths = new[]
-            {
-                Length.Five,
-                Length.Ten,
-                Length.Twenty,
-                Length.Fifty,
-                Length.OneHundred,
-                Length.TwoHundred,
-                //Length.ThreeHundredThirtyThree,
-            };
+            var indicatorLengths = _indicatorLengths;
 
-            var rsiLengths = new[]
-            {
-                Length.Five,
-                Length.Ten,
-                Length.Twenty,
-                Length.Fifty,
-                Length.OneHundred,
-                Length.TwoHundred,
-                //Length.ThreeHundredThirtyThree,
-            };
+            var smas = indicatorLengths.Select(length => GetSma(candlestick, length)).ToArray();
+            var rsis = indicatorLengths.Select(length => GetRsi(candlestick, length)).ToArray();
+            var smasHigherTimeFrame = _computeHigherTimeFrameSmas
+                ? indicatorLengths.Select(length => GetSma(candlestick, length, PeriodSize.FourHours)).ToArray()
+                : [];
 
-            var smas = smaLengths.Select(length => GetSma(candlestick, length)).ToArray();
-            var rsis = rsiLengths.Select(length => GetRsi(candlestick, length)).ToArray();
-            var smasHigherTimeFrame = smaLengths.Select(length => GetSma(candlestick, length, PeriodSize.FourHours)).ToArray();
-
-            LogRsis(candlestick, rsiLengths, rsis);
+            LogRsis(candlestick, indicatorLengths, rsis);
 
             var smasAndRsisCalculatedEvent = new SmasAndRsisCalculatedEvent(candlestick[Last], smasHigherTimeFrame, smas, rsis);
 
