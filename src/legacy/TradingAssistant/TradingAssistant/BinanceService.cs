@@ -201,12 +201,14 @@ namespace TradingAssistant
             var account = _rest.UsdFuturesApi.Account;
             var startUserStreamResult = await account.StartUserStreamAsync(cancellationToken);
 
-            if (!startUserStreamResult.GetResultOrError(out _listenKey, out var startUserStreamError))
+            if (!startUserStreamResult.Success || startUserStreamResult.Data is null)
             {
-                _logger.LogError("Start user stream has failed. {Error}", startUserStreamError);
+                _logger.LogError("Start user stream has failed. {Error}", startUserStreamResult.Error);
 
                 return false;
             }
+
+            _listenKey = startUserStreamResult.Data;
 
             _ = Task.Run(async () =>
             {
@@ -255,21 +257,25 @@ namespace TradingAssistant
             var exchangeData = _rest.UsdFuturesApi.ExchangeData;
             var getExchangeInfoResult = await exchangeData.GetExchangeInfoAsync(cancellationToken);
 
-            if (!getExchangeInfoResult.GetResultOrError(out var exchangeInfo, out var getExchangeInfoError))
+            if (!getExchangeInfoResult.Success || getExchangeInfoResult.Data is null)
             {
-                _logger.LogError("Get exchange info failed. {Error}", getExchangeInfoError);
+                _logger.LogError("Get exchange info failed. {Error}", getExchangeInfoResult.Error);
 
                 return false;
             }
+
+            var exchangeInfo = getExchangeInfoResult.Data;
 
             var getLast24hTickersResult = await exchangeData.GetTickersAsync(cancellationToken);
 
-            if (!getLast24hTickersResult.GetResultOrError(out var last24hTickers, out var getLast24hTickersError))
+            if (!getLast24hTickersResult.Success || getLast24hTickersResult.Data is null)
             {
-                _logger.LogError("Get last 24-hour tickers failed. {Error}", getLast24hTickersError);
+                _logger.LogError("Get last 24-hour tickers failed. {Error}", getLast24hTickersResult.Error);
 
                 return false;
             }
+
+            var last24hTickers = getLast24hTickersResult.Data;
 
             var highestTradedVolumeSymbols = last24hTickers.Where(ticker => ticker.QuoteVolume > 000_000_000)
                 .Select(ticker => ticker.Symbol);
@@ -284,7 +290,7 @@ namespace TradingAssistant
             {
                 if (!_symbols.TryAdd(symbol.Name, symbol))
                 {
-                    _logger.LogWarning("Store {Symbol} info failed. {Error}", symbol.Name, getExchangeInfoError);
+                    _logger.LogWarning("Store {Symbol} info failed. {Error}", symbol.Name, getExchangeInfoResult.Error);
                 }
             }
 
@@ -322,12 +328,14 @@ namespace TradingAssistant
             var account = _rest.UsdFuturesApi.Account;
             var getLeverageBracketsResult = await account.GetBracketsAsync(ct: cancellationToken);
 
-            if (!getLeverageBracketsResult.GetResultOrError(out var brackets, out var getLeverageBracketsError))
+            if (!getLeverageBracketsResult.Success || getLeverageBracketsResult.Data is null)
             {
-                _logger.LogError("Get leverage brackets failed. {Error}", getLeverageBracketsError);
+                _logger.LogError("Get leverage brackets failed. {Error}", getLeverageBracketsResult.Error);
 
                 return false;
             }
+
+            var brackets = getLeverageBracketsResult.Data;
 
             brackets.ToList().ForEach(bracket =>
             {
@@ -429,14 +437,14 @@ namespace TradingAssistant
             var account = _rest.UsdFuturesApi.Account;
             var getAccountInfoResult = await account.GetAccountInfoV2Async(ct: cancellationToken);
 
-            if (!getAccountInfoResult.GetResultOrError(out var accountInfo, out var getAccountInfoError))
+            if (!getAccountInfoResult.Success || getAccountInfoResult.Data is null)
             {
-                _logger.LogError("Get account information failed. {Error}", getAccountInfoError);
+                _logger.LogError("Get account information failed. {Error}", getAccountInfoResult.Error);
 
                 return default;
             }
 
-            return accountInfo;
+            return getAccountInfoResult.Data;
         }
 
         public async Task<BinancePositionDetailsUsdt?> TryGetPositionInformationAsync(string symbol, CancellationToken cancellationToken = default)
@@ -444,14 +452,14 @@ namespace TradingAssistant
             var account = _rest.UsdFuturesApi.Account;
             var getPositionResult = await account.GetPositionInformationAsync(symbol, ct: cancellationToken);
 
-            if (!getPositionResult.GetResultOrError(out var positions, out var getPositionError))
+            if (!getPositionResult.Success || getPositionResult.Data is null)
             {
-                _logger.LogError("Get position information failed. {Error}", getPositionError);
+                _logger.LogError("Get position information failed. {Error}", getPositionResult.Error);
 
                 return default;
             }
 
-            return positions.FirstOrDefault(p => p.EntryPrice != 0 && p.Quantity != 0);
+            return getPositionResult.Data.FirstOrDefault(p => p.EntryPrice != 0 && p.Quantity != 0);
         }
 
         public async Task<IEnumerable<BinancePositionDetailsUsdt>> TryGetPositionsAsync(CancellationToken cancellationToken = default)
@@ -459,29 +467,29 @@ namespace TradingAssistant
             var account = _rest.UsdFuturesApi.Account;
             var getPositionsResult = await account.GetPositionInformationAsync(ct: cancellationToken);
 
-            if (!getPositionsResult.GetResultOrError(out var positions, out var getPositionsError))
+            if (!getPositionsResult.Success || getPositionsResult.Data is null)
             {
-                _logger.LogError("Get positions failed. {Error}", getPositionsError);
+                _logger.LogError("Get positions failed. {Error}", getPositionsResult.Error);
 
                 return [];
             }
 
-            return positions.Where(p => p.EntryPrice != 0 && p.Quantity != 0);
+            return getPositionsResult.Data.Where(p => p.EntryPrice != 0 && p.Quantity != 0);
         }
 
-        public async Task<IEnumerable<BinanceFuturesOrder>> TryGetOpenOrdersAsync(string symbol, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<BinanceUsdFuturesOrder>> TryGetOpenOrdersAsync(string symbol, CancellationToken cancellationToken = default)
         {
             var trading = _rest.UsdFuturesApi.Trading;
             var getOpenOrdersResult = await trading.GetOpenOrdersAsync(symbol, ct: cancellationToken);
 
-            if (!getOpenOrdersResult.GetResultOrError(out var openOrders, out var getOpenOrdersError))
+            if (!getOpenOrdersResult.Success || getOpenOrdersResult.Data is null)
             {
-                _logger.LogError("Get open orders failed. {Error}", getOpenOrdersError);
+                _logger.LogError("Get open orders failed. {Error}", getOpenOrdersResult.Error);
 
                 return [];
             }
 
-            return openOrders;
+            return getOpenOrdersResult.Data;
         }
 
         public async Task<bool> TryUnsubscribeFromPriceAsync(string symbol)
@@ -505,12 +513,14 @@ namespace TradingAssistant
                 onMessage: @event => action(@event.Data.Data),
                 ct: cancellationToken);
 
-            if (!subscribeToPriceResult.GetResultOrError(out var newPriceSubscription, out var subscribeToPriceError))
+            if (!subscribeToPriceResult.Success || subscribeToPriceResult.Data is null)
             {
-                _logger.LogError("Subscribe to {Symbol} price failed. {Error}", symbol, subscribeToPriceError);
+                _logger.LogError("Subscribe to {Symbol} price failed. {Error}", symbol, subscribeToPriceResult.Error);
 
                 return false;
             }
+
+            var newPriceSubscription = subscribeToPriceResult.Data;
 
             if (_priceSubscriptions.TryRemove(symbol, out var oldPriceSubscription))
             {
@@ -576,11 +586,11 @@ namespace TradingAssistant
                         },
                         ct: cancellationToken);
 
-                    if (!subscribeToKlineUpdatesResult.GetResultOrError(out var _, out var subscribeToKlineUpdatesError))
+                    if (!subscribeToKlineUpdatesResult.Success)
                     {
                         _logger.LogWarning("Subscribe to {TimeFrame} candlesticks failed. {Error}",
                             EnumConverter.GetString(timeFrame),
-                            subscribeToKlineUpdatesError);
+                            subscribeToKlineUpdatesResult.Error);
 
                         return;
                     }
@@ -614,15 +624,17 @@ namespace TradingAssistant
                             limit: candlesPerRequest,
                             ct: token);
 
-                        if (!getKlinesResult.GetResultOrError(out var klines, out var getKlinesError))
+                        if (!getKlinesResult.Success || getKlinesResult.Data is null)
                         {
                             _logger.LogWarning("Get {Symbol} {TimeFrame} candlestick failed. {Error}",
                                         symbol,
                                 EnumConverter.GetString(timeFrame),
-                                getKlinesError);
+                                getKlinesResult.Error);
 
                             return;
                         }
+
+                        var klines = getKlinesResult.Data;
 
                         totalKlines.AddRange(klines);
 
