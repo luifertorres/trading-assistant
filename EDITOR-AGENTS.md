@@ -34,7 +34,7 @@ Not installed by `/ai-onboard`. Install when you need `/opsx:new`, archive, or s
 
 ### Work without OpenSpec CLI (Tier 1)
 
-Read `openspec/changes/<name>/` markdown directly; use `ai/skills/planning/SKILL.md` and (where tests exist) `ai/skills/test-driven-development`.
+Read `openspec/changes/<name>/` markdown directly; use `ai/skills/planning/SKILL.md` and (where tests exist) `ai/skills/tdd`.
 
 ## Maintainer notes
 

@@ -51,7 +51,7 @@ Use a **direct command** when you already know the workflow—**zero extra routi
 | `/opsx:bulk-archive` | Archiving **multiple** completed changes. |
 | `/opsx:explore` | **Thinking / clarification only**—no implementation; optional OpenSpec capture. |
 | `/opsx:onboard` | Guided OpenSpec onboarding cycle. |
-| `/test-driven-implementation` | Strict TDD implementation (unit tests first). |
+| `/tdd` | Strict TDD implementation (unit tests first). |
 | `/commit` | Commit staged changes (≤50 char subject). |
 | `/slice` | Ship one visible win; append WINS.md. |
 
@@ -63,7 +63,7 @@ Use a **direct command** when you already know the workflow—**zero extra routi
 
 Invoke by name when the task clearly matches (see each skill; repo-native canonical under `ai/skills/`):
 
-- `test-driven-development` — strict TDD, red-green-refactor.
+- `tdd` — strict TDD, red-green-refactor (`/tdd` after `/ai-onboard`).
 - `dotnet-verification` — running / fixing .NET tests, verify order.
 - `planning` — granular CreatePlan todos; TDD `*-test-red`/`*-impl` only when the target already has tests.
 - `binance-net` — USD-M Binance.Net usage and boundaries.

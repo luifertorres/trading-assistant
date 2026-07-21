@@ -8,7 +8,7 @@ triggers: [write tests, unit test, integration test, coverage, FluentAssertions,
 
 > Packages: xunit, FluentAssertions, coverlet; NSubstitute where already referenced.
 >
-> **Strict TDD (test first):** [`ai/skills/test-driven-development/SKILL.md`](../test-driven-development/SKILL.md) — failing unit test before production behavior changes.
+> **Strict TDD (test first):** [`ai/skills/tdd/SKILL.md`](../tdd/SKILL.md) — failing unit test before production behavior changes.
 
 ## TDD quick loop (unit tests)
 
@@ -136,5 +136,5 @@ dotnet test src/mvp/WebSocketTrading/WebSocketTrading.Tests/WebSocketTrading.Tes
 
 ## Related routing
 
-- Strict TDD: [`ai/skills/test-driven-development/SKILL.md`](../test-driven-development/SKILL.md)
+- Strict TDD: [`ai/skills/tdd/SKILL.md`](../tdd/SKILL.md)
 - Root index: [`AGENTS.md`](../../../AGENTS.md)

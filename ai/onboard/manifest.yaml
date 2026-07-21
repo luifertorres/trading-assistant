@@ -1,7 +1,7 @@
 # Onboard manifest for editor agent devkit. See ai/commands/ai-onboard.md.
 
 commands:
-  test-driven-implementation:
+  tdd:
     slim_sections: [title, constraints, steps]
   commit:
     slim_sections: [title, constraints, steps, message_style]
@@ -19,7 +19,7 @@ openspec_skills_dir: openspec/agent/skills
 context_dir: ai/context
 
 skill_stubs:
-  - test-driven-development
+  - tdd
   - dotnet-verification
   - planning
   - binance-net

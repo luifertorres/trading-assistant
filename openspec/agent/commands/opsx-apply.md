@@ -21,7 +21,7 @@ Implement tasks from an OpenSpec change.
    - List active changes: subdirectories of `openspec/changes/` excluding `archive/`
    - If ambiguous, use **AskUserQuestion** to pick a change name
    - Read directly: `openspec/changes/<name>/tasks.md`, `proposal.md`, `design.md`, and `specs/**/*.md`
-   - Apply [`ai/skills/planning/SKILL.md`](../../ai/skills/planning/SKILL.md) for path-specific todos; use [`ai/skills/test-driven-development/SKILL.md`](../../ai/skills/test-driven-development/SKILL.md) when implementing behavior in buckets that have unit tests (`*-test-red` before `*-impl`)
+   - Apply [`ai/skills/planning/SKILL.md`](../../ai/skills/planning/SKILL.md) for path-specific todos; use [`ai/skills/tdd/SKILL.md`](../../ai/skills/tdd/SKILL.md) when implementing behavior in buckets that have unit tests (`*-test-red` before `*-impl`)
    - Skip steps 2–3 below; proceed from step 4 using those files as context (tasks artifact = `tasks.md`)
    - Tell the user: install CLI for status/archive/sync — `npm i -g @fission-ai/openspec` (`openspec/SETUP.md`)
 

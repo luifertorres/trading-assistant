@@ -34,7 +34,7 @@ When `openspec --version` fails after `/ai-onboard`:
 
 1. List active changes under `openspec/changes/` (exclude `archive/`).
 2. Read `tasks.md`, `proposal.md`, `design.md`, `specs/` directly.
-3. Use [`ai/skills/planning/SKILL.md`](../ai/skills/planning/SKILL.md) and (where tests exist) [`ai/skills/test-driven-development/SKILL.md`](../ai/skills/test-driven-development/SKILL.md).
+3. Use [`ai/skills/planning/SKILL.md`](../ai/skills/planning/SKILL.md) and (where tests exist) [`ai/skills/tdd/SKILL.md`](../ai/skills/tdd/SKILL.md).
 4. Install CLI when you need scaffold, status graphs, archive, or sync.
 
 `/opsx:*` commands include CLI preflight — see `openspec/agent/commands/opsx-apply.md`.

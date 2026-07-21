@@ -30,7 +30,7 @@ Do not emit a slim copy of `ai-onboard` into `{editorRoot}/commands/`.
 | Command | Slim file must include |
 |---------|-------------------------|
 | `commit` | Constraints, Steps, Message style |
-| `test-driven-implementation` | Constraints (incl. no secrets), Steps |
+| `tdd` | Constraints (incl. no secrets), Steps |
 | `slice` | Title, Steps, pointer to ship-a-slice skill |
 
 ## Maintainer: refresh OpenSpec vendor

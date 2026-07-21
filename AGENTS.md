@@ -24,7 +24,7 @@ Human documentation: [docs/README.md](docs/README.md).
 
 | Task | Skill / command |
 |------|-----------------|
-| Strict TDD / test-first | `ai/skills/test-driven-development/SKILL.md` |
+| Strict TDD / test-first | `/tdd` → `ai/skills/tdd/SKILL.md` |
 | Tests / verify order | `ai/skills/dotnet-verification/SKILL.md` |
 | Plan Mode / CreatePlan | `ai/skills/planning/SKILL.md` |
 | AI onboard | `ai/commands/ai-onboard.md` |
@@ -35,7 +35,7 @@ Human documentation: [docs/README.md](docs/README.md).
 
 ### Done checklist
 
-Failing unit test first for behavior changes (strict TDD per `ai/skills/test-driven-development/SKILL.md`), then green implementation, `dotnet build`, unit test csproj, integration csproj last when Infrastructure changed.
+Failing unit test first for behavior changes (strict TDD per `ai/skills/tdd/SKILL.md`), then green implementation, `dotnet build`, unit test csproj, integration csproj last when Infrastructure changed.
 
 ### Modular context (by rate of change)
 

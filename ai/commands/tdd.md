@@ -1,6 +1,6 @@
-# Test-driven implementation (strict unit tests)
+# TDD (strict unit tests)
 
-Use when the user wants to implement or change behavior using **strict TDD** (unit tests first). Canonical detail: `ai/skills/test-driven-development/SKILL.md`.
+Use when the user wants to implement or change behavior using **strict TDD** (unit tests first). Canonical detail: `ai/skills/tdd/SKILL.md`.
 
 ## Constraints
 
@@ -12,7 +12,7 @@ Use when the user wants to implement or change behavior using **strict TDD** (un
 
 ## Steps
 
-1. Read `ai/skills/test-driven-development/SKILL.md` and `ai/skills/dotnet-verification/SKILL.md`; pick the test project for the bucket being changed.
+1. Read `ai/skills/tdd/SKILL.md` and `ai/skills/dotnet-verification/SKILL.md`; pick the test project for the bucket being changed.
 2. **Red** — Add or update a unit test (`Method_Scenario_ExpectedResult`). Run `dotnet test <test.csproj> --filter "FullyQualifiedName~<TestClass>"` and confirm failure for the right reason.
 3. **Green** — Implement minimal production code so only that test passes. Re-run the same filtered test, then the full test project.
 4. **Refactor** — Improve structure without changing behavior; keep tests green.

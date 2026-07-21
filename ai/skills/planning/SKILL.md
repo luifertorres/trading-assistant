@@ -37,7 +37,7 @@ For each **behavior** change (Domain, Application use cases, deterministic mappe
 
 1. Emit **`{name}-test-red`** then **`{name}-impl`** (never reverse).
 2. `*-test-red` content names the test file/class, filtered `dotnet test` command, and expected failure.
-3. Follow [`ai/skills/test-driven-development/SKILL.md`](../test-driven-development/SKILL.md) for the red/green meaning of those todos.
+3. Follow [`ai/skills/tdd/SKILL.md`](../tdd/SKILL.md) for the red/green meaning of those todos.
 
 Host DI, composition roots, and pure wiring may stay single todos after the related behavior slice is green.
 
@@ -157,7 +157,7 @@ When OpenSpec CLI is unavailable, read `openspec/changes/<name>/tasks.md` direct
 
 ## Related routing
 
-- Strict TDD (implementation): [`ai/skills/test-driven-development/SKILL.md`](../test-driven-development/SKILL.md)
+- Strict TDD (implementation): [`ai/skills/tdd/SKILL.md`](../tdd/SKILL.md)
 - Verify order: [`ai/skills/dotnet-verification/SKILL.md`](../dotnet-verification/SKILL.md)
 - Editor enforcement: run `ai/commands/ai-onboard.md` after changing `ai/templates/rules/` or this skill.
 - Root index: [`AGENTS.md`](../../../AGENTS.md)

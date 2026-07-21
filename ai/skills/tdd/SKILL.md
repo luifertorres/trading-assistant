@@ -1,7 +1,7 @@
 ---
-name: test-driven-development
+name: tdd
 description: Strict test-driven development — failing unit test before production code; Red-Green-Refactor.
-triggers: [TDD, test first, red green refactor, strict TDD, write test before, test-driven]
+triggers: [TDD, tdd, test first, red green refactor, strict TDD, write test before, test-driven]
 ---
 
 # SKILL: Strict TDD (unit tests)
@@ -10,7 +10,7 @@ triggers: [TDD, test first, red green refactor, strict TDD, write test before, t
 >
 > Specs, OpenSpec tasks, and plans define **what** to build; TDD defines **proof** of done — whether or not you used SDD/planning first.
 >
-> Test patterns and verify order: [`ai/skills/dotnet-verification/SKILL.md`](../dotnet-verification/SKILL.md). For editor-side enforcement rules, run `ai/commands/ai-onboard.md` when `ai/templates/rules/`, or `ai/commands/` changes.
+> Test patterns and verify order: [`ai/skills/dotnet-verification/SKILL.md`](../dotnet-verification/SKILL.md). For editor-side enforcement rules, run `ai/commands/ai-onboard.md` when `ai/templates/rules/` or `ai/commands/` changes.
 
 ## When this skill applies
 
@@ -93,27 +93,13 @@ Verify order: [`ai/skills/dotnet-verification/SKILL.md`](../dotnet-verification/
 
 ## Plan Mode / CreatePlan
 
-For each behavior change, emit **two todos** in order:
+When the target already has tests, planning emits **`*-test-red`** then **`*-impl`** — see [`ai/skills/planning/SKILL.md`](../planning/SKILL.md). This skill defines the red/green meaning of those todos.
 
-| Todo id suffix | Purpose |
-|----------------|---------|
-| `*-test-red` | Add/update test; run filtered `dotnet test` and confirm failure |
-| `*-impl` | Minimal production change so the test passes |
-
-Example:
-
-```yaml
-- id: orchestrator-test-red
-  content: In `src/platform/TradingPlatform/tests/MarketData.Application.Tests/Usdm1dBackfillOrchestratorTests.cs`, add `RunAsync_WhenEmptyRegistry_CompletesWithoutError` with fakes for exchange/registry/writer; run `dotnet test src/platform/TradingPlatform/tests/MarketData.Application.Tests/MarketData.Application.Tests.csproj --filter FullyQualifiedName~Usdm1dBackfillOrchestratorTests` and confirm failure.
-- id: orchestrator-impl
-  content: In `src/platform/TradingPlatform/src/MarketData/MarketData.Application/...`, implement minimal logic so `RunAsync_WhenEmptyRegistry_CompletesWithoutError` passes.
-```
-
-Never place `*-impl` before the matching `*-test-red` todo.
+Never place `*-impl` before the matching `*-test-red` todo when TDD pairing applies.
 
 ## OpenSpec coexistence
 
-When implementing via `/opsx:apply`, OpenSpec `tasks.md` defines *what*; each behavior task still splits into `*-test-red` then `*-impl`.
+When implementing via `/opsx:apply`, OpenSpec `tasks.md` defines *what*; each behavior task on a tested project still splits into `*-test-red` then `*-impl`.
 
 ## Anti-patterns
 
@@ -126,5 +112,5 @@ When implementing via `/opsx:apply`, OpenSpec `tasks.md` defines *what*; each be
 ## Related routing
 
 - Planning todos (TDD pairing when target already has tests): [`ai/skills/planning/SKILL.md`](../planning/SKILL.md)
-- Explicit workflow command: [`ai/commands/test-driven-implementation.md`](../../commands/test-driven-implementation.md)
+- Explicit workflow command: [`ai/commands/tdd.md`](../../commands/tdd.md)
 - Root index: [`AGENTS.md`](../../../AGENTS.md)

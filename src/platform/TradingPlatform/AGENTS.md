@@ -55,7 +55,7 @@ Use `/opsx:new` to start Platform changes, then `/opsx:apply`, `/opsx:sync`, `/o
 | Cli (unit) | `tests/TradingPlatform.Cli.Tests/TradingPlatform.Cli.Tests.csproj` |
 | MarketData Infrastructure (integration) | `tests/MarketData.Infrastructure.IntegrationTests/MarketData.Infrastructure.IntegrationTests.csproj` |
 
-Full suite: `dotnet test TradingPlatform.slnx` from this directory. Patterns and verify order: [`ai/skills/dotnet-verification/SKILL.md`](../../../ai/skills/dotnet-verification/SKILL.md). Strict TDD: [`ai/skills/test-driven-development/SKILL.md`](../../../ai/skills/test-driven-development/SKILL.md).
+Full suite: `dotnet test TradingPlatform.slnx` from this directory. Patterns and verify order: [`ai/skills/dotnet-verification/SKILL.md`](../../../ai/skills/dotnet-verification/SKILL.md). Strict TDD: [`ai/skills/tdd/SKILL.md`](../../../ai/skills/tdd/SKILL.md).
 
 **Verify order:** `dotnet build TradingPlatform.slnx` → affected unit csproj → `MarketData.Infrastructure.IntegrationTests` **last** when persistence/Binance adapter changed.
 

@@ -7,7 +7,7 @@ alwaysApply: true
 
 Before implementing or changing **behavior** in Domain, Application use cases, or deterministic mappers:
 
-1. Read and follow [`ai/skills/test-driven-development/SKILL.md`](ai/skills/test-driven-development/SKILL.md).
+1. Read and follow [`ai/skills/tdd/SKILL.md`](ai/skills/tdd/SKILL.md).
 2. Do **not** add or edit production behavior until a **failing** unit test exists in the matching test csproj (see dotnet-verification skill for paths).
 3. After implementation, run `dotnet test` on that test project before marking the task complete.
 
