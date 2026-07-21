@@ -1,4 +1,4 @@
-﻿using Binance.Net.Enums;
+using Binance.Net.Enums;
 using Binance.Net.Objects.Models.Futures;
 using CryptoExchange.Net.Converters.SystemTextJson;
 using FASTER.core;
@@ -35,6 +35,7 @@ namespace TradingAssistant
         {
             var symbolToTrade = trade.Symbol;
 
+
             if (!_binance.TryGetSymbolInformation(symbolToTrade, out var information))
             {
                 return false;
@@ -50,6 +51,7 @@ namespace TradingAssistant
             var candlestick = GetCandlestick(lastCandleId, lookbackPeriods);
             var bitcoin = GetCandlestick(lastCandleId with { Symbol = "BTCUSDT" }, lookbackPeriods);
             var withoutQuoteAsset = ..^4;
+
 
             if (symbolToTrade[withoutQuoteAsset] is not "BTC" && candlestick.IsCorrelatedWith(bitcoin))
             {
@@ -172,6 +174,20 @@ namespace TradingAssistant
                 referenceStopLossRoi, Environment.NewLine,
                 actualStopLossRoi);
 
+
+            var isEntryOrderPlaced = await _binance.TryPlaceEntryOrderAsync(symbolToTrade,
+                newPositionSide,
+                FuturesOrderType.Market,
+                quantity,
+                entryPrice,
+                cancellationToken);
+
+            if (!isEntryOrderPlaced)
+            {
+                return false;
+            }
+
+
             var isStopLossPlaced = await _binance.TryPlaceStopLossAsync(symbolToTrade,
                 entryPrice,
                 quantity.WithSide(newPositionSide),
@@ -191,23 +207,12 @@ namespace TradingAssistant
 
             if (!isStopLossPlaced)
             {
-                return false;
-            }
-
-            var isEntryOrderPlaced = await _binance.TryPlaceEntryOrderAsync(symbolToTrade,
-                newPositionSide,
-                FuturesOrderType.Market,
-                quantity,
-                entryPrice,
-                cancellationToken);
-
-            if (!isEntryOrderPlaced)
-            {
-                await _binance.TryCancelStopLossAsync(symbolToTrade, cancellationToken);
+                await _binance.TryClosePositionAtMarketAsync(symbolToTrade,
+                    quantity.WithSide(newPositionSide),
+                    cancellationToken);
 
                 return false;
             }
-
             if (symbolToTrade[withoutQuoteAsset] is "BTC" && quantity > BitcoinQuantityToReduce)
             {
                 var isPositionReduced = await _binance.TryClosePositionAtMarketAsync(symbolToTrade,
@@ -339,6 +344,7 @@ namespace TradingAssistant
             return position is { EntryPrice: > 0, Quantity: > 0 or < 0 };
         }
 
+
         private static bool IsPositionUpdatedToday(BinancePositionInfoUsdt position)
         {
             return position.UpdateTime is { Date: { } date } && date == DateTime.UtcNow.Date;
@@ -350,3 +356,4 @@ namespace TradingAssistant
         }
     }
 }
+

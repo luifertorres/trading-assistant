@@ -42,6 +42,7 @@ namespace TradingAssistant
         private KlineInterval _interval;
         private int _candlestickSize;
         private string? _listenKey;
+        private bool _isHedgeMode;
 
         public BinanceService(ILogger<BinanceService> logger,
             IConfiguration configuration,
@@ -84,6 +85,11 @@ namespace TradingAssistant
             }
 
             if (!await TryConfigureLeverageAsync())
+            {
+                throw new BinanceServiceNotConfiguredException();
+            }
+
+            if (!await TryConfigurePositionModeAsync())
             {
                 throw new BinanceServiceNotConfiguredException();
             }
@@ -378,6 +384,27 @@ namespace TradingAssistant
 
             return true;
         }
+
+        private async Task<bool> TryConfigurePositionModeAsync(CancellationToken cancellationToken = default)
+        {
+            var positionModeResult = await _rest.UsdFuturesApi.Account.GetPositionModeAsync(ct: cancellationToken);
+
+            if (!positionModeResult.Success || positionModeResult.Data is null)
+            {
+                _logger.LogError("Get position mode failed. {Error}", positionModeResult.Error);
+
+                return false;
+            }
+
+            _isHedgeMode = positionModeResult.Data.IsHedgeMode;
+            _logger.LogInformation("Position mode: {Mode}", _isHedgeMode ? "Hedge" : "One-way");
+
+
+            return true;
+        }
+
+        private PositionSide? HedgePositionSide(OrderSide positionEntrySide) =>
+            _isHedgeMode ? positionEntrySide.AsPositionSide() : null;
 
         private void HandleLeverageUpdate(DataEvent<BinanceFuturesStreamConfigUpdate> configUpdate)
         {
@@ -764,8 +791,8 @@ namespace TradingAssistant
         public async Task<bool> TryCancelStopLossAsync(string symbol, CancellationToken cancellationToken = default)
         {
             var trading = _rest.UsdFuturesApi.Trading;
-            var cancelOrderResult = await trading.CancelOrderAsync(symbol,
-                origClientOrderId: string.Format(StopLossIdFormat, symbol.ToLower()),
+            var cancelOrderResult = await trading.CancelConditionalOrderAsync(
+                clientOrderId: string.Format(StopLossIdFormat, symbol.ToLower()),
                 ct: cancellationToken);
 
             if (!cancelOrderResult.Success)
@@ -781,8 +808,8 @@ namespace TradingAssistant
         public async Task<bool> TryCancelBreakEvenAsync(string symbol, CancellationToken cancellationToken = default)
         {
             var trading = _rest.UsdFuturesApi.Trading;
-            var cancelOrderResult = await trading.CancelOrderAsync(symbol,
-                origClientOrderId: string.Format(BreakEvenIdFormat, symbol.ToLower()),
+            var cancelOrderResult = await trading.CancelConditionalOrderAsync(
+                clientOrderId: string.Format(BreakEvenIdFormat, symbol.ToLower()),
                 ct: cancellationToken);
 
             if (!cancelOrderResult.Success)
@@ -798,8 +825,8 @@ namespace TradingAssistant
         public async Task<bool> TryCancelTakeProfitAsync(string symbol, CancellationToken cancellationToken = default)
         {
             var trading = _rest.UsdFuturesApi.Trading;
-            var cancelOrderResult = await trading.CancelOrderAsync(symbol,
-                origClientOrderId: string.Format(TakeProfitIdFormat, symbol.ToLower()),
+            var cancelOrderResult = await trading.CancelConditionalOrderAsync(
+                clientOrderId: string.Format(TakeProfitIdFormat, symbol.ToLower()),
                 ct: cancellationToken);
 
             if (!cancelOrderResult.Success)
@@ -815,8 +842,8 @@ namespace TradingAssistant
         public async Task<bool> TryCancelSteppedTrailingAsync(string symbol, CancellationToken cancellationToken = default)
         {
             var trading = _rest.UsdFuturesApi.Trading;
-            var cancelOrderResult = await trading.CancelOrderAsync(symbol,
-                origClientOrderId: string.Format(SteppedTrailingIdFormat, symbol.ToLower()),
+            var cancelOrderResult = await trading.CancelConditionalOrderAsync(
+                clientOrderId: string.Format(SteppedTrailingIdFormat, symbol.ToLower()),
                 ct: cancellationToken);
 
             if (!cancelOrderResult.Success)
@@ -832,8 +859,8 @@ namespace TradingAssistant
         public async Task<bool> TryCancelTrailingStopAsync(string symbol, CancellationToken cancellationToken = default)
         {
             var trading = _rest.UsdFuturesApi.Trading;
-            var cancelOrderResult = await trading.CancelOrderAsync(symbol,
-                origClientOrderId: string.Format(TrailingStopIdFormat, symbol.ToLower()),
+            var cancelOrderResult = await trading.CancelConditionalOrderAsync(
+                clientOrderId: string.Format(TrailingStopIdFormat, symbol.ToLower()),
                 ct: cancellationToken);
 
             if (!cancelOrderResult.Success)
@@ -872,6 +899,7 @@ namespace TradingAssistant
                 orderType,
                 quantity,
                 price: isLimitOrder ? ApplyPriceFilter(entryPrice.Value, symbolInformation?.PriceFilter) : null,
+                positionSide: HedgePositionSide(orderSide),
                 timeInForce: isLimitOrder ? TimeInForce.GoodTillCanceled : null,
                 newClientOrderId: isLimitOrder ? string.Format(EntryOrderIdFormat, symbol.ToLower()) : null,
                 ct: cancellationToken);
@@ -906,16 +934,17 @@ namespace TradingAssistant
 
             TryGetSymbolInformation(symbol, out var symbolInformation);
 
-            var placeOrderResult = await trading.PlaceOrderAsync(symbol,
+            var placeOrderResult = await trading.PlaceConditionalOrderAsync(symbol,
                 positionQuantity.AsOrderSide().Reverse(),
-                FuturesOrderType.StopMarket,
+                ConditionalOrderType.StopMarket,
                 quantity: null,
-                stopPrice: ApplyPriceFilter(stopLossPrice, symbolInformation?.PriceFilter),
+                positionSide: HedgePositionSide(positionQuantity.AsOrderSide()),
+                triggerPrice: ApplyPriceFilter(stopLossPrice, symbolInformation?.PriceFilter),
                 closePosition: true,
-                timeInForce: TimeInForce.GoodTillCanceled,
-                newClientOrderId: string.Format(StopLossIdFormat, symbol.ToLower()),
+                clientOrderId: string.Format(StopLossIdFormat, symbol.ToLower()),
                 priceProtect: true,
                 ct: cancellationToken);
+
 
             if (!placeOrderResult.Success)
             {
@@ -936,14 +965,14 @@ namespace TradingAssistant
 
             TryGetSymbolInformation(symbol, out var symbolInformation);
 
-            var placeOrderResult = await trading.PlaceOrderAsync(symbol,
+            var placeOrderResult = await trading.PlaceConditionalOrderAsync(symbol,
                 positionSide.Reverse(),
-                FuturesOrderType.StopMarket,
+                ConditionalOrderType.StopMarket,
                 quantity: null,
-                stopPrice: ApplyPriceFilter(stopPrice, symbolInformation?.PriceFilter),
+                positionSide: HedgePositionSide(positionSide),
+                triggerPrice: ApplyPriceFilter(stopPrice, symbolInformation?.PriceFilter),
                 closePosition: true,
-                timeInForce: TimeInForce.GoodTillCanceled,
-                newClientOrderId: string.Format(BreakEvenIdFormat, symbol.ToLower()),
+                clientOrderId: string.Format(BreakEvenIdFormat, symbol.ToLower()),
                 priceProtect: true,
                 ct: cancellationToken);
 
@@ -968,14 +997,14 @@ namespace TradingAssistant
             TryGetSymbolInformation(symbol, out var symbolInformation);
 
             var trading = _rest.UsdFuturesApi.Trading;
-            var placeOrderResult = await trading.PlaceOrderAsync(symbol,
+            var placeOrderResult = await trading.PlaceConditionalOrderAsync(symbol,
                 orderSide,
-                FuturesOrderType.StopMarket,
+                ConditionalOrderType.StopMarket,
                 quantity: null,
-                stopPrice: ApplyPriceFilter(takeProfitPrice, symbolInformation?.PriceFilter),
+                positionSide: HedgePositionSide(orderSide.Reverse()),
+                triggerPrice: ApplyPriceFilter(takeProfitPrice, symbolInformation?.PriceFilter),
                 closePosition: true,
-                timeInForce: TimeInForce.GoodTillCanceled,
-                newClientOrderId: string.Format(SteppedTrailingIdFormat, symbol.ToLower()),
+                clientOrderId: string.Format(SteppedTrailingIdFormat, symbol.ToLower()),
                 priceProtect: true,
                 ct: cancellationToken);
 
@@ -1007,59 +1036,15 @@ namespace TradingAssistant
 
             TryGetSymbolInformation(symbol, out var symbolInformation);
 
-            var orderType = FuturesOrderType.TakeProfitMarket;
-
-            var maybeQuantity = orderType switch
-            {
-                FuturesOrderType.TakeProfitMarket => (decimal?)null,
-                FuturesOrderType.Limit => Math.Abs(positionQuantity),
-
-                _ => throw new NotSupportedException($"Order type {orderType} is not supported"),
-            };
-
-            var maybeStopPrice = orderType switch
-            {
-                FuturesOrderType.TakeProfitMarket => ApplyPriceFilter(takeProfitPrice, symbolInformation?.PriceFilter),
-                FuturesOrderType.Limit => (decimal?)null,
-
-                _ => throw new NotSupportedException($"Order type {orderType} is not supported"),
-            };
-
-            var maybePrice = orderType switch
-            {
-                FuturesOrderType.TakeProfitMarket => (decimal?)null,
-                FuturesOrderType.Limit => ApplyPriceFilter(takeProfitPrice, symbolInformation?.PriceFilter),
-
-                _ => throw new NotSupportedException($"Order type {orderType} is not supported"),
-            };
-
-            var maybeClosePosition = orderType switch
-            {
-                FuturesOrderType.TakeProfitMarket => true,
-                FuturesOrderType.Limit => (bool?)null,
-
-                _ => throw new NotSupportedException($"Order type {orderType} is not supported"),
-            };
-
-            var maybePriceProtect = orderType switch
-            {
-                FuturesOrderType.TakeProfitMarket => true,
-                FuturesOrderType.Limit => (bool?)null,
-
-                _ => throw new NotSupportedException($"Order type {orderType} is not supported"),
-            };
-
-            var placeOrderResult = await trading.PlaceOrderAsync(symbol,
+            var placeOrderResult = await trading.PlaceConditionalOrderAsync(symbol,
                 positionQuantity.AsOrderSide().Reverse(),
-                orderType,
-                quantity: maybeClosePosition is true ? null : maybeQuantity,
-                price: maybePrice,
-                stopPrice: maybeStopPrice,
-                closePosition: maybeClosePosition,
-                timeInForce: TimeInForce.GoodTillCanceled,
-                reduceOnly: maybeClosePosition is true ? null : true,
-                newClientOrderId: string.Format(TakeProfitIdFormat, symbol.ToLower()),
-                priceProtect: maybePriceProtect,
+                ConditionalOrderType.TakeProfitMarket,
+                quantity: null,
+                positionSide: HedgePositionSide(positionQuantity.AsOrderSide()),
+                triggerPrice: ApplyPriceFilter(takeProfitPrice, symbolInformation?.PriceFilter),
+                closePosition: true,
+                clientOrderId: string.Format(TakeProfitIdFormat, symbol.ToLower()),
+                priceProtect: true,
                 ct: cancellationToken);
 
             if (!placeOrderResult.Success)
@@ -1089,13 +1074,14 @@ namespace TradingAssistant
             };
 
             var trading = _rest.UsdFuturesApi.Trading;
-            var placeOrderResult = await trading.PlaceOrderAsync(symbol,
+            var placeOrderResult = await trading.PlaceConditionalOrderAsync(symbol,
                 orderSide,
-                FuturesOrderType.TrailingStopMarket,
+                ConditionalOrderType.TrailingStopMarket,
                 quantity: Math.Abs(quantity),
+                positionSide: HedgePositionSide(quantity.AsOrderSide()),
                 timeInForce: TimeInForce.GoodTillCanceled,
-                reduceOnly: true,
-                newClientOrderId: string.Format(TrailingStopIdFormat, symbol.ToLower()),
+                reduceOnly: _isHedgeMode ? null : true,
+                clientOrderId: string.Format(TrailingStopIdFormat, symbol.ToLower()),
                 activationPrice: price.HasValue ? ApplyPriceFilter(price.Value, symbolInformation?.PriceFilter) : null,
                 callbackRate: Math.Round(callbackRate, decimals: 2),
                 priceProtect: true,
@@ -1120,7 +1106,8 @@ namespace TradingAssistant
                 positionQuantity.AsOrderSide().Reverse(),
                 FuturesOrderType.Market,
                 Math.Abs(positionQuantity),
-                reduceOnly: true,
+                positionSide: HedgePositionSide(positionQuantity.AsOrderSide()),
+                reduceOnly: _isHedgeMode ? null : true,
                 ct: cancellationToken);
 
             if (!placeOrderResult.Success)
@@ -1134,3 +1121,4 @@ namespace TradingAssistant
         }
     }
 }
+

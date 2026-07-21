@@ -41,6 +41,8 @@ internal sealed class Rsi5Extreme1mStrategy(ISender sender, ILogger<Rsi5Extreme1
                     OrderSide.Buy,
                     price),
                 cancellationToken);
+
         }
     }
 }
+

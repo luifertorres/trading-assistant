@@ -1,5 +1,6 @@
 ﻿using Binance.Net;
 using FASTER.core;
+using Microsoft.EntityFrameworkCore;
 using X.Extensions.Logging.Telegram.Extensions;
 
 namespace TradingAssistant
@@ -17,8 +18,8 @@ namespace TradingAssistant
                     var telegramToken = context.Configuration["Logging:Telegram:AccessToken"];
                     var telegramChatId = context.Configuration["Logging:Telegram:ChatId"];
                     if (!string.IsNullOrWhiteSpace(telegramToken)
-                        && !string.IsNullOrWhiteSpace(telegramChatId)
-                        && !string.Equals(telegramToken, "TELEGRAM_BOT_ACCESS_TOKEN", StringComparison.Ordinal))
+                        && !string.Equals(telegramToken, "TELEGRAM_BOT_ACCESS_TOKEN", StringComparison.Ordinal)
+                        && !string.IsNullOrWhiteSpace(telegramChatId))
                     {
                         builder.AddTelegram(context.Configuration);
                     }
@@ -72,6 +73,11 @@ namespace TradingAssistant
                     //services.AddHostedService<Rsi200ClosePositionWorker>();
                 })
                 .Build();
+
+            using (var scope = host.Services.CreateScope())
+            {
+                scope.ServiceProvider.GetRequiredService<TradingContext>().Database.Migrate();
+            }
 
             host.Services.GetRequiredService<BinanceService>()
                 .TriggerLastCandleClosedNotifications();
