@@ -175,19 +175,6 @@ namespace TradingAssistant
                 actualStopLossRoi);
 
 
-            var isEntryOrderPlaced = await _binance.TryPlaceEntryOrderAsync(symbolToTrade,
-                newPositionSide,
-                FuturesOrderType.Market,
-                quantity,
-                entryPrice,
-                cancellationToken);
-
-            if (!isEntryOrderPlaced)
-            {
-                return false;
-            }
-
-
             var isStopLossPlaced = await _binance.TryPlaceStopLossAsync(symbolToTrade,
                 entryPrice,
                 quantity.WithSide(newPositionSide),
@@ -207,9 +194,19 @@ namespace TradingAssistant
 
             if (!isStopLossPlaced)
             {
-                await _binance.TryClosePositionAtMarketAsync(symbolToTrade,
-                    quantity.WithSide(newPositionSide),
-                    cancellationToken);
+                return false;
+            }
+
+            var isEntryOrderPlaced = await _binance.TryPlaceEntryOrderAsync(symbolToTrade,
+                newPositionSide,
+                FuturesOrderType.Market,
+                quantity,
+                entryPrice,
+                cancellationToken);
+
+            if (!isEntryOrderPlaced)
+            {
+                await _binance.TryCancelStopLossAsync(symbolToTrade, cancellationToken);
 
                 return false;
             }
