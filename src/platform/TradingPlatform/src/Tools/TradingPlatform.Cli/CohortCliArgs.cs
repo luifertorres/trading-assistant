@@ -21,7 +21,7 @@ internal sealed record CohortBacktestArgs(
     IReadOnlyList<string> Symbols,
     decimal InitialCapital,
     decimal FeeBpsPerSide,
-    decimal PositionNotionalFraction,
+    decimal VectorRiskFraction,
     DateTimeOffset? From,
     DateTimeOffset? To)
 {
@@ -67,7 +67,8 @@ internal sealed record CohortBacktestArgs(
                 initialCapital = decimal.Parse(TakeValue(), CultureInfo.InvariantCulture);
             else if (a.Equals("--fee-bps", StringComparison.OrdinalIgnoreCase))
                 feeBps = decimal.Parse(TakeValue(), CultureInfo.InvariantCulture);
-            else if (a.Equals("--position-fraction", StringComparison.OrdinalIgnoreCase))
+            else if (a.Equals("--vector-risk", StringComparison.OrdinalIgnoreCase)
+                     || a.Equals("--position-fraction", StringComparison.OrdinalIgnoreCase))
                 positionFraction = decimal.Parse(TakeValue(), CultureInfo.InvariantCulture);
             else
                 throw new ArgumentException($"Unknown argument: {a}. {Usage}");

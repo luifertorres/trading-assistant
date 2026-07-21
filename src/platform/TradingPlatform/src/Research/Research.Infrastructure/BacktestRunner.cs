@@ -25,7 +25,7 @@ public sealed class BacktestRunner(
                 0);
         }
 
-        var sink = new SimulationOrderIntentSink(request.Configuration, request.Vector.PositionSide);
+        var sink = new SimulationOrderIntentSink(request.Configuration, request.Vector.Direction);
         var strategy = strategies.Create(request.Vector);
         for (var i = 0; i < bars.Count; i++)
         {

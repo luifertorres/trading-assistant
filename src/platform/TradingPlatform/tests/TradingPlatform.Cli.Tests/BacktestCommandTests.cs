@@ -25,13 +25,14 @@ public sealed class BacktestCommandTests
             "BTCUSDT",
             "FixedWindow",
             TimeFrame: "1D",
+            Direction: Direction.Long,
             EnterBar: 3,
             ExitBar: 12,
             TakeProfitPct: 0.08m,
             RsiExit: 70m,
             InitialCapital: 10_000m,
             FeeBpsPerSide: 4m,
-            PositionNotionalFraction: 0.1m,
+            VectorRiskFraction: 0.1m,
             From: null,
             To: null,
             Save: false);
@@ -57,13 +58,14 @@ public sealed class BacktestCommandTests
             "BTCUSDT",
             "FixedWindow",
             TimeFrame: "1D",
+            Direction: Direction.Long,
             EnterBar: 3,
             ExitBar: 12,
             TakeProfitPct: 0.08m,
             RsiExit: 70m,
             InitialCapital: 10_000m,
             FeeBpsPerSide: 4m,
-            PositionNotionalFraction: 0.1m,
+            VectorRiskFraction: 0.1m,
             From: null,
             To: null,
             Save: true);
@@ -98,13 +100,14 @@ public sealed class BacktestCommandTests
             "BTCUSDT",
             "FixedWindow",
             TimeFrame: "1D",
+            Direction: Direction.Long,
             EnterBar: 3,
             ExitBar: 12,
             TakeProfitPct: 0.08m,
             RsiExit: 70m,
             InitialCapital: 25_000m,
             FeeBpsPerSide: 8m,
-            PositionNotionalFraction: 0.25m,
+            VectorRiskFraction: 0.25m,
             From: null,
             To: null,
             Save: false);
@@ -114,7 +117,7 @@ public sealed class BacktestCommandTests
         outcome.ExitCode.Should().Be(0);
         outcome.Result!.Configuration.InitialCapital.Should().Be(25_000m);
         outcome.Result.Configuration.FeeBpsPerSide.Should().Be(8m);
-        outcome.Result.Configuration.PositionNotionalFraction.Should().Be(0.25m);
+        outcome.Result.Configuration.VectorRiskFraction.Should().Be(0.25m);
     }
 
     [Fact]
@@ -131,13 +134,14 @@ public sealed class BacktestCommandTests
             "BTCUSDT",
             "FixedWindow",
             TimeFrame: "1D",
+            Direction: Direction.Long,
             EnterBar: 3,
             ExitBar: 12,
             TakeProfitPct: 0.08m,
             RsiExit: 70m,
             InitialCapital: 10_000m,
             FeeBpsPerSide: 4m,
-            PositionNotionalFraction: 0.1m,
+            VectorRiskFraction: 0.1m,
             From: null,
             To: null,
             Save: false);
@@ -166,13 +170,14 @@ public sealed class BacktestCommandTests
             "BTCUSDT",
             "FixedWindow",
             TimeFrame: "1D",
+            Direction: Direction.Long,
             EnterBar: 3,
             ExitBar: 12,
             TakeProfitPct: 0.08m,
             RsiExit: 70m,
             InitialCapital: 10_000m,
             FeeBpsPerSide: 4m,
-            PositionNotionalFraction: 0.1m,
+            VectorRiskFraction: 0.1m,
             From: null,
             To: null,
             Save: false);
@@ -193,13 +198,14 @@ public sealed class BacktestCommandTests
             "BTCUSDT",
             "RsiCross",
             TimeFrame: "1D",
+            Direction: Direction.Long,
             EnterBar: 3,
             ExitBar: 12,
             TakeProfitPct: 0.08m,
             RsiExit: 70m,
             InitialCapital: 10_000m,
             FeeBpsPerSide: 4m,
-            PositionNotionalFraction: 0.1m,
+            VectorRiskFraction: 0.1m,
             From: null,
             To: null,
             Save: false);

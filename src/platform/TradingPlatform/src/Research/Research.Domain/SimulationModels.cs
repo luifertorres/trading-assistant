@@ -17,7 +17,7 @@ public sealed record TradeRecord(
 public sealed record SimulationConfiguration(
     decimal InitialCapital,
     decimal FeeBpsPerSide,
-    decimal PositionNotionalFraction);
+    decimal VectorRiskFraction);
 
 public sealed record SimulationRunResult(
     TradingVectorId VectorId,

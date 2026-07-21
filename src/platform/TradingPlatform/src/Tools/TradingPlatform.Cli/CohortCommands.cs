@@ -34,7 +34,7 @@ internal static class CohortBacktestCommand
         var verdictStore = new JsonBacktestVerdictStore(args.VerdictDirectory);
         var log = provider.GetRequiredService<ILoggerFactory>().CreateLogger("cohort-backtest");
 
-        var cfg = new SimulationConfiguration(args.InitialCapital, args.FeeBpsPerSide, args.PositionNotionalFraction);
+        var cfg = new SimulationConfiguration(args.InitialCapital, args.FeeBpsPerSide, args.VectorRiskFraction);
         var exitCode = 0;
 
         Console.WriteLine("| Symbol | Trades | Return | MaxDD | PF | Verdict |");
@@ -52,11 +52,13 @@ internal static class CohortBacktestCommand
                 continue;
             }
 
+            var asset = Asset.FromUsdmExchangeSymbol(symbol);
             var vector = new TradingVectorSpec(
                 TradingVectorId.New(),
+                asset,
                 instrument.Id,
                 TimeFrameCode.Hour4,
-                PositionSide.Long,
+                Direction.Long,
                 "Rsi5Extreme",
                 new Dictionary<string, string> { ["takeProfitPct"] = "0.08", ["rsiExit"] = "70" });
 

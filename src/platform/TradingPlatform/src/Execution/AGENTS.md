@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Route portfolio vectors to a live order sink; Binance USD-M adapter with real-money guardrails.
+Route portfolio TradingVectors to a live order sink; Binance USD-M adapter with real-money guardrails.
 
 ## Key types
 
@@ -10,9 +10,17 @@ Route portfolio vectors to a live order sink; Binance USD-M adapter with real-mo
 |------|---------|------|
 | `ILiveOrderIntentSink` | Application | Accepts `OrderIntent` for live placement |
 | `PortfolioExecutionRouter` | Application | Same strategy factory as Research; live sink |
+| `VectorInventory` | Kernel | Per-vector tracked qty; exit size = `min(tracked, exchangeSideQty)` |
 | `LiveTradingOptions` | Infrastructure | Armed, caps, kill-switch path |
 | `BinanceLiveOrderIntentSink` | Infrastructure | Market entry + StopMarket SL; 1x ISOLATED |
 | `LoggingLiveOrderIntentSink` | Infrastructure | Stub for disarmed / dev |
+
+## Hedge-mode accounting
+
+- Binance USD-M hedge mode: **one exchange-side position per `(Asset, Direction)`**.
+- Multiple TradingVectors sharing Asset+Direction (different TimeFrame/TradingLogic) each hold a `VectorInventory`.
+- Entries add to that vector's inventory; exits close **only** that vector's tracked quantity.
+- Long and Short may both be open on the same Asset.
 
 ## Do
 
@@ -24,6 +32,7 @@ Route portfolio vectors to a live order sink; Binance USD-M adapter with real-mo
 
 - Arm by default or auto-scale size.
 - Skip leverage/margin setup before entry.
+- Close the full exchange side when one vector exits.
 
 ## Verify
 

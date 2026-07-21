@@ -16,7 +16,14 @@ Copy and extend. “Action” = keep / rename / merge / split.
 |------|-----------------|--------------------------------------------------------|--------|
 | SeriesDescriptor | | Logical candle stream: symbol + `TimeFrameCode`. | |
 | TimeFrameCode | | Chart-style token; note `1m` vs `1M`. | |
-| Trading vector | | `TradingVectorSpec` + stable `TradingVectorId`. | |
+| Asset | Canonical `broker:venue:symbol` (e.g. `binance:usdm:BTCUSDT`). | Kernel `Asset`. | keep |
+| Direction | `Long` or `Short`. | Kernel `Direction` (was `PositionSide`). | renamed |
+| TimeFrame | Chart interval. | `TimeFrameCode`. | keep |
+| TradingLogic | Entry/exit rules (e.g. `Sma200Sma5`). | String on `TradingVectorSpec` (was `StrategyKind`). | renamed |
+| Trading vector | Unique `(Asset, Direction, TimeFrame, TradingLogic)`. | `TradingVectorSpec` + `TradingVectorId`. | keep |
+| VectorInventory | Per-vector tracked open qty. | Kernel type; hedge-mode sibling accounting. | added |
+| VectorRiskFraction | Fraction of initial capital per vector. | `SimulationConfiguration` field (was `PositionNotionalFraction`). | renamed |
+| Exchange-side position | Broker aggregate for Asset+Direction. | Sum of sibling inventories in hedge mode. | added |
 | Simulation run | | One backtest evaluation; config + bars → trades + equity + max drawdown. | |
 | Run result | | `SimulationRunResult` persisted for Analytics. | |
 | Underwater fraction | | Drawdown-from-peak equity fraction for correlation. | |

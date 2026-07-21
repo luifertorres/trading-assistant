@@ -1,12 +1,15 @@
 using Research.Domain;
+using TradingPlatform.Kernel;
 
 namespace Research.Application;
 
 /// <summary>Machine-readable backtest gate for live arming.</summary>
 public sealed record BacktestVerdict(
     string Symbol,
-    string StrategyKind,
+    string TradingLogic,
     string TimeFrame,
+    Direction Direction,
+    string? AssetValue,
     Guid RunId,
     bool Pass,
     int TradeCount,
@@ -25,9 +28,11 @@ public static class BacktestVerdictEvaluator
 
     public static BacktestVerdict Evaluate(
         string symbol,
-        string strategyKind,
+        string tradingLogic,
         string timeFrame,
-        SimulationRunResult run)
+        SimulationRunResult run,
+        Direction direction = Direction.Long,
+        string? assetValue = null)
     {
         var init = run.Configuration.InitialCapital;
         var ret = init > 0 ? (run.FinalEquity - init) / init : 0m;
@@ -46,8 +51,10 @@ public static class BacktestVerdictEvaluator
         var pass = reasons.Count == 0;
         return new BacktestVerdict(
             symbol,
-            strategyKind,
+            tradingLogic,
             timeFrame,
+            direction,
+            assetValue,
             run.RunId,
             pass,
             run.Trades.Count,

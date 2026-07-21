@@ -19,9 +19,9 @@ internal static class BacktestCommand
         BacktestArgs args,
         CancellationToken cancellationToken = default)
     {
-        if (!IsSupportedStrategy(args.StrategyKind))
+        if (!IsSupportedTradingLogic(args.TradingLogic))
         {
-            Console.Error.WriteLine($"Unsupported strategy kind '{args.StrategyKind}'.");
+            Console.Error.WriteLine($"Unsupported trading logic '{args.TradingLogic}'.");
             return new BacktestCommandOutcome(1, null);
         }
 
@@ -55,10 +55,10 @@ internal static class BacktestCommand
 
         var timeFrame = TimeFrameCode.Parse(args.TimeFrame);
         var series = new SeriesDescriptor(instrument.Id, timeFrame);
-        var cfg = new SimulationConfiguration(args.InitialCapital, args.FeeBpsPerSide, args.PositionNotionalFraction);
-        var vector = BuildVector(args, instrument.Id, timeFrame);
+        var cfg = new SimulationConfiguration(args.InitialCapital, args.FeeBpsPerSide, args.VectorRiskFraction);
+        var asset = Asset.FromUsdmExchangeSymbol(args.Symbol);
+        var vector = BuildVector(args, asset, instrument.Id, timeFrame);
 
-        // Quick bar count check via runner's empty path — read candles first for explicit CLI error
         var candleReader = provider.GetRequiredService<ICandleSeriesReader>();
         var bars = await candleReader.ReadAsync(series, args.From, args.To, cancellationToken).ConfigureAwait(false);
         if (bars.Count == 0)
@@ -69,10 +69,11 @@ internal static class BacktestCommand
         }
 
         log.LogInformation(
-            "Running backtest: {Symbol} {TimeFrame} {Strategy} capital {Capital}",
-            args.Symbol,
+            "Running backtest: {Asset} {Direction} {TimeFrame} {TradingLogic} capital {Capital}",
+            asset.Value,
+            args.Direction,
             timeFrame.Value,
-            args.StrategyKind,
+            args.TradingLogic,
             args.InitialCapital);
 
         var result = await runner.RunAsync(
@@ -97,9 +98,11 @@ internal static class BacktestCommand
         {
             var verdict = BacktestVerdictEvaluator.Evaluate(
                 args.Symbol,
-                args.StrategyKind,
+                args.TradingLogic,
                 timeFrame.Value,
-                result);
+                result,
+                args.Direction,
+                asset.Value);
             var store = new JsonBacktestVerdictStore(args.VerdictDirectory);
             await store.SaveAsync(verdict, cancellationToken).ConfigureAwait(false);
             Console.WriteLine($"VERDICT: {(verdict.Pass ? "PASS" : "FAIL")} — {verdict.FailReason ?? "ok"}");
@@ -108,19 +111,25 @@ internal static class BacktestCommand
         return new BacktestCommandOutcome(0, result);
     }
 
-    private static bool IsSupportedStrategy(string kind) =>
-        kind.Equals("FixedWindow", StringComparison.OrdinalIgnoreCase) ||
-        kind.Equals("Rsi5Extreme", StringComparison.OrdinalIgnoreCase);
+    private static bool IsSupportedTradingLogic(string logic) =>
+        logic.Equals("FixedWindow", StringComparison.OrdinalIgnoreCase) ||
+        logic.Equals("Rsi5Extreme", StringComparison.OrdinalIgnoreCase) ||
+        logic.Equals("Sma200Sma5", StringComparison.OrdinalIgnoreCase);
 
-    private static TradingVectorSpec BuildVector(BacktestArgs args, InstrumentId instrumentId, TimeFrameCode timeFrame)
+    private static TradingVectorSpec BuildVector(
+        BacktestArgs args,
+        Asset asset,
+        InstrumentId instrumentId,
+        TimeFrameCode timeFrame)
     {
-        if (args.StrategyKind.Equals("Rsi5Extreme", StringComparison.OrdinalIgnoreCase))
+        if (args.TradingLogic.Equals("Rsi5Extreme", StringComparison.OrdinalIgnoreCase))
         {
             return new TradingVectorSpec(
                 TradingVectorId.New(),
+                asset,
                 instrumentId,
                 timeFrame,
-                PositionSide.Long,
+                args.Direction,
                 "Rsi5Extreme",
                 new Dictionary<string, string>
                 {
@@ -129,11 +138,24 @@ internal static class BacktestCommand
                 });
         }
 
+        if (args.TradingLogic.Equals("Sma200Sma5", StringComparison.OrdinalIgnoreCase))
+        {
+            return new TradingVectorSpec(
+                TradingVectorId.New(),
+                asset,
+                instrumentId,
+                timeFrame,
+                args.Direction,
+                "Sma200Sma5",
+                new Dictionary<string, string>());
+        }
+
         return new TradingVectorSpec(
             TradingVectorId.New(),
+            asset,
             instrumentId,
             timeFrame,
-            PositionSide.Long,
+            args.Direction,
             "FixedWindow",
             new Dictionary<string, string>
             {

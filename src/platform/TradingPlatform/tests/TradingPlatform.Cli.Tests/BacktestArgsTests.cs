@@ -1,5 +1,6 @@
 using FluentAssertions;
 using TradingPlatform.Cli;
+using TradingPlatform.Kernel;
 
 namespace TradingPlatform.Cli.Tests;
 
@@ -11,12 +12,13 @@ public sealed class BacktestArgsTests
         var args = BacktestArgs.Parse(["backtest", "--market-db", "market.sqlite"]);
 
         args.Symbol.Should().Be("BTCUSDT");
-        args.StrategyKind.Should().Be("FixedWindow");
+        args.TradingLogic.Should().Be("FixedWindow");
+        args.Direction.Should().Be(Direction.Long);
         args.EnterBar.Should().Be(5);
         args.ExitBar.Should().Be(15);
         args.InitialCapital.Should().Be(10_000m);
         args.FeeBpsPerSide.Should().Be(4m);
-        args.PositionNotionalFraction.Should().Be(0.1m);
+        args.VectorRiskFraction.Should().Be(0.1m);
         args.Save.Should().BeFalse();
     }
 
@@ -29,12 +31,29 @@ public sealed class BacktestArgsTests
             "--market-db", "market.sqlite",
             "--initial-capital", "25000",
             "--fee-bps", "8",
-            "--position-fraction", "0.25"
+            "--vector-risk", "0.25"
         ]);
 
         args.InitialCapital.Should().Be(25_000m);
         args.FeeBpsPerSide.Should().Be(8m);
-        args.PositionNotionalFraction.Should().Be(0.25m);
+        args.VectorRiskFraction.Should().Be(0.25m);
+    }
+
+    [Fact]
+    public void Parse_AcceptsSma200Sma5ShortAndVectorRisk()
+    {
+        var args = BacktestArgs.Parse(
+        [
+            "backtest",
+            "--market-db", "market.sqlite",
+            "--trading-logic", "Sma200Sma5",
+            "--direction", "Short",
+            "--vector-risk", "0.02"
+        ]);
+
+        args.TradingLogic.Should().Be("Sma200Sma5");
+        args.Direction.Should().Be(Direction.Short);
+        args.VectorRiskFraction.Should().Be(0.02m);
     }
 
     [Fact]

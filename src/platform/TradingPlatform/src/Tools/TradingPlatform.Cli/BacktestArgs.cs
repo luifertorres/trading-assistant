@@ -1,4 +1,5 @@
 using System.Globalization;
+using TradingPlatform.Kernel;
 
 namespace TradingPlatform.Cli;
 
@@ -7,15 +8,16 @@ internal sealed record BacktestArgs(
     string ResearchDatabasePath,
     string? VerdictDirectory,
     string Symbol,
-    string StrategyKind,
+    string TradingLogic,
     string TimeFrame,
+    Direction Direction,
     int EnterBar,
     int ExitBar,
     decimal TakeProfitPct,
     decimal RsiExit,
     decimal InitialCapital,
     decimal FeeBpsPerSide,
-    decimal PositionNotionalFraction,
+    decimal VectorRiskFraction,
     DateTimeOffset? From,
     DateTimeOffset? To,
     bool Save)
@@ -24,9 +26,11 @@ internal sealed record BacktestArgs(
         "Usage: TradingPlatform.Cli backtest --market-db <path> " +
         "[--research-db <path>] [--verdict-dir <path>] [--symbol <exchangeSymbol>] " +
         "[--timeframe 4H|1D] [--from <iso8601>] [--to <iso8601>] " +
-        "[--strategy FixedWindow|Rsi5Extreme] [--enter-bar <int>] [--exit-bar <int>] " +
+        "[--strategy|--trading-logic FixedWindow|Rsi5Extreme|Sma200Sma5] " +
+        "[--direction Long|Short] [--enter-bar <int>] [--exit-bar <int>] " +
         "[--take-profit-pct <decimal>] [--rsi-exit <decimal>] " +
-        "[--initial-capital <decimal>] [--fee-bps <decimal>] [--position-fraction <decimal>] [--save]";
+        "[--initial-capital <decimal>] [--fee-bps <decimal>] " +
+        "[--vector-risk|--position-fraction <decimal>] [--save]";
 
     public static BacktestArgs Parse(string[] args)
     {
@@ -34,15 +38,16 @@ internal sealed record BacktestArgs(
         string? researchDb = null;
         string? verdictDir = null;
         var symbol = "BTCUSDT";
-        var strategy = "FixedWindow";
+        var tradingLogic = "FixedWindow";
         var timeFrame = "1D";
+        var direction = Direction.Long;
         var enterBar = 5;
         var exitBar = 15;
         var takeProfitPct = 0.08m;
         var rsiExit = 70m;
         var initialCapital = 10_000m;
         var feeBps = 4m;
-        var positionFraction = 0.1m;
+        var vectorRisk = 0.1m;
         DateTimeOffset? from = null;
         DateTimeOffset? to = null;
         var save = false;
@@ -77,8 +82,11 @@ internal sealed record BacktestArgs(
                 from = ParseUtcOffset(TakeValue(), a);
             else if (a.Equals("--to", StringComparison.OrdinalIgnoreCase))
                 to = ParseUtcOffset(TakeValue(), a);
-            else if (a.Equals("--strategy", StringComparison.OrdinalIgnoreCase))
-                strategy = TakeValue();
+            else if (a.Equals("--strategy", StringComparison.OrdinalIgnoreCase)
+                     || a.Equals("--trading-logic", StringComparison.OrdinalIgnoreCase))
+                tradingLogic = TakeValue();
+            else if (a.Equals("--direction", StringComparison.OrdinalIgnoreCase))
+                direction = ParseDirection(TakeValue());
             else if (a.Equals("--enter-bar", StringComparison.OrdinalIgnoreCase))
                 enterBar = int.Parse(TakeValue());
             else if (a.Equals("--exit-bar", StringComparison.OrdinalIgnoreCase))
@@ -91,8 +99,9 @@ internal sealed record BacktestArgs(
                 initialCapital = decimal.Parse(TakeValue(), CultureInfo.InvariantCulture);
             else if (a.Equals("--fee-bps", StringComparison.OrdinalIgnoreCase))
                 feeBps = decimal.Parse(TakeValue(), CultureInfo.InvariantCulture);
-            else if (a.Equals("--position-fraction", StringComparison.OrdinalIgnoreCase))
-                positionFraction = decimal.Parse(TakeValue(), CultureInfo.InvariantCulture);
+            else if (a.Equals("--vector-risk", StringComparison.OrdinalIgnoreCase)
+                     || a.Equals("--position-fraction", StringComparison.OrdinalIgnoreCase))
+                vectorRisk = decimal.Parse(TakeValue(), CultureInfo.InvariantCulture);
             else
                 throw new ArgumentException($"Unknown argument: {a}. {Usage}");
         }
@@ -107,19 +116,23 @@ internal sealed record BacktestArgs(
             Path.GetFullPath(researchDb),
             string.IsNullOrWhiteSpace(verdictDir) ? null : Path.GetFullPath(verdictDir),
             symbol,
-            strategy,
+            tradingLogic,
             timeFrame,
+            direction,
             enterBar,
             exitBar,
             takeProfitPct,
             rsiExit,
             initialCapital,
             feeBps,
-            positionFraction,
+            vectorRisk,
             from,
             to,
             save);
     }
+
+    private static Direction ParseDirection(string value) =>
+        value.Equals("Short", StringComparison.OrdinalIgnoreCase) ? Direction.Short : Direction.Long;
 
     private static DateTimeOffset ParseUtcOffset(string value, string flag)
     {

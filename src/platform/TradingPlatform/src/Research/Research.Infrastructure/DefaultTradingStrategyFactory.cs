@@ -6,10 +6,11 @@ namespace Research.Infrastructure;
 public sealed class DefaultTradingStrategyFactory : ITradingStrategyFactory
 {
     public ITradingStrategy Create(TradingVectorSpec vector) =>
-        vector.StrategyKind switch
+        vector.TradingLogic switch
         {
             "FixedWindow" => new FixedWindowStrategy(),
             "Rsi5Extreme" => new Rsi5ExtremeStrategy(),
-            _ => throw new NotSupportedException($"Unknown strategy kind: {vector.StrategyKind}")
+            "Sma200Sma5" => new Sma200Sma5Strategy(),
+            _ => throw new NotSupportedException($"Unknown trading logic: {vector.TradingLogic}")
         };
 }

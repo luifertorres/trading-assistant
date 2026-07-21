@@ -1,6 +1,6 @@
 namespace TradingPlatform.Kernel;
 
-public enum PositionSide
+public enum Direction
 {
     Long = 1,
     Short = 2

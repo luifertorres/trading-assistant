@@ -1,17 +1,25 @@
 # Ubiquitous language — TradingPlatform
 
+Aligned with Ivan Scherman trading-vector language (see WebSocketTrading MVP README).
+
 | Term | Meaning |
 |------|---------|
+| **Asset** | Canonical broker identity `broker:venue:symbol` (e.g. `binance:usdm:BTCUSDT`). Kernel type `Asset`. |
+| **Direction** | `Long` or `Short`. Kernel enum `Direction`. |
+| **TimeFrame** | Chart interval token. Kernel type `TimeFrameCode` (e.g. `1D`, `4H`, `5m`). |
+| **TradingLogic** | Entry/exit rules (e.g. `Sma200Sma5`, `Rsi5Extreme`). String on `TradingVectorSpec`. |
+| **TradingVector** | Unique `(Asset, Direction, TimeFrame, TradingLogic)`. Kernel type `TradingVectorSpec` + stable `TradingVectorId`. |
+| **VectorInventory** | Per-vector tracked open quantity. Enter → `AddFill`; exit → `ConsumeForExit`. Sibling vectors on same Asset+Direction sum on the exchange side in hedge mode. |
+| **VectorRiskFraction** | Fraction of `InitialCapital` allocated per vector (e.g. `0.02` = 2%). Independent per vector. |
+| **Exchange-side position** | Broker aggregate for `(Asset, Direction)` in hedge mode = sum of sibling `VectorInventory` quantities. |
 | **InstrumentId** | Opaque stable identifier for a registered instrument (allocated by the MarketData registry). |
-| **SeriesDescriptor** | Logical candle stream: `InstrumentId` + `TimeFrameCode` (e.g. instrument `42` + `1m`). |
-| **TimeFrameCode** | Chart-style token: lowercase **s** / **m** (e.g. `1s`, `1m`, `15m`); uppercase **H** / **D** / **W** / **M** (e.g. `1H`, `1D`, `1M`). **1m** = minute, **1M** = month. |
-| **Trading vector** | `TradingVectorSpec`: `InstrumentId`, timeframe, position side, strategy kind, parameters, stable `TradingVectorId`. |
+| **SeriesDescriptor** | Logical candle stream: `InstrumentId` + `TimeFrameCode`. |
 | **Simulation run** | One backtest evaluation: config + bars → trades + equity + max drawdown. |
 | **Run result** | `SimulationRunResult` persisted for Analytics (JSON payload in `SimulationRuns` table). |
 | **Underwater fraction** | Per-bar drawdown from running peak equity, used for correlation in Analytics. |
 | **Portfolio definition** | Named, versioned set of `PortfolioMember` (vector id + weight) — published language to Execution. |
 | **Simulation sink** | Accepts `OrderIntent` during a backtest; updates virtual PnL and trade list. |
-| **Live sink** | Accepts the same `OrderIntent` shape for real or paper broker placement (stub today). |
+| **Live sink** | Accepts the same `OrderIntent` shape for real or paper broker placement. |
 | **Broker ACL** | Anti-corruption layer at the exchange boundary; no broker types in inner Domain. |
 
 ## Bounded contexts (solution mapping)

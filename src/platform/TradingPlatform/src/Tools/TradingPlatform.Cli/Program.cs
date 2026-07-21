@@ -45,6 +45,9 @@ try
         case "fire-test-order":
             Environment.Exit(await FireTestOrderCommand.RunAsync(FireTestOrderArgs.Parse(args)).ConfigureAwait(false));
             return;
+        case "universe-backtest":
+            Environment.Exit(await UniverseBacktestCommand.RunAsync(UniverseBacktestArgs.Parse(args)).ConfigureAwait(false));
+            return;
         case "demo":
             await RunDemoAsync().ConfigureAwait(false);
             return;
@@ -69,6 +72,7 @@ static void PrintUsage()
         $"  {BacktestArgs.Usage}\n" +
         $"  {CohortBacktestArgs.Usage}\n" +
         $"  {CohortComposeArgs.Usage}\n" +
+        $"  {UniverseBacktestArgs.Usage}\n" +
         $"  {FireTestOrderArgs.Usage}");
 }
 
@@ -152,12 +156,13 @@ static async Task RunDemoAsync()
     var bars = SyntheticBars(count: 40, start: new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
     await writer.UpsertAsync(new SeriesDescriptor(instrumentId, TimeFrameCode.Min1), bars).ConfigureAwait(false);
 
-    var cfg = new SimulationConfiguration(InitialCapital: 10_000m, FeeBpsPerSide: 4m, PositionNotionalFraction: 0.1m);
+    var cfg = new SimulationConfiguration(InitialCapital: 10_000m, FeeBpsPerSide: 4m, VectorRiskFraction: 0.1m);
+    var asset = Asset.FromUsdmExchangeSymbol("BTCUSDT");
     var v1 = new TradingVectorSpec(
-        TradingVectorId.New(), instrumentId, TimeFrameCode.Min1, PositionSide.Long, "FixedWindow",
+        TradingVectorId.New(), asset, instrumentId, TimeFrameCode.Min1, Direction.Long, "FixedWindow",
         new Dictionary<string, string> { ["enterBar"] = "3", ["exitBar"] = "12" });
     var v2 = new TradingVectorSpec(
-        TradingVectorId.New(), instrumentId, TimeFrameCode.Min1, PositionSide.Long, "FixedWindow",
+        TradingVectorId.New(), asset, instrumentId, TimeFrameCode.Min1, Direction.Long, "FixedWindow",
         new Dictionary<string, string> { ["enterBar"] = "5", ["exitBar"] = "18" });
 
     var r1 = await runner.RunAsync(new BacktestRequest(v1, cfg, null, null)).ConfigureAwait(false);

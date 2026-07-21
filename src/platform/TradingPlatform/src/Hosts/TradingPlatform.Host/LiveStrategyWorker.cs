@@ -29,9 +29,10 @@ public sealed class LiveStrategyWorker(
             {
                 var spec = new TradingVectorSpec(
                     TradingVectorId.New(),
+                    Asset.FromUsdmExchangeSymbol(symbol),
                     evt.InstrumentId,
                     TimeFrame,
-                    PositionSide.Long,
+                    Direction.Long,
                     "Rsi5Extreme",
                     new Dictionary<string, string> { ["takeProfitPct"] = "0.08", ["rsiExit"] = "70" });
                 entry = (spec, strategies.Create(spec), 0);

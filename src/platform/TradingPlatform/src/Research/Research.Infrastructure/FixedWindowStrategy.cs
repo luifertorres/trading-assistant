@@ -12,7 +12,7 @@ public sealed class FixedWindowStrategy : ITradingStrategy
         var exit = int.Parse(context.Vector.Parameters.GetValueOrDefault("exitBar", "15"));
         if (context.BarIndex == enter)
         {
-            var kind = context.Vector.PositionSide == PositionSide.Long
+            var kind = context.Vector.Direction == Direction.Long
                 ? OrderIntentKind.OpenLong
                 : OrderIntentKind.OpenShort;
             context.Sink.OnIntent(new OrderIntent(kind, 0, "fixed-window"), context.Bar);

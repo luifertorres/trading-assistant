@@ -15,13 +15,13 @@ public sealed class SimulationOrderIntentSink : ISimulationOrderIntentSink
     private decimal _quantity;
     private DateTimeOffset? _entryTime;
     private decimal _entryFees;
-    private readonly PositionSide _side;
+    private readonly Direction _direction;
 
-    public SimulationOrderIntentSink(SimulationConfiguration cfg, PositionSide side)
+    public SimulationOrderIntentSink(SimulationConfiguration cfg, Direction direction)
     {
         _cfg = cfg;
         _cash = cfg.InitialCapital;
-        _side = side;
+        _direction = direction;
     }
 
     public IReadOnlyList<TradeRecord> Trades => _trades;
@@ -32,9 +32,9 @@ public sealed class SimulationOrderIntentSink : ISimulationOrderIntentSink
         var price = intent.ExitPrice ?? signalBar.Close;
         switch (intent.Kind)
         {
-            case OrderIntentKind.OpenLong when _side == PositionSide.Long && _entryPrice is null:
+            case OrderIntentKind.OpenLong when _direction == Direction.Long && _entryPrice is null:
             {
-                var notional = _cfg.InitialCapital * _cfg.PositionNotionalFraction;
+                var notional = _cfg.InitialCapital * _cfg.VectorRiskFraction;
                 var qty = notional / price;
                 if (qty <= 0)
                     return;
@@ -46,9 +46,9 @@ public sealed class SimulationOrderIntentSink : ISimulationOrderIntentSink
                 _entryTime = signalBar.CloseTime;
                 break;
             }
-            case OrderIntentKind.OpenShort when _side == PositionSide.Short && _entryPrice is null:
+            case OrderIntentKind.OpenShort when _direction == Direction.Short && _entryPrice is null:
             {
-                var notional = _cfg.InitialCapital * _cfg.PositionNotionalFraction;
+                var notional = _cfg.InitialCapital * _cfg.VectorRiskFraction;
                 var qty = notional / price;
                 if (qty <= 0)
                     return;
@@ -64,10 +64,10 @@ public sealed class SimulationOrderIntentSink : ISimulationOrderIntentSink
             {
                 var qty = _quantity;
                 var exitFee = qty * price * (_cfg.FeeBpsPerSide / 10_000m);
-                decimal gross = _side switch
+                decimal gross = _direction switch
                 {
-                    PositionSide.Long => qty * (price - ep),
-                    PositionSide.Short => qty * (ep - price),
+                    Direction.Long => qty * (price - ep),
+                    Direction.Short => qty * (ep - price),
                     _ => 0
                 };
                 _cash += gross - exitFee;
@@ -92,10 +92,10 @@ public sealed class SimulationOrderIntentSink : ISimulationOrderIntentSink
     {
         if (_entryPrice is null || _quantity == 0)
             return _cash;
-        return _side switch
+        return _direction switch
         {
-            PositionSide.Long => _cash + _quantity * (markPrice - _entryPrice.Value),
-            PositionSide.Short => _cash + _quantity * (_entryPrice.Value - markPrice),
+            Direction.Long => _cash + _quantity * (markPrice - _entryPrice.Value),
+            Direction.Short => _cash + _quantity * (_entryPrice.Value - markPrice),
             _ => _cash
         };
     }
