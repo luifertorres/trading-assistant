@@ -934,17 +934,19 @@ namespace TradingAssistant
 
             TryGetSymbolInformation(symbol, out var symbolInformation);
 
+            var orderSide = positionQuantity.AsOrderSide().Reverse();
+
             var placeOrderResult = await trading.PlaceConditionalOrderAsync(symbol,
-                positionQuantity.AsOrderSide().Reverse(),
+                orderSide,
                 ConditionalOrderType.StopMarket,
-                quantity: null,
+                quantity: Math.Abs(positionQuantity),
                 positionSide: HedgePositionSide(positionQuantity.AsOrderSide()),
+                timeInForce: TimeInForce.GoodTillCanceled,
+                reduceOnly: _isHedgeMode ? null : true,
                 triggerPrice: ApplyPriceFilter(stopLossPrice, symbolInformation?.PriceFilter),
-                closePosition: true,
                 clientOrderId: string.Format(StopLossIdFormat, symbol.ToLower()),
                 priceProtect: true,
                 ct: cancellationToken);
-
 
             if (!placeOrderResult.Success)
             {

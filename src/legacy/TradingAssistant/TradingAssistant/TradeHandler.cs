@@ -174,7 +174,6 @@ namespace TradingAssistant
                 referenceStopLossRoi, Environment.NewLine,
                 actualStopLossRoi);
 
-
             var isStopLossPlaced = await _binance.TryPlaceStopLossAsync(symbolToTrade,
                 entryPrice,
                 quantity.WithSide(newPositionSide),
@@ -241,6 +240,35 @@ namespace TradingAssistant
 
                             return false;
                         }
+                    }
+                }
+
+                if (isPositionReduced)
+                {
+                    var remainingQuantity = (quantity - BitcoinQuantityToReduce).WithSide(newPositionSide);
+
+                    await _binance.TryCancelStopLossAsync(symbolToTrade, cancellationToken);
+
+                    isStopLossPlaced = await _binance.TryPlaceStopLossAsync(symbolToTrade,
+                        entryPrice,
+                        remainingQuantity,
+                        actualStopLossRoi,
+                        cancellationToken: cancellationToken);
+
+                    if (!isStopLossPlaced)
+                    {
+                        await _binance.TryCancelStopLossAsync(symbolToTrade, cancellationToken);
+
+                        isStopLossPlaced = await _binance.TryPlaceStopLossAsync(symbolToTrade,
+                            entryPrice,
+                            remainingQuantity,
+                            actualStopLossRoi,
+                            cancellationToken: cancellationToken);
+                    }
+
+                    if (!isStopLossPlaced)
+                    {
+                        return false;
                     }
                 }
             }
