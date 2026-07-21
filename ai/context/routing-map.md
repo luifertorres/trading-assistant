@@ -65,7 +65,7 @@ Invoke by name when the task clearly matches (see each skill; repo-native canoni
 
 - `test-driven-development` — strict TDD, red-green-refactor.
 - `dotnet-verification` — running / fixing .NET tests, verify order.
-- `implementation-planning` — granular CreatePlan todos.
+- `planning` — granular CreatePlan todos; TDD `*-test-red`/`*-impl` only when the target already has tests.
 - `binance-net` — USD-M Binance.Net usage and boundaries.
 - `openspec-*` — OpenSpec vendor (`/ai-onboard` copies from `openspec/agent/skills/`; requires CLI or manual fallback).
 - `commit` / `pr` — git hygiene when requested.

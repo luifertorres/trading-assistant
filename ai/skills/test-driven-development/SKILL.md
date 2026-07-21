@@ -125,6 +125,6 @@ When implementing via `/opsx:apply`, OpenSpec `tasks.md` defines *what*; each be
 
 ## Related routing
 
-- Planning todos: [`ai/skills/implementation-planning/SKILL.md`](../implementation-planning/SKILL.md)
+- Planning todos (TDD pairing when target already has tests): [`ai/skills/planning/SKILL.md`](../planning/SKILL.md)
 - Explicit workflow command: [`ai/commands/test-driven-implementation.md`](../../commands/test-driven-implementation.md)
 - Root index: [`AGENTS.md`](../../../AGENTS.md)

@@ -1,0 +1,18 @@
+---
+description: Plan Mode must emit granular, path-specific todos for downstream agents.
+alwaysApply: true
+---
+
+# Plan Mode — granular todos
+
+When in **Plan Mode**, calling **CreatePlan**, or producing an implementation plan before coding:
+
+1. Read and follow [`ai/skills/planning/SKILL.md`](ai/skills/planning/SKILL.md).
+2. Every plan MUST include structured frontmatter `todos` with `id` and `content` (not prose-only task lists).
+3. Each `content` MUST include at least one **repo-relative file path** and a **concrete action** (type, method, or migration name when known).
+4. Split coarse items until an implementation agent can execute without codebase search.
+5. Always end with a **`verify`** todo naming exact `dotnet build` (and `dotnet test` when tests exist). See [`ai/skills/planning/SKILL.md`](ai/skills/planning/SKILL.md).
+6. **If the target solution/project already has any tests:** for each behavior change, pair todos **`{name}-test-red`** then **`{name}-impl`** (never reverse). See [`ai/skills/test-driven-development/SKILL.md`](ai/skills/test-driven-development/SKILL.md).
+7. **If the target has no tests** (e.g. legacy TradingAssistant): do **not** require test-first pairing; path-specific todos + build verify are enough.
+
+Do not finalize or present a plan for approval while todos remain vague. Do not invent a test project solely to enable TDD in the plan.

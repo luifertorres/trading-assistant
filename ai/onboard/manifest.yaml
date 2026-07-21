@@ -21,7 +21,7 @@ context_dir: ai/context
 skill_stubs:
   - test-driven-development
   - dotnet-verification
-  - implementation-planning
+  - planning
   - binance-net
   - chief-of-staff
   - commit

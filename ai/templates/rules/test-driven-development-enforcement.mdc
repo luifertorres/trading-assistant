@@ -10,6 +10,5 @@ Before implementing or changing **behavior** in Domain, Application use cases, o
 1. Read and follow [`ai/skills/test-driven-development/SKILL.md`](ai/skills/test-driven-development/SKILL.md).
 2. Do **not** add or edit production behavior until a **failing** unit test exists in the matching test csproj (see dotnet-verification skill for paths).
 3. After implementation, run `dotnet test` on that test project before marking the task complete.
-4. In **Plan Mode** / **CreatePlan**: for each behavior slice, emit a `*-test-red` todo **before** the matching `*-impl` todo.
 
-Specs and plans define acceptance criteria; unit tests prove done — with or without OpenSpec.
+Applies to Domain, Application use cases, and deterministic mappers in buckets that have unit test projects. Legacy TradingAssistant and other no-test buckets are out of scope for this rule. Specs and plans define acceptance criteria; unit tests prove done where they exist — with or without OpenSpec.

@@ -20,7 +20,7 @@ Start a new change using the experimental artifact-driven approach.
    **If CLI not installed**, stop and tell the user:
    > OpenSpec CLI is required to scaffold a new change. Install: `npm i -g @fission-ai/openspec` — see `openspec/SETUP.md`.
    >
-   > **Without CLI:** implement from an existing change via `/opsx:apply` markdown fallback, or use Plan Mode with `ai/skills/implementation-planning/SKILL.md` (no OpenSpec scaffold).
+   > **Without CLI:** implement from an existing change via `/opsx:apply` markdown fallback, or use Plan Mode with `ai/skills/planning/SKILL.md` (no OpenSpec scaffold).
 
    Do not proceed with steps 1+ until CLI is available.
 

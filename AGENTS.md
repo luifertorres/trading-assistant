@@ -26,7 +26,7 @@ Human documentation: [docs/README.md](docs/README.md).
 |------|-----------------|
 | Strict TDD / test-first | `ai/skills/test-driven-development/SKILL.md` |
 | Tests / verify order | `ai/skills/dotnet-verification/SKILL.md` |
-| Plan Mode / CreatePlan | `ai/skills/implementation-planning/SKILL.md` |
+| Plan Mode / CreatePlan | `ai/skills/planning/SKILL.md` |
 | AI onboard | `ai/commands/ai-onboard.md` |
 | Binance.Net usage | `ai/skills/binance-net/SKILL.md` |
 | Commit / PR | `ai/skills/commit/SKILL.md`, `ai/skills/pr/SKILL.md` |
