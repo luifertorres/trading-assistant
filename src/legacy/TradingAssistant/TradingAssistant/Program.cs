@@ -29,20 +29,14 @@ namespace TradingAssistant
                         configuration.RegisterServicesFromAssembly(typeof(Program).Assembly);
                     });
 
-                    services.AddBinance(restOptions =>
+                    services.AddBinance(options =>
                     {
                         var key = context.Configuration["Binance:Futures:ApiKey"]!;
                         var secret = context.Configuration["Binance:Futures:ApiSecret"]!;
 
-                        restOptions.ApiCredentials = new BinanceCredentials(key, secret);
-                    });
-
-                    services.AddBinance(socketOptions =>
-                    {
-                        var key = context.Configuration["Binance:Futures:ApiKey"]!;
-                        var secret = context.Configuration["Binance:Futures:ApiSecret"]!;
-
-                        socketOptions.ApiCredentials = new BinanceCredentials(key, secret);
+                        // Binance.Net rate-limits/retries REST internally; do not cut off waits with HttpClient timeout.
+                        options.Rest.RequestTimeout = Timeout.InfiniteTimeSpan;
+                        options.ApiCredentials = new BinanceCredentials(key, secret);
                     });
 
                     services.AddDbContext<TradingContext>();
