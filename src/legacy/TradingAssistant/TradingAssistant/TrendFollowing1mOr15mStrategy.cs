@@ -10,6 +10,9 @@ namespace TradingAssistant
 
         public Task Handle(SmasAndRsisCalculatedEvent notification, CancellationToken cancellationToken)
         {
+            // Disabled: Rsi5Extreme1mStrategy is the only 1m strategy
+            return Task.CompletedTask;
+#if false
             if (!_allowedIntervals.Contains(notification.LastCandle.Interval))
             {
                 return Task.CompletedTask;
@@ -33,6 +36,7 @@ namespace TradingAssistant
             }
 
             return Task.CompletedTask;
+#endif
         }
 
         private OrderSide? GetTrendSignal(double[][] smasHigherTimeFrame, double[][] smas, double[][] rsis)

@@ -7,6 +7,9 @@ namespace TradingAssistant
     {
         public Task Handle(SmasAndRsisCalculatedEvent notification, CancellationToken cancellationToken)
         {
+            // Disabled: Rsi5Extreme1mStrategy is the only 1m strategy
+            return Task.CompletedTask;
+#if false
             if (notification.LastCandle.Interval != KlineInterval.OneMinute)
             {
                 return Task.CompletedTask;
@@ -28,6 +31,7 @@ namespace TradingAssistant
             }
 
             return Task.CompletedTask;
+#endif
         }
 
         private static OrderSide? GetReversionSignal(double[][] smasHigherTimeFrame, double[][] smas, double[][] rsis)
