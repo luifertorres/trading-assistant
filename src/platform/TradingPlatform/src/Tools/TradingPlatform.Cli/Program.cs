@@ -158,10 +158,10 @@ static async Task RunDemoAsync()
 
     var cfg = new SimulationConfiguration(InitialCapital: 10_000m, FeeBpsPerSide: 4m, VectorRiskFraction: 0.1m);
     var asset = Asset.FromUsdmExchangeSymbol("BTCUSDT");
-    var v1 = new TradingVectorSpec(
+    var v1 = new TradingVector(
         TradingVectorId.New(), asset, instrumentId, TimeFrameCode.Min1, Direction.Long, "FixedWindow",
         new Dictionary<string, string> { ["enterBar"] = "3", ["exitBar"] = "12" });
-    var v2 = new TradingVectorSpec(
+    var v2 = new TradingVector(
         TradingVectorId.New(), asset, instrumentId, TimeFrameCode.Min1, Direction.Long, "FixedWindow",
         new Dictionary<string, string> { ["enterBar"] = "5", ["exitBar"] = "18" });
 
@@ -172,7 +172,7 @@ static async Task RunDemoAsync()
 
     var portfolio = composer.ComposeDrawdownUncorrelated([r1, r2], maxPairwiseCorrelation: 0.99, "demo-portfolio");
     await filePortfolios.SaveAsync(portfolio).ConfigureAwait(false);
-    await router.ExecuteOneShotAsync(portfolio, new Dictionary<TradingVectorId, TradingVectorSpec> { [v1.Id] = v1, [v2.Id] = v2 }, bars, v1.Id).ConfigureAwait(false);
+    await router.ExecuteOneShotAsync(portfolio, new Dictionary<TradingVectorId, TradingVector> { [v1.Id] = v1, [v2.Id] = v2 }, bars, v1.Id).ConfigureAwait(false);
     log.LogInformation("Demo complete: portfolio {Name} members {N}", portfolio.Name, portfolio.Members.Count);
 }
 

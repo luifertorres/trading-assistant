@@ -116,7 +116,7 @@ internal static class BacktestCommand
         logic.Equals("Rsi5Extreme", StringComparison.OrdinalIgnoreCase) ||
         logic.Equals("Sma200Sma5", StringComparison.OrdinalIgnoreCase);
 
-    private static TradingVectorSpec BuildVector(
+    private static TradingVector BuildVector(
         BacktestArgs args,
         Asset asset,
         InstrumentId instrumentId,
@@ -124,7 +124,7 @@ internal static class BacktestCommand
     {
         if (args.TradingLogic.Equals("Rsi5Extreme", StringComparison.OrdinalIgnoreCase))
         {
-            return new TradingVectorSpec(
+            return new TradingVector(
                 TradingVectorId.New(),
                 asset,
                 instrumentId,
@@ -140,7 +140,7 @@ internal static class BacktestCommand
 
         if (args.TradingLogic.Equals("Sma200Sma5", StringComparison.OrdinalIgnoreCase))
         {
-            return new TradingVectorSpec(
+            return new TradingVector(
                 TradingVectorId.New(),
                 asset,
                 instrumentId,
@@ -150,7 +150,7 @@ internal static class BacktestCommand
                 new Dictionary<string, string>());
         }
 
-        return new TradingVectorSpec(
+        return new TradingVector(
             TradingVectorId.New(),
             asset,
             instrumentId,

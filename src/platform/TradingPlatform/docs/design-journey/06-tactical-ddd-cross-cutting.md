@@ -30,13 +30,13 @@ Fill “keep in Kernel vs move to a context”:
 | `SeriesDescriptor` | | |
 | `OhlcBar` | | |
 | `TimeFrameCode` | | |
-| `TradingVectorId` / `TradingVectorSpec` | | |
+| `TradingVectorId` / `TradingVector` | | |
 | `OrderIntent` | | |
 | `PositionSide` | | |
 
 ## Compare with repo
 
-- Kernel types: [TradingPlatform.Kernel](../../src/BuildingBlocks/TradingPlatform.Kernel/) (`SeriesDescriptor`, `OhlcBar`, `TimeFrameCode`, `TradingVectorSpec`, `TradingVectorId`, `OrderIntent`, `PositionSide`, …).
+- Kernel types: [TradingPlatform.Kernel](../../src/BuildingBlocks/TradingPlatform.Kernel/) (`SeriesDescriptor`, `OhlcBar`, `TimeFrameCode`, `TradingVector`, `TradingVectorId`, `OrderIntent`, `PositionSide`, …).
 - Per-context layering matches solution folders in [TradingPlatform.slnx](../../TradingPlatform.slnx).
 - Composition: [TradingPlatform.Host/Program.cs](../../src/Hosts/TradingPlatform.Host/Program.cs), [TradingPlatform.Cli/Program.cs](../../src/Tools/TradingPlatform.Cli/Program.cs).
 

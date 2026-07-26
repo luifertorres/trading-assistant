@@ -1,7 +1,7 @@
 namespace TradingPlatform.Kernel;
 
 /// <summary>Unique trading vector: Asset + Direction + TimeFrame + TradingLogic.</summary>
-public sealed record TradingVectorSpec(
+public sealed record TradingVector(
     TradingVectorId Id,
     Asset Asset,
     InstrumentId Instrument,

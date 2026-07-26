@@ -17,7 +17,7 @@ Separate **simulation** (deterministic evaluation of a strategy over bars) from 
 
 | # | Scenario | Expected outcome |
 |---|----------|------------------|
-| 1 | Run backtest for `TradingVectorSpec` + `SimulationConfiguration` | `SimulationRunResult` with trades, equity, max drawdown |
+| 1 | Run backtest for `TradingVector` + `SimulationConfiguration` | `SimulationRunResult` with trades, equity, max drawdown |
 | 2 | Strategy emits intents on bar N | Simulation sink records fills / virtual PnL per your sink rules |
 | 3 | Same vector, two runs | Distinct `RunId`, comparable metrics |
 | 4 | Invalid strategy parameters | (define: fail fast vs degraded run) |

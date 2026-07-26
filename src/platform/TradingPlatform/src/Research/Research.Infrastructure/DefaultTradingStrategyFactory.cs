@@ -5,7 +5,7 @@ namespace Research.Infrastructure;
 
 public sealed class DefaultTradingStrategyFactory : ITradingStrategyFactory
 {
-    public ITradingStrategy Create(TradingVectorSpec vector) =>
+    public ITradingStrategy Create(TradingVector vector) =>
         vector.TradingLogic switch
         {
             "FixedWindow" => new FixedWindowStrategy(),

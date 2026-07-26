@@ -53,7 +53,7 @@ internal static class CohortBacktestCommand
             }
 
             var asset = Asset.FromUsdmExchangeSymbol(symbol);
-            var vector = new TradingVectorSpec(
+            var vector = new TradingVector(
                 TradingVectorId.New(),
                 asset,
                 instrument.Id,

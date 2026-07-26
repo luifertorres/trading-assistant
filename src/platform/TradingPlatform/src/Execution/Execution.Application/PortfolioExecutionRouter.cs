@@ -13,7 +13,7 @@ public sealed class PortfolioExecutionRouter(
 {
     public async Task ExecuteOneShotAsync(
         PortfolioDefinition portfolio,
-        IReadOnlyDictionary<TradingVectorId, TradingVectorSpec> vectorById,
+        IReadOnlyDictionary<TradingVectorId, TradingVector> vectorById,
         IReadOnlyList<OhlcBar> bars,
         TradingVectorId activeVectorId,
         CancellationToken cancellationToken = default)

@@ -48,7 +48,7 @@ The backtest command SHALL load historical bars only through `ICandleSeriesReade
 
 ### Requirement: FixedWindow strategy parameters
 
-For strategy kind `FixedWindow`, the CLI SHALL construct a `TradingVectorSpec` with parameters `enterBar` and `exitBar` (0-based bar indices) supplied by the operator (`--enter-bar`, `--exit-bar`). The factory MUST resolve this to the existing `FixedWindowStrategy` implementation.
+For strategy kind `FixedWindow`, the CLI SHALL construct a `TradingVector` with parameters `enterBar` and `exitBar` (0-based bar indices) supplied by the operator (`--enter-bar`, `--exit-bar`). The factory MUST resolve this to the existing `FixedWindowStrategy` implementation.
 
 #### Scenario: FixedWindow run completes
 

@@ -20,7 +20,7 @@ Fill **your** judgment (relationship type + short rationale):
 | Research → Execution | | | `ITradingStrategyFactory` + `PortfolioExecutionRouter` |
 | Portfolio → Execution | | | `PortfolioDefinition` + member weights |
 | * → Exchange | | | `BrokerAntiCorruptionStub`, `ILiveOrderIntentSink` |
-| Kernel ↔ contexts | | | Shared types: `SeriesDescriptor`, `OhlcBar`, `TradingVectorSpec`, `OrderIntent`, … |
+| Kernel ↔ contexts | | | Shared types: `SeriesDescriptor`, `OhlcBar`, `TradingVector`, `OrderIntent`, … |
 
 ## Workshop: mermaid (starter skeleton)
 

@@ -2,7 +2,7 @@ namespace TradingPlatform.Kernel;
 
 public static class TradingVectorIdentity
 {
-    public static void EnsureUnique(IReadOnlyList<TradingVectorSpec> vectors)
+    public static void EnsureUnique(IReadOnlyList<TradingVector> vectors)
     {
         ArgumentNullException.ThrowIfNull(vectors);
 

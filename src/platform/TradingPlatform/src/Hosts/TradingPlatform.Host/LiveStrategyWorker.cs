@@ -16,7 +16,7 @@ public sealed class LiveStrategyWorker(
 {
     private static readonly string[] Symbols = ["DOGEUSDT", "XRPUSDT", "SOLUSDT", "1000PEPEUSDT"];
     private static readonly TimeFrameCode TimeFrame = TimeFrameCode.Hour4;
-    private readonly Dictionary<string, (TradingVectorSpec Spec, ITradingStrategy Strategy, int BarCount)> _state = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, (TradingVector Spec, ITradingStrategy Strategy, int BarCount)> _state = new(StringComparer.Ordinal);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -27,7 +27,7 @@ public sealed class LiveStrategyWorker(
             var symbol = evt.ExchangeSymbol;
             if (!_state.TryGetValue(symbol, out var entry))
             {
-                var spec = new TradingVectorSpec(
+                var spec = new TradingVector(
                     TradingVectorId.New(),
                     Asset.FromUsdmExchangeSymbol(symbol),
                     evt.InstrumentId,

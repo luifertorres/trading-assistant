@@ -19,8 +19,8 @@ Copy and extend. “Action” = keep / rename / merge / split.
 | Asset | Canonical `broker:venue:symbol` (e.g. `binance:usdm:BTCUSDT`). | Kernel `Asset`. | keep |
 | Direction | `Long` or `Short`. | Kernel `Direction` (was `PositionSide`). | renamed |
 | TimeFrame | Chart interval. | `TimeFrameCode`. | keep |
-| TradingLogic | Entry/exit rules (e.g. `Sma200Sma5`). | String on `TradingVectorSpec` (was `StrategyKind`). | renamed |
-| Trading vector | Unique `(Asset, Direction, TimeFrame, TradingLogic)`. | `TradingVectorSpec` + `TradingVectorId`. | keep |
+| TradingLogic | Entry/exit rules (e.g. `Sma200Sma5`). | String on `TradingVector` (was `StrategyKind`). | renamed |
+| Trading vector | Unique `(Asset, Direction, TimeFrame, TradingLogic)`. | `TradingVector` + `TradingVectorId`. | keep |
 | VectorInventory | Per-vector tracked open qty. | Kernel type; hedge-mode sibling accounting. | added |
 | VectorRiskFraction | Fraction of initial capital per vector. | `SimulationConfiguration` field (was `PositionNotionalFraction`). | renamed |
 | Exchange-side position | Broker aggregate for Asset+Direction. | Sum of sibling inventories in hedge mode. | added |
@@ -43,11 +43,11 @@ List words you will **not** use interchangeably (e.g. “run” vs “backtest�
 ## Compare with repo
 
 - Source of truth for terms: [GLOSSARY.md](../GLOSSARY.md).
-- Types that **encode** language: `TradingVectorSpec`, `PortfolioDefinition`, `SimulationRunResult` under `src/platform/TradingPlatform/src/`.
+- Types that **encode** language: `TradingVector`, `PortfolioDefinition`, `SimulationRunResult` under `src/platform/TradingPlatform/src/`.
 
 ## Open questions / ADR candidates
 
-- If you rename “Trading vector” in speech, does `TradingVectorSpec` stay for historical consistency?
+- **Resolved:** `TradingVectorSpec` was renamed to `TradingVector` for ubiquitous-language alignment (type name matches the domain term).
 - Should “Run result” include **raw bar replay** reference, or stay equity/trades only?
 
 ## Next doc

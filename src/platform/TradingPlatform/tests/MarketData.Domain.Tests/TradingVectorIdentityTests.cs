@@ -13,7 +13,7 @@ public sealed class TradingVectorIdentityTests
         var tf = TimeFrameCode.Day1;
         var vectors = new[]
         {
-            new TradingVectorSpec(
+            new TradingVector(
                 TradingVectorId.New(),
                 asset,
                 instrument,
@@ -21,7 +21,7 @@ public sealed class TradingVectorIdentityTests
                 Direction.Long,
                 "Sma200Sma5",
                 new Dictionary<string, string>()),
-            new TradingVectorSpec(
+            new TradingVector(
                 TradingVectorId.New(),
                 asset,
                 instrument,
@@ -44,7 +44,7 @@ public sealed class TradingVectorIdentityTests
         var instrument = new InstrumentId(1);
         var vectors = new[]
         {
-            new TradingVectorSpec(
+            new TradingVector(
                 TradingVectorId.New(),
                 asset,
                 instrument,
@@ -52,7 +52,7 @@ public sealed class TradingVectorIdentityTests
                 Direction.Long,
                 "Sma200Sma5",
                 new Dictionary<string, string>()),
-            new TradingVectorSpec(
+            new TradingVector(
                 TradingVectorId.New(),
                 asset,
                 instrument,

@@ -4,5 +4,5 @@ namespace Research.Application;
 
 public interface ITradingStrategyFactory
 {
-    ITradingStrategy Create(TradingVectorSpec vector);
+    ITradingStrategy Create(TradingVector vector);
 }

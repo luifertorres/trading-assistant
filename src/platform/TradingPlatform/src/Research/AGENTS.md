@@ -9,12 +9,12 @@ Trading strategies, backtest simulation, and shared `ITradingStrategy` used by l
 | Type | Project | Role |
 |------|---------|------|
 | `ITradingStrategy` | Application | `OnBar(BarProcessingContext)` → `OrderIntent` via sink |
-| `ITradingStrategyFactory` | Application | Resolves strategy by `TradingVectorSpec.TradingLogic` |
+| `ITradingStrategyFactory` | Application | Resolves strategy by `TradingVector.TradingLogic` |
 | `IBacktestRunner` | Application | Runs simulation over historical bars |
 | `SimulationOrderIntentSink` | Infrastructure | Fills, fees, equity curve; one position per vector |
 | `Sma200Sma5Strategy` | Infrastructure | Scherman SMA200/SMA5 long/short; no within-vector pyramid |
 | `Rsi5ExtremeStrategy` | Infrastructure | RSI(5) cross-up entry; SL = 24h low; TP % for 1x |
-| `TradingVectorSpec` | Kernel | Asset + Direction + TimeFrame + TradingLogic + parameters |
+| `TradingVector` | Kernel | Asset + Direction + TimeFrame + TradingLogic + parameters |
 | `VectorInventory` | Kernel | Per-vector tracked qty (hedge-mode accounting) |
 
 ## Do

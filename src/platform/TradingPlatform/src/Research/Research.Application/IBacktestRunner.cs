@@ -4,7 +4,7 @@ using TradingPlatform.Kernel;
 namespace Research.Application;
 
 public sealed record BacktestRequest(
-    TradingVectorSpec Vector,
+    TradingVector Vector,
     SimulationConfiguration Configuration,
     DateTimeOffset? From,
     DateTimeOffset? To);

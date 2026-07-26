@@ -7,8 +7,8 @@ Aligned with Ivan Scherman trading-vector language (see WebSocketTrading MVP REA
 | **Asset** | Canonical broker identity `broker:venue:symbol` (e.g. `binance:usdm:BTCUSDT`). Kernel type `Asset`. |
 | **Direction** | `Long` or `Short`. Kernel enum `Direction`. |
 | **TimeFrame** | Chart interval token. Kernel type `TimeFrameCode` (e.g. `1D`, `4H`, `5m`). |
-| **TradingLogic** | Entry/exit rules (e.g. `Sma200Sma5`, `Rsi5Extreme`). String on `TradingVectorSpec`. |
-| **TradingVector** | Unique `(Asset, Direction, TimeFrame, TradingLogic)`. Kernel type `TradingVectorSpec` + stable `TradingVectorId`. |
+| **TradingLogic** | Entry/exit rules (e.g. `Sma200Sma5`, `Rsi5Extreme`). String on `TradingVector`. |
+| **TradingVector** | Unique `(Asset, Direction, TimeFrame, TradingLogic)`. Kernel type `TradingVector` + stable `TradingVectorId`. |
 | **VectorInventory** | Per-vector tracked open quantity. Enter → `AddFill`; exit → `ConsumeForExit`. Sibling vectors on same Asset+Direction sum on the exchange side in hedge mode. |
 | **VectorRiskFraction** | Fraction of `InitialCapital` allocated per vector (e.g. `0.02` = 2%). Independent per vector. |
 | **Exchange-side position** | Broker aggregate for `(Asset, Direction)` in hedge mode = sum of sibling `VectorInventory` quantities. |

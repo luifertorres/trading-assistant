@@ -119,13 +119,13 @@ internal static class UniverseBacktestCommand
             eligible = eligible.Where(i => set.Contains(i.ExchangeSymbol)).ToList();
         }
 
-        var vectors = new List<TradingVectorSpec>(eligible.Count * 2);
+        var vectors = new List<TradingVector>(eligible.Count * 2);
         foreach (var instrument in eligible)
         {
             var asset = Asset.FromUsdmExchangeSymbol(instrument.ExchangeSymbol);
             foreach (var direction in new[] { Direction.Long, Direction.Short })
             {
-                vectors.Add(new TradingVectorSpec(
+                vectors.Add(new TradingVector(
                     TradingVectorId.New(),
                     asset,
                     instrument.Id,
