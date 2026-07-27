@@ -11,8 +11,15 @@ public sealed class UniverseBacktestArgsTests
         var args = UniverseBacktestArgs.Parse(["universe-backtest", "--market-db", "market.sqlite"]);
 
         args.MarketDatabasePath.Should().EndWith("market.sqlite");
-        args.VectorRiskFraction.Should().Be(0.02m);
+        args.TradingLogic.Should().Be("Rsi5ExtremeSma200");
+        args.InitialCapital.Should().Be(100m);
+        args.FeeBpsPerSide.Should().Be(5m);
+        args.VectorRiskFraction.Should().Be(0.05m);
+        args.RsiExit.Should().Be(70m);
         args.SymbolFilter.Should().BeNull();
+        args.HtmlReportPath.Should().NotBeNullOrWhiteSpace();
+        args.HtmlReportPath.Should().Contain("universe-Rsi5ExtremeSma200");
+        args.HtmlReportPath.Should().EndWith(".html");
     }
 
     [Fact]
@@ -35,5 +42,6 @@ public sealed class UniverseBacktestArgsTests
     {
         UniverseBacktestArgs.Usage.Should().Contain("universe-backtest");
         UniverseBacktestArgs.Usage.Should().Contain("--vector-risk");
+        UniverseBacktestArgs.Usage.Should().Contain("--html-report");
     }
 }

@@ -26,7 +26,7 @@ internal sealed record BacktestArgs(
         "Usage: TradingPlatform.Cli backtest --market-db <path> " +
         "[--research-db <path>] [--verdict-dir <path>] [--symbol <exchangeSymbol>] " +
         "[--timeframe 4H|1D] [--from <iso8601>] [--to <iso8601>] " +
-        "[--strategy|--trading-logic FixedWindow|Rsi5Extreme|Sma200Sma5] " +
+        "[--strategy|--trading-logic FixedWindow|Rsi5Extreme|Rsi5ExtremeSma200|Sma200Sma5] " +
         "[--direction Long|Short] [--enter-bar <int>] [--exit-bar <int>] " +
         "[--take-profit-pct <decimal>] [--rsi-exit <decimal>] " +
         "[--initial-capital <decimal>] [--fee-bps <decimal>] " +
@@ -46,7 +46,7 @@ internal sealed record BacktestArgs(
         var takeProfitPct = 0.08m;
         var rsiExit = 70m;
         var initialCapital = 10_000m;
-        var feeBps = 4m;
+        var feeBps = 5m;
         var vectorRisk = 0.1m;
         DateTimeOffset? from = null;
         DateTimeOffset? to = null;

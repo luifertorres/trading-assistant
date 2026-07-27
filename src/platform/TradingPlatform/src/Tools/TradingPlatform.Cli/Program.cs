@@ -156,7 +156,7 @@ static async Task RunDemoAsync()
     var bars = SyntheticBars(count: 40, start: new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
     await writer.UpsertAsync(new SeriesDescriptor(instrumentId, TimeFrameCode.Min1), bars).ConfigureAwait(false);
 
-    var cfg = new SimulationConfiguration(InitialCapital: 10_000m, FeeBpsPerSide: 4m, VectorRiskFraction: 0.1m);
+    var cfg = new SimulationConfiguration(InitialCapital: 10_000m, FeeBpsPerSide: 5m, VectorRiskFraction: 0.1m);
     var asset = Asset.FromUsdmExchangeSymbol("BTCUSDT");
     var v1 = new TradingVector(
         TradingVectorId.New(), asset, instrumentId, TimeFrameCode.Min1, Direction.Long, "FixedWindow",

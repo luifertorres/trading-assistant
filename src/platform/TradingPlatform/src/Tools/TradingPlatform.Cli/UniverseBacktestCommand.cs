@@ -14,7 +14,10 @@ internal sealed record UniverseBacktestArgs(
     string MarketDatabasePath,
     string ResearchDatabasePath,
     string VerdictDirectory,
+    string? HtmlReportPath,
     IReadOnlyList<string>? SymbolFilter,
+    string TradingLogic,
+    decimal RsiExit,
     decimal InitialCapital,
     decimal FeeBpsPerSide,
     decimal VectorRiskFraction,
@@ -23,17 +26,21 @@ internal sealed record UniverseBacktestArgs(
 {
     public const string Usage =
         "universe-backtest --market-db <path> [--research-db <path>] [--verdict-dir <path>] " +
-        "[--symbols BTCUSDT,ETHUSDT,...] [--vector-risk 0.02] [--from iso] [--to iso]";
+        "[--html-report <path>] [--trading-logic Rsi5ExtremeSma200|Sma200Sma5] [--symbols BTCUSDT,ETHUSDT,...] " +
+        "[--initial-capital 100] [--vector-risk 0.05] [--fee-bps 5] [--rsi-exit 70] [--from iso] [--to iso]";
 
     public static UniverseBacktestArgs Parse(string[] args)
     {
         string? marketDb = null;
         string? researchDb = null;
         string? verdictDir = null;
+        string? htmlReport = null;
         IReadOnlyList<string>? symbols = null;
-        var initialCapital = 10_000m;
-        var feeBps = 4m;
-        var vectorRisk = 0.02m;
+        var tradingLogic = "Rsi5ExtremeSma200";
+        var rsiExit = 70m;
+        var initialCapital = 100m;
+        var feeBps = 5m;
+        var vectorRisk = 0.05m;
         DateTimeOffset? from = null;
         DateTimeOffset? to = null;
 
@@ -53,8 +60,15 @@ internal sealed record UniverseBacktestArgs(
                 researchDb = TakeValue();
             else if (a.Equals("--verdict-dir", StringComparison.OrdinalIgnoreCase))
                 verdictDir = TakeValue();
+            else if (a.Equals("--html-report", StringComparison.OrdinalIgnoreCase))
+                htmlReport = TakeValue();
             else if (a.Equals("--symbols", StringComparison.OrdinalIgnoreCase))
                 symbols = TakeValue().Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            else if (a.Equals("--strategy", StringComparison.OrdinalIgnoreCase)
+                     || a.Equals("--trading-logic", StringComparison.OrdinalIgnoreCase))
+                tradingLogic = TakeValue();
+            else if (a.Equals("--rsi-exit", StringComparison.OrdinalIgnoreCase))
+                rsiExit = decimal.Parse(TakeValue(), CultureInfo.InvariantCulture);
             else if (a.Equals("--from", StringComparison.OrdinalIgnoreCase))
                 from = DateTimeOffset.Parse(TakeValue(), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal).ToUniversalTime();
             else if (a.Equals("--to", StringComparison.OrdinalIgnoreCase))
@@ -75,12 +89,20 @@ internal sealed record UniverseBacktestArgs(
 
         researchDb ??= Path.Combine(Environment.CurrentDirectory, ".trading-platform-data", "research.sqlite");
         verdictDir ??= Path.Combine(Environment.CurrentDirectory, ".trading-platform-data", "verdicts");
+        htmlReport ??= Path.Combine(
+            Environment.CurrentDirectory,
+            ".trading-platform-data",
+            "reports",
+            $"universe-{tradingLogic}-{DateTime.UtcNow:yyyyMMdd-HHmmss}.html");
 
         return new UniverseBacktestArgs(
             Path.GetFullPath(marketDb),
             Path.GetFullPath(researchDb),
             Path.GetFullPath(verdictDir),
+            Path.GetFullPath(htmlReport),
             symbols,
+            tradingLogic,
+            rsiExit,
             initialCapital,
             feeBps,
             vectorRisk,
@@ -91,7 +113,6 @@ internal sealed record UniverseBacktestArgs(
 
 internal static class UniverseBacktestCommand
 {
-    private const string TradingLogic = "Sma200Sma5";
     private static readonly TimeFrameCode TimeFrame = TimeFrameCode.Day1;
 
     public static async Task<int> RunAsync(UniverseBacktestArgs args, CancellationToken cancellationToken = default)
@@ -119,6 +140,8 @@ internal static class UniverseBacktestCommand
             eligible = eligible.Where(i => set.Contains(i.ExchangeSymbol)).ToList();
         }
 
+        var vectorParameters = BuildVectorParameters(args);
+
         var vectors = new List<TradingVector>(eligible.Count * 2);
         foreach (var instrument in eligible)
         {
@@ -131,8 +154,8 @@ internal static class UniverseBacktestCommand
                     instrument.Id,
                     TimeFrame,
                     direction,
-                    TradingLogic,
-                    new Dictionary<string, string>()));
+                    args.TradingLogic,
+                    vectorParameters));
             }
         }
 
@@ -142,7 +165,9 @@ internal static class UniverseBacktestCommand
         var exitCode = 0;
         var passCount = 0;
         var failCount = 0;
+        var rows = new List<UniverseBacktestRow>(vectors.Count);
 
+        Console.WriteLine($"Universe: {eligible.Count} instruments, {vectors.Count} vectors, logic {args.TradingLogic}, TF {TimeFrame.Value}");
         Console.WriteLine("| Asset | Direction | Trades | Return | MaxDD | PF | Verdict |");
         Console.WriteLine("|-------|-----------|--------|--------|-------|-----|---------|");
 
@@ -184,6 +209,17 @@ internal static class UniverseBacktestCommand
                     verdict.ProfitFactor,
                     label));
 
+            rows.Add(new UniverseBacktestRow(
+                vector.Asset.Value,
+                symbol,
+                vector.Direction,
+                verdict.TradeCount,
+                verdict.TotalReturnFraction,
+                verdict.MaxDrawdownFraction,
+                verdict.ProfitFactor,
+                verdict.Pass,
+                verdict.FailReason));
+
             log.LogInformation(
                 "{Asset} {Direction} verdict {Label}: {Reason}",
                 vector.Asset.Value,
@@ -193,6 +229,29 @@ internal static class UniverseBacktestCommand
         }
 
         Console.WriteLine($"Universe complete: {vectors.Count} vectors, {passCount} PASS, {failCount} FAIL.");
+
+        if (!string.IsNullOrWhiteSpace(args.HtmlReportPath))
+        {
+            var html = UniverseBacktestHtmlReport.Render(args, eligible.Count, vectors.Count, rows);
+            await UniverseBacktestHtmlReport.WriteAsync(args.HtmlReportPath, html, cancellationToken).ConfigureAwait(false);
+            Console.WriteLine($"HTML report: {args.HtmlReportPath}");
+            log.LogInformation("Wrote HTML report to {Path}", args.HtmlReportPath);
+        }
+
         return exitCode;
+    }
+
+    private static Dictionary<string, string> BuildVectorParameters(UniverseBacktestArgs args)
+    {
+        if (args.TradingLogic.Equals("Rsi5ExtremeSma200", StringComparison.OrdinalIgnoreCase)
+            || args.TradingLogic.Equals("Rsi5Extreme", StringComparison.OrdinalIgnoreCase))
+        {
+            return new Dictionary<string, string>
+            {
+                ["rsiExit"] = args.RsiExit.ToString(CultureInfo.InvariantCulture)
+            };
+        }
+
+        return new Dictionary<string, string>();
     }
 }

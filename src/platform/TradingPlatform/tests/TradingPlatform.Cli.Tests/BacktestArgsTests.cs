@@ -17,7 +17,7 @@ public sealed class BacktestArgsTests
         args.EnterBar.Should().Be(5);
         args.ExitBar.Should().Be(15);
         args.InitialCapital.Should().Be(10_000m);
-        args.FeeBpsPerSide.Should().Be(4m);
+        args.FeeBpsPerSide.Should().Be(5m);
         args.VectorRiskFraction.Should().Be(0.1m);
         args.Save.Should().BeFalse();
     }

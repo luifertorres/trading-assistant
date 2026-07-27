@@ -114,6 +114,7 @@ internal static class BacktestCommand
     private static bool IsSupportedTradingLogic(string logic) =>
         logic.Equals("FixedWindow", StringComparison.OrdinalIgnoreCase) ||
         logic.Equals("Rsi5Extreme", StringComparison.OrdinalIgnoreCase) ||
+        logic.Equals("Rsi5ExtremeSma200", StringComparison.OrdinalIgnoreCase) ||
         logic.Equals("Sma200Sma5", StringComparison.OrdinalIgnoreCase);
 
     private static TradingVector BuildVector(
@@ -122,15 +123,19 @@ internal static class BacktestCommand
         InstrumentId instrumentId,
         TimeFrameCode timeFrame)
     {
-        if (args.TradingLogic.Equals("Rsi5Extreme", StringComparison.OrdinalIgnoreCase))
+        if (args.TradingLogic.Equals("Rsi5Extreme", StringComparison.OrdinalIgnoreCase)
+            || args.TradingLogic.Equals("Rsi5ExtremeSma200", StringComparison.OrdinalIgnoreCase))
         {
+            var logicName = args.TradingLogic.Equals("Rsi5ExtremeSma200", StringComparison.OrdinalIgnoreCase)
+                ? "Rsi5ExtremeSma200"
+                : "Rsi5Extreme";
             return new TradingVector(
                 TradingVectorId.New(),
                 asset,
                 instrumentId,
                 timeFrame,
                 args.Direction,
-                "Rsi5Extreme",
+                logicName,
                 new Dictionary<string, string>
                 {
                     ["takeProfitPct"] = args.TakeProfitPct.ToString(System.Globalization.CultureInfo.InvariantCulture),
