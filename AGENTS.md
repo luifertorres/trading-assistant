@@ -12,7 +12,7 @@ Human documentation: [docs/README.md](docs/README.md).
 
 **Legacy reference:** [`src/legacy/TradingAssistant/`](src/legacy/TradingAssistant/) — frozen **single-project** live bot (maintenance only). Avoid growing it when the same capability belongs in TradingPlatform (see [`ai/context/refactor-ledger.md`](ai/context/refactor-ledger.md)).
 
-**MVP tooling:** [`src/mvp/Backtesting/`](src/mvp/Backtesting/) — isolated backtest CLI; [`src/mvp/WebSocketTrading/`](src/mvp/WebSocketTrading/) — live WS kline + SMA short worker (Binance.Net 13.1.1).
+**MVP tooling:** [`src/mvp/Backtesting/`](src/mvp/Backtesting/) — isolated backtest CLI; [`src/mvp/WebSocketTrading/`](src/mvp/WebSocketTrading/) — live WS kline + SMA short worker (Binance.Net 13.1.1); [`src/mvp/Portfolio/`](src/mvp/Portfolio/) — MAUI USDT line chart (ScottPlot).
 
 **Source tree index:** [`src/README.md`](src/README.md).
 
@@ -66,6 +66,7 @@ Isolated tooling under `src/mvp/`:
 
 - **Backtesting** — offline backtest CLI ([`Backtesting/README.md`](src/mvp/Backtesting/README.md))
 - **WebSocketTrading** — live Worker that streams klines and places orders via Binance WS API ([`WebSocketTrading/README.md`](src/mvp/WebSocketTrading/README.md)); uses Binance.Net **13.1.1** (MVP-only pin)
+- **Portfolio** — Windows MAUI chart MVP ([`Portfolio/README.md`](src/mvp/Portfolio/README.md)); ScottPlot.Maui; not Platform Portfolio context
 
 ## Key Conventions (Platform)
 
@@ -105,9 +106,12 @@ src/
     ├── Backtesting/
     │   ├── Backtesting.sln
     │   └── …                        → See Backtesting/README.md
-    └── WebSocketTrading/
-        ├── WebSocketTrading.slnx
-        └── …                        → See WebSocketTrading/README.md
+    ├── WebSocketTrading/
+    │   ├── WebSocketTrading.slnx
+    │   └── …                        → See WebSocketTrading/README.md
+    └── Portfolio/
+        ├── Portfolio.slnx
+        └── …                        → See Portfolio/README.md
 ```
 
 ## Technology Stack

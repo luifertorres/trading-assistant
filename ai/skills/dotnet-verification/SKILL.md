@@ -54,6 +54,7 @@ Run red, implement, run green. Full templates below.
 | Platform — MarketData Infrastructure | Integration | `src/platform/TradingPlatform/tests/MarketData.Infrastructure.IntegrationTests/` |
 | MVP Backtesting | Unit | `src/mvp/Backtesting/Backtesting.Mvp.Tests/` |
 | MVP WebSocketTrading | Unit | `src/mvp/WebSocketTrading/WebSocketTrading.Tests/` |
+| MVP Portfolio | Unit | `src/mvp/Portfolio/Portfolio.Tests/` |
 | Legacy | Unit (maintenance) | `src/legacy/TradingAssistant/CandlestickData.Tests/` if present |
 
 Run all Platform tests: `dotnet test src/platform/TradingPlatform/TradingPlatform.slnx`. Module-scoped: `dotnet test <path-to-csproj>`.
@@ -132,6 +133,13 @@ dotnet test src/mvp/Backtesting/Backtesting.Mvp.Tests/Backtesting.Mvp.Tests.cspr
 ```bash
 dotnet build src/mvp/WebSocketTrading/WebSocketTrading.slnx
 dotnet test src/mvp/WebSocketTrading/WebSocketTrading.Tests/WebSocketTrading.Tests.csproj
+```
+
+**Portfolio:**
+
+```bash
+dotnet build src/mvp/Portfolio/Portfolio.Maui/Portfolio.Maui.csproj -f net10.0-windows10.0.19041.0
+dotnet test src/mvp/Portfolio/Portfolio.Tests/Portfolio.Tests.csproj
 ```
 
 ## Related routing

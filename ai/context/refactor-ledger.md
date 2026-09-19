@@ -10,6 +10,7 @@ Single place to record **where new work should go** and what is frozen or legacy
 | `legacy` | `src/legacy/TradingAssistant/` | **Frozen** single-project live bot (reference / big-ball-of-mud). Restored from pre–Clean Architecture monolith; not layered. | **Maintenance and bugfixes only** unless explicitly asked to extend legacy. Do not add new cross-solution dependencies from Platform → legacy. |
 | `mvp` | `src/mvp/Backtesting/` | Isolated backtest MVP | Allowed Binance.Net usage per root `AGENTS.md`; keep isolated from main host. |
 | `mvp` | `src/mvp/WebSocketTrading/` | Live WS kline + SMA short worker | Binance.Net **13.1.1** (MVP-only pin); live orders, no dry-run; maintenance in MVP unless porting to Platform Execution. |
+| `mvp` | `src/mvp/Portfolio/` | MAUI USDT line chart | ScottPlot.Maui; isolated from Platform Portfolio context; Windows-first TFM. |
 
 ## Integration rules
 

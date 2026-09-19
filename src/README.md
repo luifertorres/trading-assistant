@@ -2,7 +2,7 @@
 
 Documentation index: [docs/README.md](../docs/README.md).
 
-Four .NET solutions live under categorized buckets. See [refactor-ledger](../ai/context/refactor-ledger.md) for where new work should go.
+Five .NET solutions live under categorized buckets. See [refactor-ledger](../ai/context/refactor-ledger.md) for where new work should go.
 
 | Bucket | Path | Role | Solution | Docs |
 |--------|------|------|----------|------|
@@ -10,6 +10,7 @@ Four .NET solutions live under categorized buckets. See [refactor-ledger](../ai/
 | **legacy** | [`legacy/TradingAssistant/`](legacy/TradingAssistant/) | Frozen single-project live bot (maintenance) | `TradingAssistant.sln` | [AGENTS](legacy/TradingAssistant/TradingAssistant/AGENTS.md) |
 | **mvp** | [`mvp/Backtesting/`](mvp/Backtesting/) | Isolated backtest MVP | `Backtesting.sln` | [README](mvp/Backtesting/README.md) |
 | **mvp** | [`mvp/WebSocketTrading/`](mvp/WebSocketTrading/) | Live WS kline + SMA short worker | `WebSocketTrading.slnx` | [README](mvp/WebSocketTrading/README.md) |
+| **mvp** | [`mvp/Portfolio/`](mvp/Portfolio/) | MAUI USDT line chart (Windows) | `Portfolio.slnx` | [README](mvp/Portfolio/README.md) |
 
 Agent routing defaults: [AGENTS.md](../AGENTS.md).
 
@@ -22,6 +23,7 @@ dotnet build src/platform/TradingPlatform/TradingPlatform.slnx
 dotnet build src/legacy/TradingAssistant/TradingAssistant.sln
 dotnet build src/mvp/Backtesting/Backtesting.sln
 dotnet build src/mvp/WebSocketTrading/WebSocketTrading.slnx
+dotnet build src/mvp/Portfolio/Portfolio.Maui/Portfolio.Maui.csproj -f net10.0-windows10.0.19041.0
 ```
 
 ## Test
@@ -30,6 +32,7 @@ dotnet build src/mvp/WebSocketTrading/WebSocketTrading.slnx
 dotnet test src/platform/TradingPlatform/TradingPlatform.slnx
 dotnet test src/mvp/Backtesting/Backtesting.sln
 dotnet test src/mvp/WebSocketTrading/WebSocketTrading.Tests/WebSocketTrading.Tests.csproj
+dotnet test src/mvp/Portfolio/Portfolio.Tests/Portfolio.Tests.csproj
 ```
 
 ## Run (common entry points)
@@ -62,6 +65,12 @@ dotnet run --project src/mvp/WebSocketTrading/WebSocketTrading.Worker/WebSocketT
 ```
 
 Local `dotnet run` sets `DOTNET_ENVIRONMENT=Development` → **1m** interval (`appsettings.Development.json`). Non-Development runs use the **1D** vector from `appsettings.json`.
+
+**Portfolio MVP (MAUI chart):**
+
+```bash
+dotnet run --project src/mvp/Portfolio/Portfolio.Maui/Portfolio.Maui.csproj -f net10.0-windows10.0.19041.0
+```
 
 ## EF migrations (legacy only)
 

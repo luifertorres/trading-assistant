@@ -42,6 +42,7 @@ triggers: [TDD, tdd, test first, red green refactor, strict TDD, write test befo
 | Platform — Infrastructure | `src/platform/TradingPlatform/tests/MarketData.Infrastructure.IntegrationTests/` | **After** unit green only |
 | MVP Backtesting | `src/mvp/Backtesting/Backtesting.Mvp.Tests/` | Backtesting MVP changes |
 | MVP WebSocketTrading | `src/mvp/WebSocketTrading/WebSocketTrading.Tests/` | WebSocketTrading MVP changes |
+| MVP Portfolio | `src/mvp/Portfolio/Portfolio.Tests/` | Portfolio chart lib (series, ticks, hover) |
 | Legacy | `src/legacy/TradingAssistant/` | Maintenance only; no new feature TDD unless explicit bugfix |
 
 Pick the project that references the layer you are changing.

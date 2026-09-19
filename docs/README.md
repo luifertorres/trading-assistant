@@ -6,7 +6,7 @@ Central index for human-facing documentation in this repository.
 
 Automated trading for **Binance Futures (USDT Perpetual)**: real-time market monitoring, technical signals, and order execution with integrated risk management.
 
-Four .NET solutions live under `src/`:
+Five .NET solutions live under `src/`:
 
 | Bucket | Path | Role |
 |--------|------|------|
@@ -14,6 +14,7 @@ Four .NET solutions live under `src/`:
 | **legacy** | [`src/legacy/TradingAssistant/`](../src/legacy/TradingAssistant/) | Frozen single-project live bot (maintenance) |
 | **mvp** | [`src/mvp/Backtesting/`](../src/mvp/Backtesting/) | Isolated backtest MVP |
 | **mvp** | [`src/mvp/WebSocketTrading/`](../src/mvp/WebSocketTrading/) | Live WS kline + SMA short worker (real orders) |
+| **mvp** | [`src/mvp/Portfolio/`](../src/mvp/Portfolio/) | MAUI USDT line chart (Windows) |
 
 Build, test, and run commands: [`src/README.md`](../src/README.md).
 
@@ -41,6 +42,10 @@ Build, test, and run commands: [`src/README.md`](../src/README.md).
 ## MVP WebSocketTrading
 
 [`src/mvp/WebSocketTrading/README.md`](../src/mvp/WebSocketTrading/README.md) — live Worker for the SMA200/SMA5 **1D short vector**; places market orders via Binance.Net Websocket API. **Real money** — no dry-run. Local Development runs use **1m** (`appsettings.Development.json`); base config is **1D**.
+
+## MVP Portfolio (MAUI chart)
+
+[`src/mvp/Portfolio/README.md`](../src/mvp/Portfolio/README.md) — isolated Windows MAUI app plotting daily UTC-5 / USDT values with ScottPlot; not the Platform Portfolio bounded context.
 
 ## Specifications (OpenSpec)
 

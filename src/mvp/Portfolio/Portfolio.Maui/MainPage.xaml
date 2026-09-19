@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:ScottPlot="clr-namespace:ScottPlot.Maui;assembly=ScottPlot.Maui"
+             x:Class="Portfolio.Maui.MainPage"
+             Title="Portfolio">
+
+    <Grid RowDefinitions="*,Auto" Padding="12">
+        <ScottPlot:MauiPlot x:Name="Chart" Grid.Row="0" />
+        <Label x:Name="HoverLabel"
+               Grid.Row="1"
+               Margin="0,8,0,0"
+               FontSize="14"
+               HorizontalTextAlignment="Center" />
+    </Grid>
+
+</ContentPage>
