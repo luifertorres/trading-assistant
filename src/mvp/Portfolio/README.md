@@ -16,8 +16,8 @@ Isolated **MAUI** app that plots a daily USDT line chart. This is an MVP under `
 
 ## Chart rules
 
-- **X:** UTC-5 midnight, `2020-08-01` .. `2026-09-19` inclusive; full daily walk is randomly subsampled to **100** points (first and last dates always kept).
-- **Y:** integer USDT `2000..5000`, seeded random per day.
+- **X:** UTC-5 midnight, one point per day from `2020-08-01` through `2026-09-19` inclusive.
+- **Y:** random walk — first day in `2000–5000` USDT; each next day changes by `previous × 0.05 × random(−1..1)` (±5% of the prior day).
 - **Axis quantum:** 1 day (X), 1 USDT (Y); ticks stride by whole days / whole USDT when dense.
 - **Hover:** nearest sample by X (no interpolated Y); label shows UTC-5 timestamp and USDT.
 

@@ -19,31 +19,41 @@ public sealed class UtcMinusFiveUsdtSeriesTests
     }
 
     [Fact]
-    public void Generate_HasTargetPointCount()
+    public void Generate_HasOnePointPerDayInInclusiveRange()
     {
-        UtcMinusFiveUsdtSeries.Generate().Should().HaveCount(UtcMinusFiveUsdtSeries.TargetPointCount);
+        UtcMinusFiveUsdtSeries.Generate().Should().HaveCount(UtcMinusFiveUsdtSeries.InclusiveDayCount);
     }
 
     [Fact]
-    public void Generate_XValues_AreStrictlyIncreasingByAtLeastOneDay()
+    public void Generate_XValues_IncreaseByExactlyOneDay()
+    {
+        var points = UtcMinusFiveUsdtSeries.Generate();
+
+        for (var i = 1; i < points.Count; i++)
+            (points[i].Time - points[i - 1].Time).Should().Be(TimeSpan.FromDays(1));
+    }
+
+    [Fact]
+    public void Generate_FirstDayY_IsIntegerInInitialRange()
+    {
+        var first = UtcMinusFiveUsdtSeries.Generate()[0];
+
+        first.Usdt.Should().BeGreaterThanOrEqualTo(UtcMinusFiveUsdtSeries.MinUsdt);
+        first.Usdt.Should().BeLessThanOrEqualTo(UtcMinusFiveUsdtSeries.MaxUsdt);
+    }
+
+    [Fact]
+    public void Generate_DailyChange_IsWithinFivePercentOfPreviousDay()
     {
         var points = UtcMinusFiveUsdtSeries.Generate();
 
         for (var i = 1; i < points.Count; i++)
         {
-            var delta = points[i].Time - points[i - 1].Time;
-            delta.Should().BeGreaterThanOrEqualTo(TimeSpan.FromDays(1));
-            (delta.TotalDays % 1).Should().Be(0);
-        }
-    }
+            var previous = points[i - 1].Usdt;
+            var current = points[i].Usdt;
+            var maxDelta = previous * 0.05;
 
-    [Fact]
-    public void Generate_YValues_AreIntegersIn2000To5000Inclusive()
-    {
-        foreach (var point in UtcMinusFiveUsdtSeries.Generate())
-        {
-            point.Usdt.Should().BeGreaterThanOrEqualTo(2000);
-            point.Usdt.Should().BeLessThanOrEqualTo(5000);
+            ((double)Math.Abs(current - previous)).Should().BeLessThanOrEqualTo(maxDelta + 1.0);
         }
     }
 

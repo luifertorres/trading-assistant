@@ -56,10 +56,9 @@ public partial class MainPage : ContentPage
             xManual.AddMajor(tick.DateTime, tick.ToString("yyyy-MM-dd"));
         Chart.Plot.Axes.Bottom.TickGenerator = xManual;
 
-        var yTicks = TickQuantizer.MajorY(
-            UtcMinusFiveUsdtSeries.MinUsdt,
-            UtcMinusFiveUsdtSeries.MaxUsdt,
-            maxTickCount: 8);
+        var yMin = _series.Min(p => p.Usdt);
+        var yMax = _series.Max(p => p.Usdt);
+        var yTicks = TickQuantizer.MajorY(yMin, yMax, maxTickCount: 8);
         var yManual = new NumericManual();
         foreach (var tick in yTicks)
             yManual.AddMajor(tick, tick.ToString());

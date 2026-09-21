@@ -9,35 +9,27 @@ public static class UtcMinusFiveUsdtSeries
     public const int MinUsdt = 2000;
     public const int MaxUsdt = 5000;
     public const int DefaultSeed = 42;
-    public const int TargetPointCount = 100;
+    public const double DailyChangeRate = 0.05;
+
+    public static int InclusiveDayCount => (int)(End - Start).TotalDays + 1;
 
     public static IReadOnlyList<UsdtPoint> Generate(int seed = DefaultSeed)
     {
         var random = new Random(seed);
-        var all = new List<UsdtPoint>();
+        var points = new List<UsdtPoint>(InclusiveDayCount);
+        var usdt = random.Next(MinUsdt, MaxUsdt + 1);
 
         for (var time = Start; time <= End; time = time.AddDays(1))
-            all.Add(new UsdtPoint(time, random.Next(MinUsdt, MaxUsdt + 1)));
+        {
+            points.Add(new UsdtPoint(time, usdt));
 
-        return Subsample(all, TargetPointCount, random);
-    }
+            if (time < End)
+            {
+                var factor = (random.NextDouble() * 2.0) - 1.0;
+                usdt = (int)Math.Round(usdt + usdt * DailyChangeRate * factor);
+            }
+        }
 
-    private static IReadOnlyList<UsdtPoint> Subsample(IReadOnlyList<UsdtPoint> all, int targetCount, Random random)
-    {
-        if (all.Count <= targetCount)
-            return all.ToList();
-
-        var interiorIndices = Enumerable
-            .Range(1, all.Count - 2)
-            .OrderBy(_ => random.Next())
-            .Take(targetCount - 2)
-            .OrderBy(i => i);
-
-        var selected = new List<UsdtPoint>(targetCount) { all[0] };
-        foreach (var index in interiorIndices)
-            selected.Add(all[index]);
-        selected.Add(all[^1]);
-
-        return selected;
+        return points;
     }
 }
