@@ -5,10 +5,62 @@
              x:Class="Portfolio.Maui.MainPage"
              Title="Portfolio">
 
-    <Grid RowDefinitions="*,Auto" Padding="12">
+    <Grid RowDefinitions="*,Auto,Auto" Padding="12">
         <ScottPlot:MauiPlot x:Name="Chart" Grid.Row="0" />
+
+        <HorizontalStackLayout x:Name="LegendRow"
+                             Grid.Row="1"
+                             Margin="0,8,0,0"
+                             HorizontalOptions="Center"
+                             Spacing="20">
+            <HorizontalStackLayout x:Name="LegendSeed42"
+                                   Spacing="6"
+                                   VerticalOptions="Center">
+                <HorizontalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnLegendSeed42Tapped" />
+                </HorizontalStackLayout.GestureRecognizers>
+                <BoxView WidthRequest="16"
+                         HeightRequest="4"
+                         VerticalOptions="Center"
+                         Color="#1E88E5" />
+                <Label Text="Seed 42"
+                       FontSize="14"
+                       VerticalOptions="Center" />
+            </HorizontalStackLayout>
+
+            <HorizontalStackLayout x:Name="LegendSeed7"
+                                   Spacing="6"
+                                   VerticalOptions="Center">
+                <HorizontalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnLegendSeed7Tapped" />
+                </HorizontalStackLayout.GestureRecognizers>
+                <BoxView WidthRequest="16"
+                         HeightRequest="4"
+                         VerticalOptions="Center"
+                         Color="#FB8C00" />
+                <Label Text="Seed 7"
+                       FontSize="14"
+                       VerticalOptions="Center" />
+            </HorizontalStackLayout>
+
+            <HorizontalStackLayout x:Name="LegendSum"
+                                   Spacing="6"
+                                   VerticalOptions="Center">
+                <HorizontalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnLegendSumTapped" />
+                </HorizontalStackLayout.GestureRecognizers>
+                <BoxView WidthRequest="16"
+                         HeightRequest="4"
+                         VerticalOptions="Center"
+                         Color="#43A047" />
+                <Label Text="Sum"
+                       FontSize="14"
+                       VerticalOptions="Center" />
+            </HorizontalStackLayout>
+        </HorizontalStackLayout>
+
         <Label x:Name="HoverLabel"
-               Grid.Row="1"
+               Grid.Row="2"
                Margin="0,8,0,0"
                FontSize="14"
                HorizontalTextAlignment="Center" />
