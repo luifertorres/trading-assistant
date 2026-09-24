@@ -33,27 +33,57 @@ public sealed class UtcMinusFiveUsdtSeriesTests
             (points[i].Time - points[i - 1].Time).Should().Be(TimeSpan.FromDays(1));
     }
 
-    [Fact]
-    public void Generate_FirstDayY_IsIntegerInInitialRange()
+    [Theory]
+    [InlineData(1)]
+    [InlineData(42)]
+    [InlineData(99)]
+    public void Generate_FirstDayY_IsIntegerInInitialRange(int seed)
     {
-        var first = UtcMinusFiveUsdtSeries.Generate()[0];
+        var first = UtcMinusFiveUsdtSeries.Generate(seed)[0];
 
-        first.Usdt.Should().BeGreaterThanOrEqualTo(UtcMinusFiveUsdtSeries.MinUsdt);
-        first.Usdt.Should().BeLessThanOrEqualTo(UtcMinusFiveUsdtSeries.MaxUsdt);
+        first.Usdt.Should().BeGreaterThanOrEqualTo(3000);
+        first.Usdt.Should().BeLessThanOrEqualTo(5000);
     }
 
-    [Fact]
-    public void Generate_DailyChange_IsWithinFivePercentOfPreviousDay()
+    [Theory]
+    [InlineData(1)]
+    [InlineData(42)]
+    [InlineData(99)]
+    public void Generate_DailyChange_IsWithinOnePercentOfPreviousDay(int seed)
     {
-        var points = UtcMinusFiveUsdtSeries.Generate();
+        var points = UtcMinusFiveUsdtSeries.Generate(seed);
 
         for (var i = 1; i < points.Count; i++)
         {
             var previous = points[i - 1].Usdt;
             var current = points[i].Usdt;
-            var maxDelta = previous * 0.05;
+            var maxDelta = previous * 0.01;
 
             ((double)Math.Abs(current - previous)).Should().BeLessThanOrEqualTo(maxDelta + 1.0);
+        }
+    }
+
+    [Fact]
+    public void Sum_AddsUsdtOnMatchingDays()
+    {
+        var left = UtcMinusFiveUsdtSeries.Generate(1);
+        var right = UtcMinusFiveUsdtSeries.Generate(2);
+        var summed = UtcMinusFiveUsdtSeries.Sum(left, right);
+
+        summed.Should().HaveCount(left.Count);
+        for (var i = 0; i < summed.Count; i++)
+        {
+            summed[i].Time.Should().Be(left[i].Time);
+            summed[i].Usdt.Should().Be(left[i].Usdt + right[i].Usdt);
+        }
+
+        for (var i = 1; i < summed.Count; i++)
+        {
+            var previous = summed[i - 1].Usdt;
+            var current = summed[i].Usdt;
+            var maxDelta = previous * 0.01;
+
+            ((double)Math.Abs(current - previous)).Should().BeLessThanOrEqualTo(maxDelta + 2.0);
         }
     }
 

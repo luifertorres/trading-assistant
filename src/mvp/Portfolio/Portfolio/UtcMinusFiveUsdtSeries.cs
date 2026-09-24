@@ -6,10 +6,11 @@ public static class UtcMinusFiveUsdtSeries
     public static readonly DateTimeOffset Start = new(2020, 8, 1, 0, 0, 0, Offset);
     public static readonly DateTimeOffset End = new(2026, 9, 19, 0, 0, 0, Offset);
 
-    public const int MinUsdt = 2000;
+    public const int MinUsdt = 3000;
     public const int MaxUsdt = 5000;
     public const int DefaultSeed = 42;
-    public const double DailyChangeRate = 0.05;
+    public const int SecondSeed = 7;
+    public const double DailyChangeRate = 0.01;
 
     public static int InclusiveDayCount => (int)(End - Start).TotalDays + 1;
 
@@ -31,5 +32,24 @@ public static class UtcMinusFiveUsdtSeries
         }
 
         return points;
+    }
+
+    public static IReadOnlyList<UsdtPoint> Sum(
+        IReadOnlyList<UsdtPoint> left,
+        IReadOnlyList<UsdtPoint> right)
+    {
+        if (left.Count != right.Count)
+            throw new ArgumentException("Series must have the same length.");
+
+        var summed = new List<UsdtPoint>(left.Count);
+        for (var i = 0; i < left.Count; i++)
+        {
+            if (left[i].Time != right[i].Time)
+                throw new ArgumentException("Series must have matching timestamps.");
+
+            summed.Add(new UsdtPoint(left[i].Time, left[i].Usdt + right[i].Usdt));
+        }
+
+        return summed;
     }
 }

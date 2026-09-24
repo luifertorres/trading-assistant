@@ -12,7 +12,9 @@ public partial class MainPage : ContentPage
     public MainPage()
     {
         InitializeComponent();
-        _series = UtcMinusFiveUsdtSeries.Generate();
+        _series = UtcMinusFiveUsdtSeries.Sum(
+            UtcMinusFiveUsdtSeries.Generate(UtcMinusFiveUsdtSeries.DefaultSeed),
+            UtcMinusFiveUsdtSeries.Generate(UtcMinusFiveUsdtSeries.SecondSeed));
     }
 
     protected override void OnAppearing()
