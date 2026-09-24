@@ -8,11 +8,15 @@ public partial class MainPage : ContentPage
 {
     private const double HiddenLegendOpacity = 0.4;
 
+    private const double CorrelationPanelHeight = 160;
+
     private readonly IReadOnlyList<UsdtPoint> _seed42Series;
     private readonly IReadOnlyList<UsdtPoint> _seed7Series;
     private readonly IReadOnlyList<UsdtPoint> _sumSeries;
+    private readonly IReadOnlyList<CorrelationPoint> _correlationSeries;
     private readonly ChartLegendSelection _legendSelection = new();
     private readonly Dictionary<ChartLegendId, Scatter> _scatters = new();
+    private Scatter? _correlationScatter;
     private Crosshair? _crosshair;
 
     public MainPage()
@@ -21,6 +25,7 @@ public partial class MainPage : ContentPage
         _seed42Series = UtcMinusFiveUsdtSeries.Generate(UtcMinusFiveUsdtSeries.DefaultSeed);
         _seed7Series = UtcMinusFiveUsdtSeries.Generate(UtcMinusFiveUsdtSeries.SecondSeed);
         _sumSeries = UtcMinusFiveUsdtSeries.Sum(_seed42Series, _seed7Series);
+        _correlationSeries = SeriesCorrelation.RollingLogReturnPearson(_seed42Series, _seed7Series);
     }
 
     protected override void OnAppearing()
@@ -34,12 +39,18 @@ public partial class MainPage : ContentPage
 
     private void BuildChart()
     {
-        _scatters[ChartLegendId.Seed42] = AddSeries(_seed42Series, ScottPlot.Colors.Blue);
-        _scatters[ChartLegendId.Seed7] = AddSeries(_seed7Series, ScottPlot.Colors.Orange);
-        _scatters[ChartLegendId.Sum] = AddSeries(_sumSeries, ScottPlot.Colors.Green);
+        _scatters[ChartLegendId.Seed42] = AddSeries(Chart.Plot, _seed42Series, ScottPlot.Colors.Blue);
+        _scatters[ChartLegendId.Seed7] = AddSeries(Chart.Plot, _seed7Series, ScottPlot.Colors.Orange);
+        _scatters[ChartLegendId.Sum] = AddSeries(Chart.Plot, _sumSeries, ScottPlot.Colors.Green);
 
         Chart.Plot.Axes.Bottom.Label.Text = "UTC-5";
         Chart.Plot.Axes.Left.Label.Text = "USDT";
+
+        _correlationScatter = AddCorrelationSeries(CorrelationChart.Plot, _correlationSeries);
+        CorrelationChart.Plot.Axes.Bottom.Label.Text = "UTC-5";
+        CorrelationChart.Plot.Axes.Left.Label.Text = "Correlation";
+        CorrelationChart.Plot.Axes.SetLimitsY(-1, 1);
+
         ApplyCustomTicks();
         ApplyLegendState();
 
@@ -53,14 +64,25 @@ public partial class MainPage : ContentPage
         Chart.GestureRecognizers.Add(gesture);
     }
 
-    private Scatter AddSeries(IReadOnlyList<UsdtPoint> series, ScottPlot.Color color)
+    private static Scatter AddSeries(Plot plot, IReadOnlyList<UsdtPoint> series, ScottPlot.Color color)
     {
         var xs = series.Select(p => p.Time.DateTime).ToArray();
         var ys = series.Select(p => (double)p.Usdt).ToArray();
-        var scatter = Chart.Plot.Add.Scatter(xs, ys);
+        var scatter = plot.Add.Scatter(xs, ys);
         scatter.MarkerSize = 0;
         scatter.LineWidth = 2;
         scatter.Color = color;
+        return scatter;
+    }
+
+    private static Scatter AddCorrelationSeries(Plot plot, IReadOnlyList<CorrelationPoint> series)
+    {
+        var xs = series.Select(p => p.Time.DateTime).ToArray();
+        var ys = series.Select(p => p.Correlation).ToArray();
+        var scatter = plot.Add.Scatter(xs, ys);
+        scatter.MarkerSize = 0;
+        scatter.LineWidth = 2;
+        scatter.Color = ScottPlot.Colors.Purple;
         return scatter;
     }
 
@@ -80,6 +102,7 @@ public partial class MainPage : ContentPage
 
         ApplyLegendState();
         Chart.Refresh();
+        CorrelationChart.Refresh();
     }
 
     private void ApplyLegendState()
@@ -93,8 +116,20 @@ public partial class MainPage : ContentPage
         UpdateLegendOpacity(LegendSeed7, ChartLegendId.Seed7);
         UpdateLegendOpacity(LegendSum, ChartLegendId.Sum);
 
+        var showCorrelation = _legendSelection.ShowCorrelation;
+        CorrelationChart.IsVisible = showCorrelation;
+        CorrelationChart.HeightRequest = showCorrelation ? CorrelationPanelHeight : 0;
+        if (_correlationScatter is not null)
+            _correlationScatter.IsVisible = showCorrelation;
+
         ApplyCustomTicks();
         Chart.Plot.Axes.AutoScale();
+
+        if (showCorrelation)
+        {
+            CorrelationChart.Plot.Axes.SetLimitsY(-1, 1);
+            CorrelationChart.Plot.Axes.AutoScaleX();
+        }
     }
 
     private void UpdateLegendOpacity(VisualElement legendItem, ChartLegendId id)
@@ -109,6 +144,7 @@ public partial class MainPage : ContentPage
         foreach (var tick in xTicks)
             xManual.AddMajor(tick.DateTime, tick.ToString("yyyy-MM-dd"));
         Chart.Plot.Axes.Bottom.TickGenerator = xManual;
+        CorrelationChart.Plot.Axes.Bottom.TickGenerator = xManual;
 
         var plottedPoints = GetPlottedPoints();
         var yMin = plottedPoints.Min(p => p.Usdt);
@@ -156,11 +192,38 @@ public partial class MainPage : ContentPage
             .Select(id => LineHover.Format(LineHover.NearestByX(GetSeries(id), x)))
             .ToArray();
 
-        HoverLabel.Text = string.Join(" | ", labels);
+        var hoverText = string.Join(" | ", labels);
+        if (_legendSelection.ShowCorrelation && _correlationSeries.Count > 0)
+        {
+            var nearestCorrelation = NearestCorrelationByX(_correlationSeries, x);
+            hoverText += $" | r = {nearestCorrelation.Correlation:F3}";
+        }
+
+        HoverLabel.Text = hoverText;
 
         var anchor = LineHover.NearestByX(GetSeries(plotted[0]), x);
         _crosshair.IsVisible = true;
         _crosshair.Position = new Coordinates(anchor.Time.DateTime.ToOADate(), anchor.Usdt);
         Chart.Refresh();
+    }
+
+    private static CorrelationPoint NearestCorrelationByX(
+        IReadOnlyList<CorrelationPoint> series,
+        DateTimeOffset x)
+    {
+        var nearest = series[0];
+        var best = Math.Abs((series[0].Time - x).Ticks);
+
+        foreach (var point in series)
+        {
+            var distance = Math.Abs((point.Time - x).Ticks);
+            if (distance < best)
+            {
+                best = distance;
+                nearest = point;
+            }
+        }
+
+        return nearest;
     }
 }

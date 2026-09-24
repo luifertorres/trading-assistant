@@ -86,4 +86,31 @@ public sealed class ChartLegendSelectionTests
         selection.Plotted.Should().Equal(ChartLegendId.Sum);
         selection.IsEnabled(ChartLegendId.Sum).Should().BeTrue();
     }
+
+    [Fact]
+    public void ShowCorrelation_DefaultIsFalseWhenSumPlotted()
+    {
+        var selection = new ChartLegendSelection();
+
+        selection.ShowCorrelation.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ShowCorrelation_TrueWhenBothWalksPlotted()
+    {
+        var selection = new ChartLegendSelection();
+        selection.TryToggle(ChartLegendId.Sum);
+
+        selection.ShowCorrelation.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ShowCorrelation_FalseWhenOnlyOneWalkPlotted()
+    {
+        var selection = new ChartLegendSelection();
+        selection.TryToggle(ChartLegendId.Sum);
+        selection.TryToggle(ChartLegendId.Seed42);
+
+        selection.ShowCorrelation.Should().BeFalse();
+    }
 }

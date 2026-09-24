@@ -38,6 +38,18 @@ public sealed class ChartLegendSelection
         }
     }
 
+    public bool ShowCorrelation
+    {
+        get
+        {
+            if (_sumEnabled)
+                return false;
+
+            var individualCount = (_seed42Enabled ? 1 : 0) + (_seed7Enabled ? 1 : 0);
+            return individualCount > 1;
+        }
+    }
+
     public bool TryToggle(ChartLegendId id)
     {
         return id switch
