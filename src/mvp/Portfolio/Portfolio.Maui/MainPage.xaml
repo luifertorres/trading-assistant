@@ -5,16 +5,14 @@
              x:Class="Portfolio.Maui.MainPage"
              Title="Portfolio">
 
-    <Grid RowDefinitions="*,Auto,Auto,Auto" Padding="12">
-        <ScottPlot:MauiPlot x:Name="Chart" Grid.Row="0" />
-
-        <ScottPlot:MauiPlot x:Name="CorrelationChart"
-                            Grid.Row="1"
-                            HeightRequest="160"
-                            IsVisible="False" />
+    <Grid RowDefinitions="*,Auto,Auto" Padding="12">
+        <ScottPlot:MauiPlot x:Name="Chart"
+                            Grid.Row="0"
+                            HorizontalOptions="Fill"
+                            VerticalOptions="Fill" />
 
         <HorizontalStackLayout x:Name="LegendRow"
-                             Grid.Row="2"
+                             Grid.Row="1"
                              Margin="0,8,0,0"
                              HorizontalOptions="Center"
                              Spacing="20">
@@ -65,7 +63,7 @@
         </HorizontalStackLayout>
 
         <Label x:Name="HoverLabel"
-               Grid.Row="3"
+               Grid.Row="2"
                Margin="0,8,0,0"
                FontSize="14"
                HorizontalTextAlignment="Center" />

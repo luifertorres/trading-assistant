@@ -1,4 +1,5 @@
 ﻿using ScottPlot;
+using ScottPlot.MultiplotLayouts;
 using ScottPlot.Plottables;
 using ScottPlot.TickGenerators;
 
@@ -8,7 +9,11 @@ public partial class MainPage : ContentPage
 {
     private const double HiddenLegendOpacity = 0.4;
 
-    private const double CorrelationPanelHeight = 160;
+    private const float CorrelationPanelHeightLogical = 160;
+
+    private static readonly FixedBottomRowLayout CorrelationLayout = new(CorrelationPanelHeightLogical);
+
+    private static float _displayDensity = 1;
 
     private readonly IReadOnlyList<UsdtPoint> _seed42Series;
     private readonly IReadOnlyList<UsdtPoint> _seed7Series;
@@ -16,6 +21,7 @@ public partial class MainPage : ContentPage
     private readonly IReadOnlyList<CorrelationPoint> _correlationSeries;
     private readonly ChartLegendSelection _legendSelection = new();
     private readonly Dictionary<ChartLegendId, Scatter> _scatters = new();
+    private Plot? _correlationPlot;
     private Scatter? _correlationScatter;
     private Crosshair? _crosshair;
 
@@ -31,25 +37,46 @@ public partial class MainPage : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
+        RefreshDisplayDensity();
+        DeviceDisplay.MainDisplayInfoChanged += OnMainDisplayInfoChanged;
+
         if (_crosshair is not null)
             return;
 
         BuildChart();
     }
 
+    protected override void OnDisappearing()
+    {
+        DeviceDisplay.MainDisplayInfoChanged -= OnMainDisplayInfoChanged;
+        base.OnDisappearing();
+    }
+
+    private void OnMainDisplayInfoChanged(object? sender, DisplayInfoChangedEventArgs e)
+    {
+        RefreshDisplayDensity();
+        if (_crosshair is null)
+            return;
+
+        Chart.Refresh();
+    }
+
+    private static void RefreshDisplayDensity()
+    {
+        var density = (float)DeviceDisplay.MainDisplayInfo.Density;
+        _displayDensity = density > 0 ? density : 1;
+    }
+
     private void BuildChart()
     {
+        ConfigureDevicePixelRendering(Chart, Chart.Plot);
+
         _scatters[ChartLegendId.Seed42] = AddSeries(Chart.Plot, _seed42Series, ScottPlot.Colors.Blue);
         _scatters[ChartLegendId.Seed7] = AddSeries(Chart.Plot, _seed7Series, ScottPlot.Colors.Orange);
         _scatters[ChartLegendId.Sum] = AddSeries(Chart.Plot, _sumSeries, ScottPlot.Colors.Green);
 
         Chart.Plot.Axes.Bottom.Label.Text = "UTC-5";
         Chart.Plot.Axes.Left.Label.Text = "USDT";
-
-        _correlationScatter = AddCorrelationSeries(CorrelationChart.Plot, _correlationSeries);
-        CorrelationChart.Plot.Axes.Bottom.Label.Text = "UTC-5";
-        CorrelationChart.Plot.Axes.Left.Label.Text = "Correlation";
-        CorrelationChart.Plot.Axes.SetLimitsY(-1, 1);
 
         ApplyCustomTicks();
         ApplyLegendState();
@@ -63,6 +90,15 @@ public partial class MainPage : ContentPage
         gesture.PointerMoved += OnPointerMoved;
         Chart.GestureRecognizers.Add(gesture);
     }
+
+    private static void ConfigureDevicePixelRendering(ScottPlot.Maui.MauiPlot chart, Plot plot)
+    {
+        chart.IgnorePixelScaling = false;
+        chart.DisplayScale = 1;
+        plot.ScaleFactor = 1;
+    }
+
+    private static float DisplayDensity() => _displayDensity;
 
     private static Scatter AddSeries(Plot plot, IReadOnlyList<UsdtPoint> series, ScottPlot.Color color)
     {
@@ -102,7 +138,6 @@ public partial class MainPage : ContentPage
 
         ApplyLegendState();
         Chart.Refresh();
-        CorrelationChart.Refresh();
     }
 
     private void ApplyLegendState()
@@ -117,18 +152,98 @@ public partial class MainPage : ContentPage
         UpdateLegendOpacity(LegendSum, ChartLegendId.Sum);
 
         var showCorrelation = _legendSelection.ShowCorrelation;
-        CorrelationChart.IsVisible = showCorrelation;
-        CorrelationChart.HeightRequest = showCorrelation ? CorrelationPanelHeight : 0;
-        if (_correlationScatter is not null)
-            _correlationScatter.IsVisible = showCorrelation;
+        if (showCorrelation)
+            EnsureCorrelationPanel();
+        else
+            RemoveCorrelationPanel();
 
         ApplyCustomTicks();
         Chart.Plot.Axes.AutoScale();
+        ApplyMainAxisPadding();
 
-        if (showCorrelation)
+        if (showCorrelation && _correlationPlot is not null)
         {
-            CorrelationChart.Plot.Axes.SetLimitsY(-1, 1);
-            CorrelationChart.Plot.Axes.AutoScaleX();
+            _correlationPlot.Axes.SetLimitsY(-1, 1);
+            _correlationPlot.Axes.AutoScaleX();
+        }
+    }
+
+    private void EnsureCorrelationPanel()
+    {
+        if (_correlationPlot is not null)
+        {
+            if (_correlationScatter is not null)
+                _correlationScatter.IsVisible = true;
+
+            Chart.Plot.Axes.Bottom.IsVisible = false;
+            _correlationPlot.Axes.Bottom.IsVisible = true;
+            return;
+        }
+
+        _correlationPlot = Chart.Multiplot.AddPlot();
+        ConfigureDevicePixelRendering(Chart, _correlationPlot);
+        _correlationScatter = AddCorrelationSeries(_correlationPlot, _correlationSeries);
+        _correlationPlot.Axes.Bottom.Label.Text = "UTC-5";
+        _correlationPlot.Axes.Left.Label.Text = "Correlation";
+        _correlationPlot.Axes.SetLimitsY(-1, 1);
+
+        Chart.Multiplot.Layout = CorrelationLayout;
+        Chart.Multiplot.SharedAxes.ShareX([Chart.Plot, _correlationPlot]);
+        Chart.Multiplot.CollapseVertically();
+
+        Chart.Plot.Axes.Bottom.IsVisible = false;
+        _correlationPlot.Axes.Bottom.IsVisible = true;
+    }
+
+    private void RemoveCorrelationPanel()
+    {
+        if (_correlationPlot is null)
+        {
+            Chart.Plot.Axes.Bottom.IsVisible = true;
+            return;
+        }
+
+        Chart.Multiplot.RemovePlot(_correlationPlot);
+        Chart.Multiplot.SharedAxes.ShareX([]);
+        Chart.Multiplot.Layout = new Rows();
+
+        _correlationPlot = null;
+        _correlationScatter = null;
+
+        Chart.Plot.Axes.Bottom.IsVisible = true;
+    }
+
+    private void ApplyMainAxisPadding()
+    {
+        var limits = Chart.Plot.Axes.GetLimits();
+        var span = limits.Top - limits.Bottom;
+        if (span <= 0)
+            return;
+
+        var pad = span * 0.05;
+        Chart.Plot.Axes.SetLimitsY(limits.Bottom - pad, limits.Top + pad);
+    }
+
+    private sealed class FixedBottomRowLayout(float bottomPlotHeightLogical) : IMultiplotLayout
+    {
+        public PixelRect[] GetSubplotRectangles(SubplotCollection subplots, PixelRect figureRect)
+        {
+            var rectangles = new PixelRect[subplots.Count];
+
+            if (subplots.Count == 1)
+            {
+                rectangles[0] = figureRect;
+                return rectangles;
+            }
+
+            var density = DisplayDensity();
+            var bottomHeight = Math.Min(bottomPlotHeightLogical * density, figureRect.Height * 0.4f);
+            var splitY = figureRect.Bottom - bottomHeight;
+
+            rectangles[0] = new PixelRect(figureRect.Left, figureRect.Right, splitY, figureRect.Top);
+            rectangles[1] = new PixelRect(figureRect.Left, figureRect.Right, figureRect.Bottom, splitY);
+
+            return rectangles;
         }
     }
 
@@ -143,8 +258,10 @@ public partial class MainPage : ContentPage
         var xManual = new DateTimeManual();
         foreach (var tick in xTicks)
             xManual.AddMajor(tick.DateTime, tick.ToString("yyyy-MM-dd"));
+
         Chart.Plot.Axes.Bottom.TickGenerator = xManual;
-        CorrelationChart.Plot.Axes.Bottom.TickGenerator = xManual;
+        if (_correlationPlot is not null)
+            _correlationPlot.Axes.Bottom.TickGenerator = xManual;
 
         var plottedPoints = GetPlottedPoints();
         var yMin = plottedPoints.Min(p => p.Usdt);
@@ -182,7 +299,11 @@ public partial class MainPage : ContentPage
         if (position is null)
             return;
 
-        var coords = Chart.Plot.GetCoordinates((float)position.Value.X, (float)position.Value.Y);
+        RefreshDisplayDensity();
+        var density = DisplayDensity();
+        var coords = Chart.Plot.GetCoordinates(
+            (float)(position.Value.X * density),
+            (float)(position.Value.Y * density));
         var x = new DateTimeOffset(DateTime.FromOADate(coords.X), UtcMinusFiveUsdtSeries.Offset);
         var plotted = _legendSelection.Plotted;
         if (plotted.Count == 0)
