@@ -211,6 +211,7 @@ public partial class MainPage : ContentPage
         _correlationScatter = null;
 
         Chart.Plot.Axes.Bottom.IsVisible = true;
+        Chart.Plot.Axes.Bottom.ResetSize();
     }
 
     private void ApplyMainAxisPadding()
