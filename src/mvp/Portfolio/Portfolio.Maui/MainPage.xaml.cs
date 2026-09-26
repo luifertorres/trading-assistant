@@ -24,6 +24,8 @@ public partial class MainPage : ContentPage
     private Plot? _correlationPlot;
     private Scatter? _correlationScatter;
     private Crosshair? _crosshair;
+    private Crosshair? _correlationCrosshair;
+    private bool _axisAlignmentRefreshInProgress;
 
     public MainPage()
     {
@@ -162,10 +164,9 @@ public partial class MainPage : ContentPage
         ApplyMainAxisPadding();
 
         if (showCorrelation && _correlationPlot is not null)
-        {
             _correlationPlot.Axes.SetLimitsY(-1, 1);
-            _correlationPlot.Axes.AutoScaleX();
-        }
+
+        ResetMultiplotAxisPanelSizes();
     }
 
     private void EnsureCorrelationPanel()
@@ -193,6 +194,11 @@ public partial class MainPage : ContentPage
 
         Chart.Plot.Axes.Bottom.IsVisible = false;
         _correlationPlot.Axes.Bottom.IsVisible = true;
+
+        _correlationCrosshair = _correlationPlot.Add.Crosshair(0, 0);
+        _correlationCrosshair.IsVisible = false;
+
+        AttachGrowingAxisAlignment();
     }
 
     private void RemoveCorrelationPanel()
@@ -203,15 +209,78 @@ public partial class MainPage : ContentPage
             return;
         }
 
+        DetachGrowingAxisAlignment();
+
         Chart.Multiplot.RemovePlot(_correlationPlot);
         Chart.Multiplot.SharedAxes.ShareX([]);
         Chart.Multiplot.Layout = new Rows();
 
         _correlationPlot = null;
         _correlationScatter = null;
+        _correlationCrosshair = null;
 
         Chart.Plot.Axes.Bottom.IsVisible = true;
         Chart.Plot.Axes.Bottom.ResetSize();
+        ResetMultiplotAxisPanelSizes();
+    }
+
+    private void AttachGrowingAxisAlignment()
+    {
+        Chart.Plot.RenderManager.RenderFinished += OnSubplotRenderFinished;
+        if (_correlationPlot is not null)
+            _correlationPlot.RenderManager.RenderFinished += OnSubplotRenderFinished;
+    }
+
+    private void DetachGrowingAxisAlignment()
+    {
+        Chart.Plot.RenderManager.RenderFinished -= OnSubplotRenderFinished;
+        if (_correlationPlot is not null)
+            _correlationPlot.RenderManager.RenderFinished -= OnSubplotRenderFinished;
+    }
+
+    private void OnSubplotRenderFinished(object? sender, RenderDetails rd)
+    {
+        if (_correlationPlot is null || sender is not Plot sourcePlot)
+            return;
+
+        var leftSize = rd.Layout.PanelSizes[sourcePlot.Axes.Left];
+        var rightSize = rd.Layout.PanelSizes[sourcePlot.Axes.Right];
+
+        var plots = Chart.Multiplot.GetPlots();
+        var targetLeft = plots.Max(p => Math.Max(p.Axes.Left.MinimumSize, leftSize));
+        var targetRight = plots.Max(p => Math.Max(p.Axes.Right.MinimumSize, rightSize));
+
+        var changed = false;
+        foreach (var plot in plots)
+        {
+            if (plot.Axes.Left.MinimumSize < targetLeft)
+            {
+                plot.Axes.Left.MinimumSize = targetLeft;
+                changed = true;
+            }
+
+            if (plot.Axes.Right.MinimumSize < targetRight)
+            {
+                plot.Axes.Right.MinimumSize = targetRight;
+                changed = true;
+            }
+        }
+
+        if (!changed || _axisAlignmentRefreshInProgress)
+            return;
+
+        _axisAlignmentRefreshInProgress = true;
+        Chart.Refresh();
+        _axisAlignmentRefreshInProgress = false;
+    }
+
+    private void ResetMultiplotAxisPanelSizes()
+    {
+        foreach (var plot in Chart.Multiplot.GetPlots())
+        {
+            plot.Axes.Left.ResetSize();
+            plot.Axes.Right.ResetSize();
+        }
     }
 
     private void ApplyMainAxisPadding()
@@ -302,9 +371,12 @@ public partial class MainPage : ContentPage
 
         RefreshDisplayDensity();
         var density = DisplayDensity();
-        var coords = Chart.Plot.GetCoordinates(
+        var pixel = new Pixel(
             (float)(position.Value.X * density),
             (float)(position.Value.Y * density));
+
+        var plotUnderMouse = Chart.Multiplot.GetPlotAtPixel(pixel) ?? Chart.Plot;
+        var coords = plotUnderMouse.GetCoordinates(pixel);
         var x = new DateTimeOffset(DateTime.FromOADate(coords.X), UtcMinusFiveUsdtSeries.Offset);
         var plotted = _legendSelection.Plotted;
         if (plotted.Count == 0)
@@ -324,8 +396,43 @@ public partial class MainPage : ContentPage
         HoverLabel.Text = hoverText;
 
         var anchor = LineHover.NearestByX(GetSeries(plotted[0]), x);
+        var snappedX = anchor.Time.DateTime.ToOADate();
+
         _crosshair.IsVisible = true;
-        _crosshair.Position = new Coordinates(anchor.Time.DateTime.ToOADate(), anchor.Usdt);
+        var showCorrelationPanel = _correlationCrosshair is not null && _legendSelection.ShowCorrelation;
+
+        if (!showCorrelationPanel)
+        {
+            _crosshair.HorizontalLine.IsVisible = true;
+            _crosshair.VerticalLine.IsVisible = true;
+            _crosshair.Position = new Coordinates(snappedX, anchor.Usdt);
+            Chart.Refresh();
+            return;
+        }
+
+        _crosshair.VerticalLine.IsVisible = true;
+        _correlationCrosshair!.VerticalLine.IsVisible = true;
+
+        if (plotUnderMouse == _correlationPlot)
+        {
+            var nearestCorrelation = NearestCorrelationByX(_correlationSeries, anchor.Time);
+            _correlationCrosshair.HorizontalLine.IsVisible = true;
+            _correlationCrosshair.Position = new Coordinates(snappedX, nearestCorrelation.Correlation);
+
+            _crosshair.HorizontalLine.IsVisible = false;
+            _crosshair.Position = new Coordinates(snappedX, anchor.Usdt);
+        }
+        else
+        {
+            _crosshair.HorizontalLine.IsVisible = true;
+            _crosshair.Position = new Coordinates(snappedX, anchor.Usdt);
+
+            var nearestCorrelation = NearestCorrelationByX(_correlationSeries, anchor.Time);
+            _correlationCrosshair.HorizontalLine.IsVisible = false;
+            _correlationCrosshair.Position = new Coordinates(snappedX, nearestCorrelation.Correlation);
+        }
+
+        _correlationCrosshair.IsVisible = true;
         Chart.Refresh();
     }
 
