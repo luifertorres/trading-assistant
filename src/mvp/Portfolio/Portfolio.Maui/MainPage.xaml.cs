@@ -233,9 +233,17 @@ public partial class MainPage : ContentPage
 
     private void DetachGrowingAxisAlignment()
     {
-        Chart.Plot.RenderManager.RenderFinished -= OnSubplotRenderFinished;
+        UnsubscribeRenderFinished(Chart.Plot);
         if (_correlationPlot is not null)
-            _correlationPlot.RenderManager.RenderFinished -= OnSubplotRenderFinished;
+            UnsubscribeRenderFinished(_correlationPlot);
+    }
+
+    private void UnsubscribeRenderFinished(Plot plot)
+    {
+        var remaining = Delegate.Remove(
+            plot.RenderManager.RenderFinished,
+            (EventHandler<RenderDetails>)OnSubplotRenderFinished);
+        plot.RenderManager.RenderFinished = remaining as EventHandler<RenderDetails> ?? delegate { };
     }
 
     private void OnSubplotRenderFinished(object? sender, RenderDetails rd)
