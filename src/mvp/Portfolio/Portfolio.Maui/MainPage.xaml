@@ -5,14 +5,37 @@
              x:Class="Portfolio.Maui.MainPage"
              Title="Portfolio">
 
-    <Grid RowDefinitions="*,Auto,Auto" Padding="12">
+    <Grid RowDefinitions="*,Auto,Auto,Auto" Padding="12">
         <ScottPlot:MauiPlot x:Name="Chart"
                             Grid.Row="0"
                             HorizontalOptions="Fill"
                             VerticalOptions="Fill" />
 
-        <HorizontalStackLayout x:Name="LegendRow"
+        <HorizontalStackLayout x:Name="ScenarioRow"
                              Grid.Row="1"
+                             Margin="0,8,0,0"
+                             HorizontalOptions="Center"
+                             Spacing="24">
+            <Label x:Name="ScenarioNegativeGrowth"
+                   Text="Negative growth"
+                   FontSize="14"
+                   VerticalOptions="Center">
+                <Label.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnScenarioNegativeGrowthTapped" />
+                </Label.GestureRecognizers>
+            </Label>
+            <Label x:Name="ScenarioPositiveBias"
+                   Text="Positive bias"
+                   FontSize="14"
+                   VerticalOptions="Center">
+                <Label.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnScenarioPositiveBiasTapped" />
+                </Label.GestureRecognizers>
+            </Label>
+        </HorizontalStackLayout>
+
+        <HorizontalStackLayout x:Name="LegendRow"
+                             Grid.Row="2"
                              Margin="0,8,0,0"
                              HorizontalOptions="Center"
                              Spacing="20">
@@ -46,6 +69,22 @@
                        VerticalOptions="Center" />
             </HorizontalStackLayout>
 
+            <HorizontalStackLayout x:Name="LegendSeed13"
+                                   IsVisible="False"
+                                   Spacing="6"
+                                   VerticalOptions="Center">
+                <HorizontalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnLegendSeed13Tapped" />
+                </HorizontalStackLayout.GestureRecognizers>
+                <BoxView WidthRequest="16"
+                         HeightRequest="4"
+                         VerticalOptions="Center"
+                         Color="#8E24AA" />
+                <Label Text="Seed 13"
+                       FontSize="14"
+                       VerticalOptions="Center" />
+            </HorizontalStackLayout>
+
             <HorizontalStackLayout x:Name="LegendSum"
                                    Spacing="6"
                                    VerticalOptions="Center">
@@ -63,7 +102,7 @@
         </HorizontalStackLayout>
 
         <Label x:Name="HoverLabel"
-               Grid.Row="2"
+               Grid.Row="3"
                Margin="0,8,0,0"
                FontSize="14"
                HorizontalTextAlignment="Center" />

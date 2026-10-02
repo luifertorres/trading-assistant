@@ -113,4 +113,37 @@ public sealed class ChartLegendSelectionTests
 
         selection.ShowCorrelation.Should().BeFalse();
     }
+
+    [Fact]
+    public void ThreeWalk_ToggleSumOff_ShowsAllThreeWalks()
+    {
+        var selection = ThreeWalkSelection();
+
+        selection.TryToggle(ChartLegendId.Sum).Should().BeTrue();
+
+        selection.Plotted.Should().Equal(ChartLegendId.Seed42, ChartLegendId.Seed7, ChartLegendId.Seed13);
+    }
+
+    [Fact]
+    public void ThreeWalk_ShowCorrelation_FalseWhenAllThreeWalksPlotted()
+    {
+        var selection = ThreeWalkSelection();
+        selection.TryToggle(ChartLegendId.Sum);
+
+        selection.ShowCorrelation.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ThreeWalk_ShowCorrelation_TrueWhenExactlyTwoWalksEnabled()
+    {
+        var selection = ThreeWalkSelection();
+        selection.TryToggle(ChartLegendId.Sum);
+        selection.TryToggle(ChartLegendId.Seed13);
+
+        selection.ShowCorrelation.Should().BeTrue();
+        selection.Plotted.Should().Equal(ChartLegendId.Seed42, ChartLegendId.Seed7);
+    }
+
+    private static ChartLegendSelection ThreeWalkSelection() =>
+        new([ChartLegendId.Seed42, ChartLegendId.Seed7, ChartLegendId.Seed13]);
 }

@@ -93,4 +93,38 @@ public sealed class UtcMinusFiveUsdtSeriesTests
         UtcMinusFiveUsdtSeries.Generate(1).Should().Equal(UtcMinusFiveUsdtSeries.Generate(1));
         UtcMinusFiveUsdtSeries.Generate(1).Should().NotEqual(UtcMinusFiveUsdtSeries.Generate(2));
     }
+
+    [Fact]
+    public void Generate_WithDailyDrift_EnsembleMeanLogGrowth_IsPositive()
+    {
+        var totalLogGrowth = 0.0;
+        for (var seed = 0; seed < 128; seed++)
+        {
+            var points = UtcMinusFiveUsdtSeries.Generate(seed, UtcMinusFiveUsdtSeries.DailyDrift);
+            var first = points[0].Usdt;
+            var last = points[^1].Usdt;
+            totalLogGrowth += Math.Log((double)last / first);
+        }
+
+        (totalLogGrowth / 128).Should().BeGreaterThan(0.25);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(42)]
+    [InlineData(99)]
+    public void Generate_WithDailyDrift_DailyChange_IsWithinDriftPlusOnePercent(int seed)
+    {
+        var points = UtcMinusFiveUsdtSeries.Generate(seed, UtcMinusFiveUsdtSeries.DailyDrift);
+        var maxRate = UtcMinusFiveUsdtSeries.DailyDrift + UtcMinusFiveUsdtSeries.DailyChangeRate;
+
+        for (var i = 1; i < points.Count; i++)
+        {
+            var previous = points[i - 1].Usdt;
+            var current = points[i].Usdt;
+            var maxDelta = previous * maxRate;
+
+            ((double)Math.Abs(current - previous)).Should().BeLessThanOrEqualTo(maxDelta + 1.0);
+        }
+    }
 }

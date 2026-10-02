@@ -10,11 +10,13 @@ public static class UtcMinusFiveUsdtSeries
     public const int MaxUsdt = 5000;
     public const int DefaultSeed = 42;
     public const int SecondSeed = 7;
+    public const int ThirdSeed = 13;
     public const double DailyChangeRate = 0.01;
+    public const double DailyDrift = 0.000236;
 
     public static int InclusiveDayCount => (int)(End - Start).TotalDays + 1;
 
-    public static IReadOnlyList<UsdtPoint> Generate(int seed = DefaultSeed)
+    public static IReadOnlyList<UsdtPoint> Generate(int seed = DefaultSeed, double dailyDrift = 0)
     {
         var random = new Random(seed);
         var points = new List<UsdtPoint>(InclusiveDayCount);
@@ -27,7 +29,8 @@ public static class UtcMinusFiveUsdtSeries
             if (time < End)
             {
                 var factor = (random.NextDouble() * 2.0) - 1.0;
-                usdt = (int)Math.Round(usdt + usdt * DailyChangeRate * factor);
+                var changeRate = dailyDrift + DailyChangeRate * factor;
+                usdt = (int)Math.Round(usdt + usdt * changeRate);
             }
         }
 

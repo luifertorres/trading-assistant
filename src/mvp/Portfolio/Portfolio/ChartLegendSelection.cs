@@ -4,20 +4,34 @@ public enum ChartLegendId
 {
     Seed42,
     Seed7,
+    Seed13,
     Sum
 }
 
 public sealed class ChartLegendSelection
 {
-    private bool _seed42Enabled = true;
-    private bool _seed7Enabled = true;
+    private readonly IReadOnlyList<ChartLegendId> _walkIds;
+    private readonly Dictionary<ChartLegendId, bool> _walkEnabled;
     private bool _sumEnabled = true;
+
+    public ChartLegendSelection()
+        : this([ChartLegendId.Seed42, ChartLegendId.Seed7])
+    {
+    }
+
+    public ChartLegendSelection(IReadOnlyList<ChartLegendId> walkIds)
+    {
+        if (walkIds.Count == 0)
+            throw new ArgumentException("At least one walk id is required.", nameof(walkIds));
+
+        _walkIds = walkIds.ToArray();
+        _walkEnabled = walkIds.ToDictionary(id => id, _ => true);
+    }
 
     public bool IsEnabled(ChartLegendId id) => id switch
     {
-        ChartLegendId.Seed42 => _seed42Enabled,
-        ChartLegendId.Seed7 => _seed7Enabled,
         ChartLegendId.Sum => _sumEnabled,
+        _ when _walkEnabled.TryGetValue(id, out var enabled) => enabled,
         _ => throw new ArgumentOutOfRangeException(nameof(id))
     };
 
@@ -28,11 +42,12 @@ public sealed class ChartLegendSelection
             if (_sumEnabled)
                 return [ChartLegendId.Sum];
 
-            var plotted = new List<ChartLegendId>(2);
-            if (_seed42Enabled)
-                plotted.Add(ChartLegendId.Seed42);
-            if (_seed7Enabled)
-                plotted.Add(ChartLegendId.Seed7);
+            var plotted = new List<ChartLegendId>(_walkIds.Count);
+            foreach (var id in _walkIds)
+            {
+                if (_walkEnabled[id])
+                    plotted.Add(id);
+            }
 
             return plotted;
         }
@@ -45,8 +60,14 @@ public sealed class ChartLegendSelection
             if (_sumEnabled)
                 return false;
 
-            var individualCount = (_seed42Enabled ? 1 : 0) + (_seed7Enabled ? 1 : 0);
-            return individualCount > 1;
+            var individualCount = 0;
+            foreach (var id in _walkIds)
+            {
+                if (_walkEnabled[id])
+                    individualCount++;
+            }
+
+            return individualCount == 2;
         }
     }
 
@@ -55,8 +76,7 @@ public sealed class ChartLegendSelection
         return id switch
         {
             ChartLegendId.Sum => TryToggleSum(),
-            ChartLegendId.Seed42 => TryToggleWalk(ref _seed42Enabled),
-            ChartLegendId.Seed7 => TryToggleWalk(ref _seed7Enabled),
+            _ when _walkEnabled.ContainsKey(id) => TryToggleWalk(id),
             _ => throw new ArgumentOutOfRangeException(nameof(id))
         };
     }
@@ -65,7 +85,7 @@ public sealed class ChartLegendSelection
     {
         if (_sumEnabled)
         {
-            if (!_seed42Enabled && !_seed7Enabled)
+            if (!_walkIds.Any(id => _walkEnabled[id]))
                 return false;
 
             _sumEnabled = false;
@@ -76,18 +96,30 @@ public sealed class ChartLegendSelection
         return true;
     }
 
-    private bool TryToggleWalk(ref bool enabled)
+    private bool TryToggleWalk(ChartLegendId id)
     {
         if (_sumEnabled)
         {
-            enabled = !enabled;
+            _walkEnabled[id] = !_walkEnabled[id];
             return true;
         }
 
-        if (enabled && Plotted.Count == 1)
+        if (_walkEnabled[id] && EnabledWalkCount() == 1)
             return false;
 
-        enabled = !enabled;
+        _walkEnabled[id] = !_walkEnabled[id];
         return true;
+    }
+
+    private int EnabledWalkCount()
+    {
+        var count = 0;
+        foreach (var walkId in _walkIds)
+        {
+            if (_walkEnabled[walkId])
+                count++;
+        }
+
+        return count;
     }
 }
