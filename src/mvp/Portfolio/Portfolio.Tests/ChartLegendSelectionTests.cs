@@ -88,30 +88,30 @@ public sealed class ChartLegendSelectionTests
     }
 
     [Fact]
-    public void ShowCorrelation_DefaultIsFalseWhenSumPlotted()
+    public void ShowDrawdown_DefaultIsFalseWhenSumPlotted()
     {
         var selection = new ChartLegendSelection();
 
-        selection.ShowCorrelation.Should().BeFalse();
+        selection.ShowDrawdown.Should().BeFalse();
     }
 
     [Fact]
-    public void ShowCorrelation_TrueWhenBothWalksPlotted()
+    public void ShowDrawdown_TrueWhenBothWalksPlotted()
     {
         var selection = new ChartLegendSelection();
         selection.TryToggle(ChartLegendId.Sum);
 
-        selection.ShowCorrelation.Should().BeTrue();
+        selection.ShowDrawdown.Should().BeTrue();
     }
 
     [Fact]
-    public void ShowCorrelation_FalseWhenOnlyOneWalkPlotted()
+    public void ShowDrawdown_FalseWhenOnlyOneWalkPlotted()
     {
         var selection = new ChartLegendSelection();
         selection.TryToggle(ChartLegendId.Sum);
         selection.TryToggle(ChartLegendId.Seed42);
 
-        selection.ShowCorrelation.Should().BeFalse();
+        selection.ShowDrawdown.Should().BeFalse();
     }
 
     [Fact]
@@ -125,22 +125,22 @@ public sealed class ChartLegendSelectionTests
     }
 
     [Fact]
-    public void ThreeWalk_ShowCorrelation_FalseWhenAllThreeWalksPlotted()
+    public void ThreeWalk_ShowDrawdown_TrueWhenAllThreeWalksPlotted()
     {
         var selection = ThreeWalkSelection();
         selection.TryToggle(ChartLegendId.Sum);
 
-        selection.ShowCorrelation.Should().BeFalse();
+        selection.ShowDrawdown.Should().BeTrue();
     }
 
     [Fact]
-    public void ThreeWalk_ShowCorrelation_TrueWhenExactlyTwoWalksEnabled()
+    public void ThreeWalk_ShowDrawdown_TrueWhenExactlyTwoWalksEnabled()
     {
         var selection = ThreeWalkSelection();
         selection.TryToggle(ChartLegendId.Sum);
         selection.TryToggle(ChartLegendId.Seed13);
 
-        selection.ShowCorrelation.Should().BeTrue();
+        selection.ShowDrawdown.Should().BeTrue();
         selection.Plotted.Should().Equal(ChartLegendId.Seed42, ChartLegendId.Seed7);
     }
 

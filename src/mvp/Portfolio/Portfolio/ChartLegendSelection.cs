@@ -53,7 +53,7 @@ public sealed class ChartLegendSelection
         }
     }
 
-    public bool ShowCorrelation
+    public bool ShowDrawdown
     {
         get
         {
@@ -67,7 +67,7 @@ public sealed class ChartLegendSelection
                     individualCount++;
             }
 
-            return individualCount == 2;
+            return individualCount >= 2;
         }
     }
 
