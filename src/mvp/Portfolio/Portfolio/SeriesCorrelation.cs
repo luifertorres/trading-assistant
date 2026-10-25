@@ -38,6 +38,55 @@ public static class SeriesCorrelation
         return points;
     }
 
+    public static double? LogReturnPearson(
+        IReadOnlyList<UsdtPoint> left,
+        IReadOnlyList<UsdtPoint> right,
+        int horizonDays = 1)
+    {
+        if (horizonDays < 1)
+            throw new ArgumentOutOfRangeException(nameof(horizonDays), "Horizon must be at least 1.");
+
+        if (left.Count != right.Count)
+            throw new ArgumentException("Series must have the same length.");
+
+        ValidateSeries(left);
+        ValidateSeries(right);
+        ValidateTimestamps(left, right);
+
+        var sampleCount = (left.Count - 1) / horizonDays;
+        if (sampleCount < 3)
+            return null;
+
+        var sumX = 0.0;
+        var sumY = 0.0;
+        var sumXX = 0.0;
+        var sumYY = 0.0;
+        var sumXY = 0.0;
+
+        for (var start = 0; start + horizonDays < left.Count; start += horizonDays)
+        {
+            var end = start + horizonDays;
+            var x = LogReturn(left[start].Usdt, left[end].Usdt);
+            var y = LogReturn(right[start].Usdt, right[end].Usdt);
+            sumX += x;
+            sumY += y;
+            sumXX += x * x;
+            sumYY += y * y;
+            sumXY += x * y;
+        }
+
+        var count = sampleCount;
+        var numerator = count * sumXY - sumX * sumY;
+        var denomLeft = count * sumXX - sumX * sumX;
+        var denomRight = count * sumYY - sumY * sumY;
+        var denominator = Math.Sqrt(denomLeft * denomRight);
+
+        if (denominator == 0.0)
+            return null;
+
+        return numerator / denominator;
+    }
+
     private static void ValidateSeries(IReadOnlyList<UsdtPoint> series)
     {
         for (var i = 0; i < series.Count; i++)

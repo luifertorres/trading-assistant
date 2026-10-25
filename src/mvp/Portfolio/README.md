@@ -40,9 +40,29 @@ Isolated **MAUI** app that plots a daily USDT line chart. This is an MVP under `
 
   - **Negative growth:** seeds `42` and `7`, zero daily drift — symmetric ±1% shock only (long-run log growth tends negative).
 
-  - **Positive bias:** seeds `42`, `7`, and `13`, daily drift `0.000236` on top of the same ±1% shock (long-run log growth ~8%/year).
+  - **Positive bias:** seeds `42`, `7`, and `13`, daily drift `0.000236` on top of the same ±1% shock (long-run log growth ~8%/year). Independent walks — the **null baseline** for dependence readouts.
 
-- **Y:** each walk starts in `3000–5000` USDT; each next day uses `previous × (1 + drift + 0.01 × random(−1..1))` (integer USDT). **Sum** is the day-by-day sum of that scenario’s walks only.
+  - **Shared factor:** same seeds and drift; daily shock `μ + 0.01 × (√0.6 × m_t + √0.4 × e_i,t)` with one market draw `m_t` per day (`MarketSeed = 2023`) and per-walk `e_i,t` from each seed’s RNG (same draw order as Positive bias).
+
+  - **Crash-coupled:** with probability `0.01` per day (market stream), all walks take `−2.5%` that day; otherwise `μ′ + 0.01 × e_i,t` with `μ′ = (μ + 0.01 × 0.025) / 0.99` so long-run drift matches Positive bias.
+
+  - **Complementary regimes:** regime flips with probability `1/120` per day; seed `42` gets `±0.001` regime drift (sign flips with regime), seed `7` the opposite sign, seed `13` no regime term; all still add `μ + 0.01 × e_i,t`.
+
+- **Y:** each walk starts in `3000–5000` USDT; each next day uses `previous × (1 + drift + 0.01 × random(−1..1))` (integer USDT) unless a dependence scenario overrides the rate formula above. **Sum** is the day-by-day sum of that scenario’s walks only.
+
+- **Dependence readout** (Consolas label under hover): one row per pair (`42×7`, `42×13`, `7×13`) plus a portfolio summary line.
+
+  - **Theory 1 — `rho1d` / `rho30d`:** Pearson correlation of daily and 30-day non-overlapping log returns (Scherman’s stated PnL correlation).
+
+  - **Theory 2 — `tail5%`:** share of A’s worst 5% return days that are also among B’s worst 5% (~`0.05` if independent).
+
+  - **Theory 3 — `uwRho`:** Pearson correlation of underwater (drawdown-from-peak) fractions (Platform ADR-005).
+
+  - **Theory 4 — `lift-10%`:** co-underwater lift at −10% depth, `P(both) / (P(A) × P(B))` (`n/a` if either side never breaches).
+
+  - **Theory 5 — `7|42worst3` / `42|7worst3`:** average simple return of one walk over the other’s three deepest drawdown episodes.
+
+  - **Theory 6 — portfolio line:** equal-weight daily-rebalanced index (10 000 USDT start) vs member-average **max drawdown**, **Ulcer**, **CDaR95**, and **longest underwater** days.
 
 - **Legends:** `Seed 42` (blue), `Seed 7` (orange), `Seed 13` (purple, Positive bias only), `Sum` (green). **Sum on** plots only the summed line. **Sum off** plots each walk whose flag is on. Tapping a walk while Sum is on flips that walk’s flag for when Sum is turned off. Tapping a walk while Sum is off shows or hides that line; the last visible line cannot be turned off. Disabled flags render at lower opacity but stay tappable. Switching scenario rebuilds the series and resets legends to Sum on.
 
@@ -92,6 +112,6 @@ If the window closes immediately, confirm `WindowsPackageType` is `None` in the 
 
 
 
-Move the pointer along the line to see X/Y values in the label below the legends. Tap scenarios to compare negative vs positive long-run drift; tap legends to switch between the sum and individual walks.
+Move the pointer along the line to see X/Y values in the label below the legends. Tap scenarios to compare independent vs engineered dependence; tap legends to switch between the sum and individual walks and to open the drawdown panel.
 
 

@@ -5,7 +5,7 @@
              x:Class="Portfolio.Maui.MainPage"
              Title="Portfolio">
 
-    <Grid RowDefinitions="*,Auto,Auto,Auto" Padding="12">
+    <Grid RowDefinitions="*,Auto,Auto,Auto,Auto" Padding="12">
         <ScottPlot:MauiPlot x:Name="Chart"
                             Grid.Row="0"
                             HorizontalOptions="Fill"
@@ -30,6 +30,30 @@
                    VerticalOptions="Center">
                 <Label.GestureRecognizers>
                     <TapGestureRecognizer Tapped="OnScenarioPositiveBiasTapped" />
+                </Label.GestureRecognizers>
+            </Label>
+            <Label x:Name="ScenarioSharedFactor"
+                   Text="Shared factor"
+                   FontSize="14"
+                   VerticalOptions="Center">
+                <Label.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnScenarioSharedFactorTapped" />
+                </Label.GestureRecognizers>
+            </Label>
+            <Label x:Name="ScenarioCrashCoupled"
+                   Text="Crash-coupled"
+                   FontSize="14"
+                   VerticalOptions="Center">
+                <Label.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnScenarioCrashCoupledTapped" />
+                </Label.GestureRecognizers>
+            </Label>
+            <Label x:Name="ScenarioComplementaryRegimes"
+                   Text="Complementary regimes"
+                   FontSize="14"
+                   VerticalOptions="Center">
+                <Label.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnScenarioComplementaryRegimesTapped" />
                 </Label.GestureRecognizers>
             </Label>
         </HorizontalStackLayout>
@@ -105,6 +129,13 @@
                Grid.Row="3"
                Margin="0,8,0,0"
                FontSize="14"
+               HorizontalTextAlignment="Center" />
+
+        <Label x:Name="DependenceReportLabel"
+               Grid.Row="4"
+               Margin="0,8,0,0"
+               FontFamily="Consolas"
+               FontSize="13"
                HorizontalTextAlignment="Center" />
     </Grid>
 

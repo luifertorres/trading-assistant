@@ -71,21 +71,24 @@ public partial class MainPage : ContentPage
             return;
 
         _scenario = scenario;
-        var drift = ReturnScenarioSeries.Drift(scenario);
         var walkIds = ReturnScenarioSeries.Seeds(scenario).Select(LegendIdForSeed).ToArray();
+        var generated = DependentWalks.Generate(scenario);
 
         _walkSeries = new Dictionary<ChartLegendId, IReadOnlyList<UsdtPoint>>();
         foreach (var seed in ReturnScenarioSeries.Seeds(scenario))
         {
             var id = LegendIdForSeed(seed);
-            _walkSeries[id] = UtcMinusFiveUsdtSeries.Generate(seed, drift);
+            _walkSeries[id] = generated[seed];
         }
 
         _sumSeries = SumWalks(_walkSeries.Values);
         _legendSelection = new ChartLegendSelection(walkIds);
-        LegendSeed13.IsVisible = scenario == ReturnScenario.PositiveBias;
+        LegendSeed13.IsVisible = ReturnScenarioSeries.Seeds(scenario).Count == 3;
         UpdateScenarioSwitcherOpacity();
         HoverLabel.Text = "";
+        DependenceReportLabel.Text = string.Join(
+            Environment.NewLine,
+            DependenceReport.Build(_walkSeries).FormatLines());
 
         if (_crosshair is not null)
         {
@@ -178,6 +181,15 @@ public partial class MainPage : ContentPage
     private void OnScenarioPositiveBiasTapped(object? sender, TappedEventArgs e) =>
         LoadScenario(ReturnScenario.PositiveBias);
 
+    private void OnScenarioSharedFactorTapped(object? sender, TappedEventArgs e) =>
+        LoadScenario(ReturnScenario.SharedFactor);
+
+    private void OnScenarioCrashCoupledTapped(object? sender, TappedEventArgs e) =>
+        LoadScenario(ReturnScenario.CrashCoupled);
+
+    private void OnScenarioComplementaryRegimesTapped(object? sender, TappedEventArgs e) =>
+        LoadScenario(ReturnScenario.ComplementaryRegimes);
+
     private void OnLegendSeed42Tapped(object? sender, TappedEventArgs e) =>
         OnLegendTapped(ChartLegendId.Seed42);
 
@@ -202,6 +214,9 @@ public partial class MainPage : ContentPage
     {
         ScenarioNegativeGrowth.Opacity = _scenario == ReturnScenario.NegativeGrowth ? 1.0 : HiddenLegendOpacity;
         ScenarioPositiveBias.Opacity = _scenario == ReturnScenario.PositiveBias ? 1.0 : HiddenLegendOpacity;
+        ScenarioSharedFactor.Opacity = _scenario == ReturnScenario.SharedFactor ? 1.0 : HiddenLegendOpacity;
+        ScenarioCrashCoupled.Opacity = _scenario == ReturnScenario.CrashCoupled ? 1.0 : HiddenLegendOpacity;
+        ScenarioComplementaryRegimes.Opacity = _scenario == ReturnScenario.ComplementaryRegimes ? 1.0 : HiddenLegendOpacity;
     }
 
     private void ApplyLegendState()

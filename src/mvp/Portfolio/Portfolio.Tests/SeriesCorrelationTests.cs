@@ -69,6 +69,55 @@ public sealed class SeriesCorrelationTests
         act.Should().Throw<ArgumentException>();
     }
 
+    [Fact]
+    public void LogReturnPearson_IdenticalSeries_IsOne()
+    {
+        var series = BuildSeries(31, i => 1000 + i);
+        var result = SeriesCorrelation.LogReturnPearson(series, series);
+
+        result.Should().NotBeNull();
+        result!.Value.Should().BeApproximately(1.0, 1e-9);
+    }
+
+    [Fact]
+    public void LogReturnPearson_MirroredSeries_IsMinusOne()
+    {
+        var (left, right) = BuildMirroredLogReturnSeries(31, baseUsdt: 1_000_000_000);
+        var result = SeriesCorrelation.LogReturnPearson(left, right);
+
+        result.Should().NotBeNull();
+        result!.Value.Should().BeApproximately(-1.0, 1e-9);
+    }
+
+    [Fact]
+    public void LogReturnPearson_LeadLagPair_TwoDayHorizonIsOne()
+    {
+        var left = BuildSeries(7, i => 1000 + i * 10);
+        var right = new List<UsdtPoint>(left.Count);
+        for (var i = 0; i < left.Count; i++)
+        {
+            var usdt = i % 2 == 0 ? left[i].Usdt : left[i - 1].Usdt;
+            right.Add(new UsdtPoint(left[i].Time, usdt));
+        }
+
+        var daily = SeriesCorrelation.LogReturnPearson(left, right, horizonDays: 1);
+        daily.Should().NotBeNull();
+        daily!.Value.Should().BeLessThan(0);
+
+        var twoDay = SeriesCorrelation.LogReturnPearson(left, right, horizonDays: 2);
+        twoDay.Should().NotBeNull();
+        twoDay!.Value.Should().BeApproximately(1.0, 1e-9);
+    }
+
+    [Fact]
+    public void LogReturnPearson_FewerThanThreeSamples_ReturnsNull()
+    {
+        var left = BuildSeries(3, i => 1000 + i);
+        var right = BuildSeries(3, i => 1000 + i * 2);
+
+        SeriesCorrelation.LogReturnPearson(left, right, horizonDays: 2).Should().BeNull();
+    }
+
     private static List<UsdtPoint> BuildSeries(int count, Func<int, int> usdtAtIndex)
     {
         var points = new List<UsdtPoint>(count);

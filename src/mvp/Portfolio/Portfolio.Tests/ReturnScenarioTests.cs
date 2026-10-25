@@ -22,4 +22,18 @@ public sealed class ReturnScenarioTests
                 UtcMinusFiveUsdtSeries.SecondSeed,
                 UtcMinusFiveUsdtSeries.ThirdSeed);
     }
+
+    [Theory]
+    [InlineData(ReturnScenario.SharedFactor)]
+    [InlineData(ReturnScenario.CrashCoupled)]
+    [InlineData(ReturnScenario.ComplementaryRegimes)]
+    public void DependenceScenarios_UseDailyDriftAndSeeds42_7_13(ReturnScenario scenario)
+    {
+        ReturnScenarioSeries.Drift(scenario).Should().Be(UtcMinusFiveUsdtSeries.DailyDrift);
+        ReturnScenarioSeries.Seeds(scenario)
+            .Should().Equal(
+                UtcMinusFiveUsdtSeries.DefaultSeed,
+                UtcMinusFiveUsdtSeries.SecondSeed,
+                UtcMinusFiveUsdtSeries.ThirdSeed);
+    }
 }
